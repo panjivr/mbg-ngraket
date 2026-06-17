@@ -3,7 +3,7 @@
 #   VM_HOST  = your VM public IP
 #   VM_USER  = ubuntu
 #   VM_SSH_KEY = the PRIVATE SSH key for the VM
-# If you don't set these, this workflow simply no-ops.
+# If you don't set these, this workflow simply no-ops (job stays green).
 name: deploy
 on:
   push:
@@ -12,9 +12,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # The `secrets` context cannot be used directly in an `if:` expression,
+    # so expose it as an env var and guard the step on that instead.
+    env:
+      VM_HOST: ${{ secrets.VM_HOST }}
     steps:
       - name: Deploy over SSH
-        if: ${{ secrets.VM_HOST != '' }}
+        if: ${{ env.VM_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
