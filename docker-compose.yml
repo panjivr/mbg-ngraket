@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mbg_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ekhsan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-mbg_kitchen}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mbg_backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-ekhsan}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-mbg_kitchen}
+      JWT_SECRET: ${JWT_SECRET:-super_secure_secret_key_generated_by_system_admin_2026}
+      MBG_INTERNAL_SKIP_AUTH: ${MBG_INTERNAL_SKIP_AUTH:-super_secure_secret_key_generated_by_system_admin_2026}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mbg_frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      PORT: 3014
+      BACKEND_URL: http://backend:8080
+      JWT_SECRET: ${JWT_SECRET:-super_secure_secret_key_generated_by_system_admin_2026}
+      NODE_ENV: production
+    ports:
+      - "3014:3014"
+
+  face_api:
+    build:
+      context: ./face_api
+      dockerfile: Dockerfile
+    container_name: mbg_face_api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      DEEPFACE_HOME: /app/weights
+      FACE_MATCH_THRESHOLD: "0.71"
+      FACE_MATCH_MIN_MARGIN: "0.017"
+      FACE_DECODE_MAX_DIM: "720"
+      FACE_RECOGNIZE_JPEG_QUALITY: "95"
+      FACE_CLAHE_CLIP: "2.35"
+      FACE_DETECTOR_BACKEND: retinaface
+      FACE_RECOGNIZE_DETECTOR_BACKEND: retinaface
+      FACE_RECOGNIZE_DETECTOR_FALLBACK: opencv
+      FACE_ENFORCE_DETECTION_RECOGNIZE: "true"
+    volumes:
+      - ./face_api/storage/faces:/app/storage/faces
+      - ./face_api/weights:/app/weights
+
+volumes:
+  postgres_data:

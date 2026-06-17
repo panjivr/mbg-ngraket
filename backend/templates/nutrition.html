@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head" id="nutrition-view">
+    <div>
+      <h1 class="h1">Nutrition</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+  </section>
+
+  {% if message.is_some() %}
+    <div class="alert alert-success">{{ message.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card">
+    <h2 class="h2">Foods</h2>
+    <form method="get" action="/app/nutrition" class="form">
+      <label class="label" for="food_query">Food search</label>
+      <input class="input" id="food_query" name="query" type="text" value="{{ query }}" placeholder="chicken / rice / milk" />
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Search</button>
+      </div>
+    </form>
+
+    {% if searched %}
+      {% if foods.len() == 0 %}
+        <div class="alert alert-danger">No results found</div>
+      {% endif %}
+    {% endif %}
+
+    <div id="foods-results-list">
+      <div class="table">
+        <table>
+          <thead><tr><th>Code</th><th>Name</th></tr></thead>
+          <tbody>
+            {% for f in foods %}
+              <tr>
+                <td class="mono"><a class="btn btn-ghost btn-sm" href="/app/nutrition?query={{ query }}&food={{ f.code }}">{{ f.code }}</a></td>
+                <td>{{ f.name }}</td>
+              </tr>
+            {% endfor %}
+            {% if foods.len() == 0 %}
+              <tr><td colspan="2" class="muted">No results</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {% if selected_food.is_some() %}
+    <section class="card" id="food-details-panel">
+      <h2 class="h2" id="food-name">{{ selected_food.as_ref().unwrap().name }}</h2>
+      <div class="muted mono">{{ selected_food.as_ref().unwrap().code }}</div>
+
+      <div class="row">
+        <a class="btn btn-primary" href="/app/nutrition?query={{ query }}&food={{ selected_food.as_ref().unwrap().code }}&link=1">Link Ingredient</a>
+      </div>
+
+      {% if linked %}
+        <div class="alert alert-success">Linked</div>
+      {% endif %}
+
+      <h3 class="h2">Nutrients</h3>
+      <div class="table" id="nutrient-composition">
+        <table>
+          <thead><tr><th>Nutrient</th><th>Value</th><th>Unit</th></tr></thead>
+          <tbody>
+            {% for n in nutrients %}
+              <tr>
+                <td>{{ n.label }}</td>
+                <td class="mono">{{ n.value }}</td>
+                <td>{{ n.unit }}</td>
+              </tr>
+            {% endfor %}
+            {% if nutrients.len() == 0 %}
+              <tr><td colspan="3" class="muted">No nutrient values</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if show_link_dialog %}
+    <dialog open>
+      <form method="post" action="/app/nutrition/link" class="form">
+        <input type="hidden" name="nutr_code" value="{{ selected_food.as_ref().unwrap().code }}" />
+        <input type="hidden" name="query" value="{{ query }}" />
+        <h2 class="h2">Link Ingredient</h2>
+        <div id="ingredient-selection-list">
+          <div class="table">
+            <table>
+              <thead><tr><th>Select</th><th>Ingredient</th></tr></thead>
+              <tbody>
+                {% for i in linkable_ingredients %}
+                  <tr>
+                    <td><input type="radio" name="ingredient_id" value="{{ i.id }}" /></td>
+                    <td>{{ i.name }}</td>
+                  </tr>
+                {% endfor %}
+                {% if linkable_ingredients.len() == 0 %}
+                  <tr><td colspan="2" class="muted">No ingredients</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" type="submit">Save Link</button>
+        </div>
+      </form>
+    </dialog>
+  {% endif %}
+{% endblock %}

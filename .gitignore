@@ -1,0 +1,25 @@
+# ---- Secrets: NEVER commit ----
+.env
+.env.production
+**/.env
+!.env.example
+!.env.production.example
+
+# ---- Dependencies & build artifacts (regenerated) ----
+node_modules/
+**/node_modules/
+target/
+**/target/
+dist/
+**/dist/
+
+# ---- Runtime ----
+*.pid
+*.log
+/data/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# NOTE: data-seed/ is committed on purpose (real seed data, per project owner's choice).

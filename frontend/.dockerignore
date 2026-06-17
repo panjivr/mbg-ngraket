@@ -1,0 +1,12 @@
+node_modules/
+tenant_dbs/
+platform_db/
+database.sqlite*
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+uploads/
+mb_gizi.db
+post_result.txt
+server_*.log

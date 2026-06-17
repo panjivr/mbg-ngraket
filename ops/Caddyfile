@@ -1,0 +1,17 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Main application (operational app) on your domain — automatic HTTPS.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3014
+}
+
+# Optional: marketing landing page on the www subdomain.
+# Point a `www` DNS record at this server, then uncomment:
+# www.{$DOMAIN} {
+# 	root * /srv/landing
+# 	file_server
+# 	encode zstd gzip
+# }

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  {% if !is_subscribed %}
+    <div class="alert alert-danger" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <strong>Akses Terbatas:</strong> Langganan Anda saat ini adalah <strong>{{ subscription_status }}</strong> dan sudah tidak aktif atau dalam masa tenggang.
+        <p style="margin-top: 4px; font-size: 14px;">Beberapa fitur mungkin tidak dapat digunakan sampai Anda melakukan pembayaran.</p>
+      </div>
+      <a href="/app/billing" class="btn btn-primary">Langganan Sekarang</a>
+    </div>
+  {% endif %}
+
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Dashboard</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+      <div class="muted">User: {{ user_email }}</div>
+    </div>
+    <div class="muted">Updated: {{ generated_at }}</div>
+  </section>
+
+  <section class="grid-3">
+    <div class="card">
+      <div class="kpi-label">Production Plans</div>
+      <div class="kpi-value">{{ plans_total }}</div>
+      <div class="kpi-help muted">Total plan tersimpan</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Production Batches</div>
+      <div class="kpi-value">{{ batches_total }}</div>
+      <div class="kpi-help muted">Total batch tersimpan</div>
+    </div>
+    <div class="card">
+      <div class="kpi-label">Ingredients</div>
+      <div class="kpi-value">{{ ingredients_total }}</div>
+      <div class="kpi-help muted">Master data bahan</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="h2">Mulai Cepat</h2>
+    <div class="row">
+      <a class="btn btn-primary" href="/app/plans">Production</a>
+      <a class="btn btn-secondary" href="/app/inventory">Update Stock</a>
+    </div>
+  </section>
+{% endblock %}

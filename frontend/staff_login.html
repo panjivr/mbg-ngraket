@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login manual staf — Sistem Manajemen Dapur MBG by DJATI CORP</title>
+    <script src="js/brand.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="staff-page">
+    <div class="min-h-screen" style="background: linear-gradient(135deg,#0B1220 0%,#0F172A 100%); display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="login-container" style="max-width: 450px; width: 100%;">
+            <div class="login-right" style="border-radius: var(--radius-lg);">
+                <div id="staff-login">
+                    <div style="margin-bottom:1.75rem;">
+                        <button class="btn btn-secondary btn-xs mb-3" onclick="window.location.href='staff.html'"><i class="fas fa-arrow-left"></i> Kembali</button>
+                        <h2 style="font-size:1.5rem;font-weight:700;color:var(--text-main);letter-spacing:-0.02em;margin-bottom:0.375rem;">Login Manual</h2>
+                        <p style="font-size:0.875rem;color:var(--text-muted);">Masuk menggunakan kode staff dan PIN Anda</p>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-full">
+                            <label class="input-label">Kode dapur / kitchen</label>
+                            <input id="st_tenant" class="input-field" placeholder="Contoh: nama kitchen atau kode dari pengelola" />
+                        </div>
+                        <div>
+                            <label class="input-label">Kode Staff</label>
+                            <input id="st_code" class="input-field" placeholder="Kode staf dari pengelola" />
+                        </div>
+                        <div>
+                            <label class="input-label">PIN</label>
+                            <input id="st_pin" type="password" class="input-field" placeholder="PIN" />
+                        </div>
+                        <div class="form-full">
+                            <button class="btn btn-primary w-full" onclick="staffLogin()"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+                        </div>
+                    </div>
+                    <div id="st_login_error" class="field-error p-3 hidden" style="background:var(--danger-soft-bg);border-radius:var(--radius);border-left:3px solid var(--danger);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-area" class="toast-area"></div>
+    <script src='js/core.js?v=30'></script>
+    <script src='js/staff_attendance.js?v=33'></script>
+</body>
+</html>

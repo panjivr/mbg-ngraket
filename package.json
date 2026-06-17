@@ -1,0 +1,16 @@
+{
+  "name": "mbg",
+  "private": true,
+  "description": "Jalankan aplikasi MBG hanya dengan Node (frontend/server.js + SQLite).",
+  "devDependencies": {
+    "pg": "^8.11.0"
+  },
+  "scripts": {
+    "create-db": "node scripts/create_mbg_db.js",
+    "migrate": "node scripts/run_migrations.js",
+    "postinstall": "npm --prefix frontend install",
+    "start": "npm --prefix frontend run deploy",
+    "start:dev": "npm --prefix frontend start",
+    "deploy": "npm --prefix frontend run deploy"
+  }
+}

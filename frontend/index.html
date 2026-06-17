@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistem Manajemen Dapur MBG by DJATI CORP — Pilih portal</title>
+    <script src="js/brand.js"></script>
+    <style>
+      :root {
+        --bg: #070a12;
+        --card: rgba(255, 255, 255, 0.06);
+        --card-2: rgba(255, 255, 255, 0.09);
+        --border: rgba(255, 255, 255, 0.14);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --accent: #4ef0e8;
+        --accent-2: #2f66ff;
+        --supplier-1: #34d399;
+        --supplier-2: #059669;
+        --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+        --radius: 18px;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background:
+          radial-gradient(900px 480px at 18% 10%, rgba(79, 240, 232, 0.16), transparent 60%),
+          radial-gradient(900px 520px at 82% 8%, rgba(47, 102, 255, 0.18), transparent 62%),
+          radial-gradient(900px 520px at 50% 110%, rgba(16, 185, 129, 0.08), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .container {
+        width: min(1040px, 100%);
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .header {
+        padding: 34px 28px 12px;
+        display: grid;
+        gap: 10px;
+        text-align: center;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 0 6px rgba(79, 240, 232, 0.12);
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(26px, 3.2vw, 40px);
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 15px;
+      }
+      .content {
+        padding: 18px 28px 28px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 900px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+      .tile {
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 16px;
+        padding: 18px;
+        display: grid;
+        gap: 10px;
+        min-height: 140px;
+      }
+      .tile--supplier {
+        border-color: rgba(52, 211, 153, 0.35);
+        background: linear-gradient(160deg, rgba(16, 185, 129, 0.08), var(--card));
+      }
+      .tile-title {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        font-size: 16px;
+      }
+      .tile-desc {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--card-2);
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 160ms ease, filter 160ms ease, background 160ms ease;
+      }
+      .btn:hover { transform: translateY(-1px); filter: brightness(1.07); }
+      .btn-primary {
+        border-color: rgba(79, 240, 232, 0.4);
+        background: linear-gradient(135deg, rgba(79, 240, 232, 0.9), rgba(47, 102, 255, 0.9));
+        color: #071018;
+      }
+      .btn-supplier {
+        border-color: rgba(52, 211, 153, 0.45);
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.95), rgba(5, 150, 105, 0.95));
+        color: #04120c;
+      }
+      .footer {
+        border-top: 1px solid var(--border);
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 12px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="brand">
+          <span class="dot"></span>
+          <span>Manajemen Dapur MBG</span>
+        </div>
+        <h1>Pilih portal</h1>
+        <p>Pilih peran Anda: pengelola dapur, relawan/staf lapangan, atau pemasok.</p>
+      </div>
+
+      <div class="content">
+        <div class="grid">
+          <div class="tile">
+            <div class="tile-title">Portal pengelola</div>
+            <div class="tile-desc">Dashboard dapur, menu, stok, keuangan, dan laporan untuk tim operasional.</div>
+            <div class="actions">
+              <a href="/app" class="btn btn-primary">Masuk portal pengelola</a>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile-title">Portal relawan &amp; staf</div>
+            <div class="tile-desc">Absensi, tugas lapangan, dan alur khusus staf tanpa akses penuh dashboard.</div>
+            <div class="actions">
+              <a href="/staff" class="btn">Masuk portal staf</a>
+            </div>
+          </div>
+          <div class="tile tile--supplier">
+            <div class="tile-title">Portal pemasok</div>
+            <div class="tile-desc">Purchase order, penawaran harga, dan konfirmasi pengiriman bahan.</div>
+            <div class="actions">
+              <a id="portal-link-supplier" href="supplier.html" class="btn btn-supplier">Masuk portal pemasok</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>&copy; 2026 DJATI CORP — Sistem Manajemen Dapur MBG</span>
+        <span>Butuh bantuan? Hubungi administrator kitchen Anda.</span>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var a = document.getElementById('portal-link-supplier');
+        if (!a) return;
+        try {
+          var base = (localStorage.getItem('app_server_url') || '').trim().replace(/\/+$/, '');
+          if (base) {
+            a.setAttribute('href', base + '/legacy/supplier.html');
+            return;
+          }
+        } catch (e) {}
+        var p = String(location.port || '');
+        var local =
+          location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (local && p === '8080') {
+          a.setAttribute('href', '/legacy/supplier.html');
+          return;
+        }
+        if (local && (p === '3000' || p === '5173' || p === '5500' || p === '4173')) {
+          a.setAttribute('href', 'http://127.0.0.1:8080/legacy/supplier.html');
+          return;
+        }
+        a.setAttribute('href', 'supplier.html');
+      })();
+    </script>
+  </body>
+</html>

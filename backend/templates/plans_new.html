@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Create Plan · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Create Plan</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+  </section>
+
+  {% if error.is_some() %}
+    <div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card">
+    <form method="post" action="/app/plans/new" class="form">
+      <label class="label" for="target_portions">Target portions</label>
+      <input class="input" id="target_portions" name="target_portions" type="number" min="1" value="{{ target_portions }}" />
+
+      <label class="label" for="target_delivery_time">Delivery time</label>
+      <input class="input" id="target_delivery_time" name="target_delivery_time" type="text" value="{{ target_delivery_time }}" placeholder="2026-03-01 10:00" />
+
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Save Plan</button>
+        <a class="btn btn-secondary" href="/app/plans">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

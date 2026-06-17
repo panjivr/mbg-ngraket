@@ -1,0 +1,114 @@
+# MBG — Production stack for a single free VM (Oracle Always Free, ARM/AMD).
+# Caddy terminates HTTPS for your domain and proxies to the Node app.
+# Postgres is internal-only (published to localhost just for the backend build).
+name: mbg
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./landing:/srv/landing:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+  db:
+    # v18 matches the bundled dump (pg_dump 18.3); older servers reject it.
+    image: postgres:18-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Bound to localhost only — needed so the backend image can be built
+    # against a live DB (sqlx compile-time query checks). Not exposed publicly.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data-seed/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      network: host
+      args:
+        DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5432/${POSTGRES_DB}
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      MBG_INTERNAL_SKIP_AUTH: ${MBG_INTERNAL_SKIP_AUTH}
+      APP_PORT: "8080"
+      RUST_LOG: ${RUST_LOG:-info}
+    expose:
+      - "8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      PORT: "3014"
+      NODE_ENV: production
+      BACKEND_URL: http://backend:8080
+      JWT_SECRET: ${JWT_SECRET}
+      MBG_INTERNAL_SKIP_AUTH: ${MBG_INTERNAL_SKIP_AUTH}
+      MBG_DISABLE_SUBSCRIPTION: ${MBG_DISABLE_SUBSCRIPTION:-1}
+      PLATFORM_DB_FILE: /app/platform_db/database.sqlite
+      FACE_API_URL: http://face_api:5000
+    volumes:
+      - ./data/platform_db:/app/platform_db
+      - ./data/tenant_dbs:/app/tenant_dbs
+      - ./data/uploads:/app/uploads
+    expose:
+      - "3014"
+
+  face_api:
+    build:
+      context: ./face_api
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      DEEPFACE_HOME: /app/weights
+      FACE_MATCH_THRESHOLD: "0.71"
+      FACE_MATCH_MIN_MARGIN: "0.017"
+      FACE_DECODE_MAX_DIM: "720"
+      FACE_RECOGNIZE_JPEG_QUALITY: "95"
+      FACE_CLAHE_CLIP: "2.35"
+      FACE_DETECTOR_BACKEND: retinaface
+      FACE_RECOGNIZE_DETECTOR_BACKEND: retinaface
+      FACE_RECOGNIZE_DETECTOR_FALLBACK: opencv
+      FACE_ENFORCE_DETECTION_RECOGNIZE: "true"
+    volumes:
+      - ./data/faces:/app/storage/faces
+      - face_weights:/app/weights
+    expose:
+      - "5000"
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  face_weights:

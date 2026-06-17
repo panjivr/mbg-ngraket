@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Sistem Manajemen Dapur MBG by DJATI CORP{% endblock %}
+
+{% block head %}
+  <meta name="description" content="Sistem Manajemen Dapur MBG by DJATI CORP — perencanaan produksi, stok, keuangan, dan nutrisi terintegrasi." />
+  <link rel="canonical" href="/" />
+  <meta property="og:title" content="Sistem Manajemen Dapur MBG by DJATI CORP" />
+  <meta property="og:description" content="Operasional dapur MBG: produksi, inventory, nutrisi, dan laporan." />
+  <script type="application/ld+json" src="/assets/schema-home.json"></script>
+{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/login">Login</a>
+{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div>
+      <h1 class="h1">Operasional dapur yang rapi, cepat, dan terukur.</h1>
+      <p class="lead">Workflow inti: master data → production planning → batch checklist → inventory forecast → nutrisi.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/login">Masuk</a>
+        <a class="btn btn-secondary" href="#fitur">Lihat fitur</a>
+      </div>
+    </div>
+    <div class="card hero-card">
+      <div class="kpi">
+        <div class="kpi-label">Target</div>
+        <div class="kpi-value">&lt; 2s</div>
+        <div class="kpi-help muted">Load cepat di koneksi lambat</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Bundle</div>
+        <div class="kpi-value">&lt; 200KB</div>
+        <div class="kpi-help muted">Minim JavaScript</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Keamanan</div>
+        <div class="kpi-value">OWASP</div>
+        <div class="kpi-help muted">Header + cookie HttpOnly</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fitur" class="grid-3">
+    <div class="card">
+      <h2 class="h2">Production Planning</h2>
+      <p class="muted">Generate plan berdasarkan recipe steps dan kapasitas resource.</p>
+    </div>
+    <div class="card">
+      <h2 class="h2">Batch Checklist</h2>
+      <p class="muted">Eksekusi batch terpantau dan mudah diaudit.</p>
+    </div>
+    <div class="card">
+      <h2 class="h2">Inventory Forecast</h2>
+      <p class="muted">Prediksi kebutuhan bahan untuk menghindari stockout.</p>
+    </div>
+  </section>
+{% endblock %}

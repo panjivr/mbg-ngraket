@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar akun · Manajemen Dapur MBG{% endblock %}
+
+{% block content %}
+  <div class="auth">
+    <div class="card auth-card">
+      <h1 class="h2">Daftar Akun Baru</h1>
+      <p class="muted">Kelola operasional dapur Anda dengan Sistem Manajemen Dapur MBG by DJATI CORP.</p>
+
+      {% if error.is_some() %}
+        <div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+      {% endif %}
+
+      <form method="post" action="/signup" class="form">
+        <label class="label" for="tenant_name">Nama Bisnis / Dapur</label>
+        <input class="input" id="tenant_name" name="tenant_name" type="text" placeholder="Contoh: Berkah Catering" required />
+
+        <label class="label" for="email">Email Administrator</label>
+        <input class="input" id="email" name="email" type="email" autocomplete="email" required />
+
+        <label class="label" for="password">Kata Sandi</label>
+        <div class="password-wrapper">
+          <input class="input" id="password" name="password" type="password" autocomplete="new-password" required />
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Tampilkan kata sandi">
+            <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+
+        <div class="row" style="margin-top: 20px;">
+          <button class="btn btn-primary" type="submit">Daftar Sekarang</button>
+          <a class="btn btn-secondary" href="/login">Sudah punya akun? Login</a>
+        </div>
+      </form>
+    </div>
+    <div class="card auth-side">
+      <div class="muted">Keuntungan Bergabung</div>
+      <ul class="list">
+        <li>Gratis uji coba 14 hari</li>
+        <li>Akses semua modul (Inventory, Finance, Nutrisi)</li>
+        <li>Keamanan data terjamin</li>
+        <li>Dukungan teknis responsif</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

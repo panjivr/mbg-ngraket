@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Plan Details · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Plan Details</h1>
+      <div class="muted mono">{{ plan_id }}</div>
+    </div>
+    <div class="row">
+      <form method="post" action="/app/plans/{{ plan_id }}/documents" class="inline">
+        <button class="btn btn-primary" type="submit">Generate Documents</button>
+      </form>
+      <a class="btn btn-secondary" href="/app/plans">Back</a>
+    </div>
+  </section>
+
+  {% if message.is_some() %}
+    <div class="alert alert-success">{{ message.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card">
+    <div class="grid-2">
+      <div class="kpi">
+        <div class="kpi-label">Status</div>
+        <div class="kpi-value">{{ status }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Target portions</div>
+        <div class="kpi-value">{{ target_portions }}</div>
+      </div>
+    </div>
+    <div class="muted mono">Delivery: {{ target_delivery_time }}</div>
+  </section>
+{% endblock %}

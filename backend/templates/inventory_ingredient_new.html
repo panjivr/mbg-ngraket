@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Add Ingredient · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Add Ingredient</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+  </section>
+
+  {% if error.is_some() %}
+    <div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card">
+    <form method="post" action="/app/inventory/ingredients/new" class="form">
+      <label class="label" for="name">Ingredient name</label>
+      <input class="input" id="name" name="name" type="text" value="{{ name }}" />
+
+      <label class="label" for="quantity">Initial quantity</label>
+      <input class="input" id="quantity" name="quantity" type="number" step="0.01" value="{{ quantity }}" />
+
+      <label class="label" for="unit">Unit</label>
+      <input class="input" id="unit" name="unit" type="text" value="{{ unit }}" placeholder="kg / gr / pcs" />
+
+      <div class="row">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-secondary" href="/app/inventory/ingredients">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Batches · MBG{% endblock %}
+
+{% block topnav %}
+<a class="btn btn-ghost" href="/app">Dashboard</a>
+<a class="btn btn-ghost" href="/app/plans">Plans</a>
+<a class="btn btn-ghost" href="/app/batches">Batches</a>
+<a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+<a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+<form method="post" action="/logout" class="inline">
+  <button class="btn btn-secondary" type="submit">Logout</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="h1">Batches</h1>
+    <div class="muted">Tenant: {{ tenant_id }}</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="h2">Pilih Plan</h2>
+  <form method="get" action="/app/batches" class="row">
+    <select class="input" name="plan_id" required>
+      <option value="" {% if selected_plan_id.is_none() %}selected{% endif %}>Pilih plan…</option>
+      {% for p in plans %}
+      <option value="{{ p.id }}" {% if selected_plan_id.is_some() &&
+        selected_plan_id.as_ref().unwrap().as_str()==p.id.as_str() %}selected{% endif %}>
+        {{ p.id }} · {{ p.status }} · {{ p.target_portions }}
+      </option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-primary" type="submit">Load</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2 class="h2">Daftar Batch</h2>
+  <div class="table">
+    <table>
+      <thead>
+        <tr>
+          <th>Menu</th>
+          <th>Batch size</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Status</th>
+          <th>ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <td>{{ b.menu_item_name }}</td>
+          <td>{{ b.batch_size }}</td>
+          <td class="mono">{{ b.start_time }}</td>
+          <td class="mono">{{ b.end_time }}</td>
+          <td>{{ b.status }}</td>
+          <td class="mono">{{ b.id }}</td>
+        </tr>
+        {% endfor %}
+        {% if batches.len() == 0 %}
+        <tr>
+          <td colspan="6" class="muted">Tidak ada batch untuk plan ini.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

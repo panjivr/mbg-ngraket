@@ -1,0 +1,11 @@
+[package]
+name = "scheduler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+time = { workspace = true }
+uuid = { workspace = true }
+shared = { path = "../shared" }
+rand = "0.8"

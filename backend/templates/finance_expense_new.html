@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Add Expense · MBG{% endblock %}
+
+{% block topnav %}
+<a class="btn btn-ghost" href="/app">Dashboard</a>
+<a class="btn btn-ghost" href="/app/plans">Production</a>
+<a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+<a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+<a class="btn btn-ghost" href="/app/finance">Finance</a>
+<a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+<form method="post" action="/logout" class="inline">
+  <button class="btn btn-secondary" type="submit">Logout</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="h1">Add Expense</h1>
+    <div class="muted">Tenant: {{ tenant_id }}</div>
+  </div>
+</section>
+
+{% if error.is_some() %}
+<div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+{% endif %}
+
+<section class="card">
+  <form method="post" action="/app/finance/expenses/new" class="form">
+    <label class="label" for="amount">Amount</label>
+    <input class="input" id="amount" name="amount" type="text" value="{{ amount }}" />
+
+    <label class="label" for="category">Category</label>
+    <select class="input" id="category" name="category">
+      <option value="">Category</option>
+      {% for c in categories %}
+      <option value="{{ c }}" {% if c.as_str()==category.as_str() %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="label" for="description">Description</label>
+    <input class="input" id="description" name="description" type="text" value="{{ description }}" />
+
+    <div class="row">
+      <button class="btn btn-primary" type="submit">Save Expense</button>
+      <a class="btn btn-secondary" href="/app/finance">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "updated_note": "Tautan mengarah ke situs resmi BGN. Unduh PDF resmi dari halaman tujuan. Salin PDF ke folder ini bila ingin muncul di aplikasi sebagai 'arsip lokal'.",
+  "canonical_reference": {
+    "short": "Keputusan Kepala BGN Nomor 401.1 Tahun 2025",
+    "about": "Petunjuk teknis tata kelola penyelenggaraan Program Makan Bergizi Gratis (acuan sistem & SOP internal aplikasi)."
+  },
+  "official_links": [
+    {
+      "id": "portal_juknis",
+      "title": "Portal Dokumen Juknis BGN",
+      "subtitle": "Pintu utama unduhan peraturan / petunjuk teknis terkait MBG",
+      "url": "https://www.bgn.go.id/juknis",
+      "kind": "portal"
+    },
+    {
+      "id": "juknis_tata_kelola_mbg",
+      "title": "Petunjuk Teknis Tata Kelola Penyelenggaraan Program Makan Bergizi Gratis (halaman BGN)",
+      "subtitle": "Dokumen Juknis terbitan BGN — unduh PDF resmi dari halaman ini",
+      "url": "https://www.bgn.go.id/juknis/lB1PKg-petunjuk-teknis-tata-kelola-penyelenggaraan-program-makan-bergizi-gratis",
+      "kind": "juknis_page"
+    },
+    {
+      "id": "jdih_keputusan",
+      "title": "JDIH BGN — Kategori Keputusan",
+      "subtitle": "Arsip keputusan resmi Badan Gizi Nasional",
+      "url": "https://jdih.bgn.go.id/jdih/category/keputusan",
+      "kind": "jdih"
+    },
+    {
+      "id": "jdih_search",
+      "title": "JDIH BGN — Pencarian Peraturan",
+      "subtitle": "Cari nomor keputusan / tahun jika URL halaman Juknis berubah",
+      "url": "https://jdih.bgn.go.id/jdih/search?tipe_dokumen=peraturan",
+      "kind": "jdih"
+    },
+    {
+      "id": "bgn_home",
+      "title": "Situs Resmi BGN",
+      "subtitle": "Informasi program & publikasi resmi",
+      "url": "https://www.bgn.go.id",
+      "kind": "portal"
+    }
+  ],
+  "repository_reference": {
+    "title": "Matriks pemetaan internal (bukan dokumen hukum)",
+    "path": "BGN_JUKNIS_MATRIX.md",
+    "note": "Berada di root repositori proyek; memetakan indikator Juknis ke modul aplikasi."
+  },
+  "internal_sop_catalog": {
+    "title": "SOP operasional aplikasi (bukan substitusi Juknis)",
+    "path": "frontend/docs/juknis-bgn/sop-internal-catalog.json",
+    "generator": "node scripts/generate_sop_catalog.js",
+    "note": "Ditampilkan di menu Jobdesc & Tugas; diperbarui terpisah dari unduhan resmi BGN."
+  }
+}

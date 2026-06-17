@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi wajah — Sistem Manajemen Dapur MBG by DJATI CORP</title>
+    <script src="js/brand.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="staff-page">
+    <div class="min-h-screen" style="background: linear-gradient(135deg,#0B1220 0%,#0F172A 100%); display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="login-container" style="max-width: 500px; width: 100%;">
+            <div class="login-right" style="border-radius: var(--radius-lg); padding: 1.25rem;">
+                <div id="staff-face-login">
+                    <div style="margin-bottom:1rem;">
+                        <button class="btn btn-secondary btn-xs mb-2" onclick="window.location.href='staff.html'"><i class="fas fa-arrow-left"></i> Kembali</button>
+                        <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-main);letter-spacing:-0.02em;margin-bottom:0.25rem;">Absensi</h2>
+                        <p id="face_tenant_hint" style="font-size:0.7rem;color:var(--text-muted);margin-top:0.35rem;line-height:1.4;"></p>
+                        <div style="margin-top:0.5rem;">
+                            <label class="input-label" style="font-size:0.75rem; display:block; margin-bottom:0.25rem;">Pilih Kitchen / SPPG</label>
+                            <select id="face_portal_tenant_select" class="input-field" style="width:100%;"></select>
+                            <div id="face_portal_tenant_error" class="field-error mt-2 hidden" style="font-size:0.75rem;"></div>
+                        </div>
+                    </div>
+
+                    <div class="card text-center mb-3" style="border: 2px solid var(--accent); background: var(--bg-card-soft); padding: 0.75rem;">
+                        <div id="face-scan-state">
+                            <div style="position:relative; overflow:hidden; border-radius:var(--radius); background:#000; width:100%; max-width:440px; margin:0 auto;">
+                                <video id="login_video" class="w-full" style="min-height:260px; transform: scaleX(-1);" playsinline autoplay muted></video>
+                                <div id="face-status-text" style="position:absolute; bottom:10px; width:100%; color:#fff; font-size:0.72rem; font-weight:600; text-shadow:0 1px 4px rgba(0,0,0,0.85); padding:0 8px;">Menyalakan kamera…</div>
+                            </div>
+                        </div>
+
+                        <div id="face-absen-panel" class="text-left mt-3" style="padding: 0 0.25rem;">
+                            <div class="grid-cols-2 gap-2 mb-2" style="display: grid;">
+                                <button type="button" class="btn btn-primary" id="btn-face-clock-in" onclick="submitFaceAttendance('CLOCK_IN')" style="background: #10B981; border-color: #059669; height: 44px; font-size: 0.88rem;">
+                                    <i class="fas fa-play mr-1"></i> Clock In
+                                </button>
+                                <button type="button" class="btn btn-warning text-white" id="btn-face-clock-out" onclick="submitFaceAttendance('CLOCK_OUT')" style="background: #F59E0B; border-color: #D97706; height: 44px; font-size: 0.88rem;">
+                                    <i class="fas fa-stop mr-1"></i> Clock Out
+                                </button>
+                            </div>
+
+                            <div id="face_login_error" class="field-error mb-2 hidden" style="font-size: 0.75rem; padding: 4px;"></div>
+
+                            <button type="button" class="btn btn-link btn-xs w-full" style="font-size: 0.7rem;" onclick="window.location.reload()">
+                                <i class="fas fa-sync"></i> Muat ulang halaman
+                            </button>
+                        </div>
+
+                        <div id="face-success-page" class="hidden mt-3 text-center">
+                            <div style="font-size:2rem; color:#10B981; margin-bottom:0.35rem;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin:0 0 0.35rem 0;" id="face-success-title">
+                                Absensi berhasil
+                            </h3>
+                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin:0 0 0.75rem 0;" id="face-success-message">
+                                Anda sudah berhasil absen masuk/keluar.
+                            </p>
+                            <button type="button" class="btn btn-primary w-full" style="background:#10B981; border-color:#059669;" onclick="resetStaffFaceAbsenLanding()">
+                                <i class="fas fa-redo mr-1"></i> Absensi lagi
+                            </button>
+                        </div>
+
+                        <div id="face-location-reject-page" class="hidden mt-3 text-center" style="padding: 0 0.35rem;">
+                            <div style="font-size:2rem; color:#F59E0B; margin-bottom:0.35rem;">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-main); margin:0 0 0.35rem 0;" id="face-location-reject-title">
+                                Lokasi tidak sesuai
+                            </h3>
+                            <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.55; margin:0 0 0.5rem 0;" id="face-location-reject-message"></p>
+                            <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin:0 0 0.85rem 0;" id="face-location-reject-detail"></p>
+                            <button type="button" class="btn btn-primary w-full" style="background:#3B82F6; border-color:#2563EB;" onclick="resetStaffFaceAbsenLanding()">
+                                <i class="fas fa-redo mr-1"></i> Absensi kembali
+                            </button>
+                            <p style="font-size:0.68rem; color:var(--text-muted); margin:0.65rem 0 0 0; line-height:1.45;">
+                                Absensi tidak tercatat sampai lokasi memenuhi kebijakan. Pastikan kitchen/SPPG yang dipilih benar.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-area" class="toast-area"></div>
+    <script src='js/core.js?v=30'></script>
+    <script src='js/staff_attendance.js?v=34'></script>
+    <script>
+        window.addEventListener('load', async () => {
+            if (typeof initStaffPage === 'function') {
+                await initStaffPage();
+            }
+            if (typeof loadDivisions === 'function') {
+                await loadDivisions();
+            }
+            if (typeof initStaffFaceAbsenPage === 'function') {
+                await initStaffFaceAbsenPage();
+            }
+        });
+    </script>
+</body>
+</html>

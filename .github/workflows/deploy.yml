@@ -1,0 +1,28 @@
+# OPTIONAL: auto-deploy to your VM on every push to main.
+# Requires 3 repo secrets (Settings > Secrets and variables > Actions):
+#   VM_HOST  = your VM public IP
+#   VM_USER  = ubuntu
+#   VM_SSH_KEY = the PRIVATE SSH key for the VM
+# If you don't set these, this workflow simply no-ops.
+name: deploy
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        if: ${{ secrets.VM_HOST != '' }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            if [ ! -d ~/mbg ]; then git clone ${{ github.server_url }}/${{ github.repository }} ~/mbg; fi
+            cd ~/mbg
+            git pull --ff-only
+            ./deploy.sh

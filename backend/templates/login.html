@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Masuk · Manajemen Dapur MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/">Beranda</a>
+{% endblock %}
+
+{% block content %}
+  <div class="auth">
+    <div class="card auth-card">
+      <h1 class="h2">Masuk</h1>
+      <p class="muted">Gunakan email dan kata sandi akun kitchen Anda.</p>
+
+      {% if error.is_some() %}
+        <div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+      {% endif %}
+
+      <form method="post" action="/login" class="form">
+        <label class="label" for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" autocomplete="username" required />
+
+        <label class="label" for="password">Kata sandi</label>
+        <div class="password-wrapper">
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required />
+          <button type="button" class="password-toggle" onclick="togglePassword(this)" aria-label="Tampilkan kata sandi">
+            <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+
+        <label class="label" for="role">Role</label>
+        <select class="input" id="role" name="role" required>
+          <option value="kepala_sppg">Kepala SPPG</option>
+          <option value="asisten_lapangan">Asisten Lapangan</option>
+          <option value="ahli_gizi">Ahli Gizi</option>
+          <option value="koordinator">Koordinator</option>
+          <option value="driver">Driver</option>
+          <option value="admin">Admin</option>
+          <option value="owner">Owner</option>
+        </select>
+
+        <label class="label" for="tenant_id">Tenant ID (opsional)</label>
+        <input class="input" id="tenant_id" name="tenant_id" type="text" placeholder="UUID tenant" />
+
+        <div class="row" style="margin-top: 20px;">
+          <button class="btn btn-primary" type="submit">Login</button>
+          <a class="btn btn-secondary" href="/">Batal</a>
+        </div>
+      </form>
+
+      <div style="margin-top: 24px; text-align: center; font-size: 14px;">
+        <p class="muted">Belum punya akun? <a href="/signup" style="color: var(--primary-2); font-weight: 600;">Daftar Sekarang</a></p>
+        <p class="muted" style="margin-top: 8px;"><a href="/forgot-password" style="color: var(--muted);">Lupa kata sandi?</a></p>
+      </div>
+    </div>
+    <div class="card auth-side">
+      <div class="muted">Keamanan</div>
+      <ul class="list">
+        <li>Session via cookie HttpOnly</li>
+        <li>Tenant ter-ikat pada token</li>
+        <li>Tanpa dependensi frontend berat</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

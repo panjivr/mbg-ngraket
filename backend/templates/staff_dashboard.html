@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}MBG - Portal Relawan{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header style="margin-bottom: 32px;">
+        <h1 class="h1">Portal Relawan</h1>
+        <p class="muted">Selamat datang, {{ user_email }}</p>
+    </header>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2 class="h2">Tugas Saya</h2>
+            <p class="muted">Lihat tugas harian yang diberikan koordinator.</p>
+            <a href="/app/tasks" class="btn btn-primary" style="margin-top: 16px;">Buka Tugas</a>
+        </div>
+        <div class="card">
+            <h2 class="h2">Absensi</h2>
+            <p class="muted">Lakukan absensi masuk atau pulang.</p>
+            <a href="/legacy/staff/attendance" class="btn btn-secondary" style="margin-top: 16px;">Absensi</a>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+        <h2 class="h2">Informasi Penting</h2>
+        <ul style="margin-top: 16px; padding-left: 20px;">
+            <li>Pastikan selalu mencuci tangan sebelum menangani makanan.</li>
+            <li>Gunakan APD lengkap saat bertugas di dapur.</li>
+            <li>Laporkan kendala ke koordinator divisi.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

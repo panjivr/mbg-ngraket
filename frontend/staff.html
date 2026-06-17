@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal relawan &amp; staf — Sistem Manajemen Dapur MBG by DJATI CORP</title>
+    <script src="js/brand.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .landing-grid { display: flex; flex-direction: column; gap: 1rem; }
+        .landing-card {
+            display: flex; align-items: center; gap: 1.25rem;
+            padding: 1.25rem; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: var(--radius-lg);
+            cursor: pointer; transition: all 0.2s ease; position: relative;
+        }
+        .landing-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-md); background: var(--bg-card-hover); }
+        .landing-card-icon {
+            width: 54px; height: 54px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; flex-shrink: 0;
+        }
+        .landing-card-body { flex: 1; }
+        .landing-card-title { font-weight: 700; color: var(--text-main); font-size: 1.0625rem; margin-bottom: 0.25rem; }
+        .landing-card-desc { font-size: 0.875rem; color: var(--text-muted); }
+        .landing-card-arrow { color: var(--text-muted); opacity: 0.5; transition: transform 0.2s; }
+        .landing-card:hover .landing-card-arrow { color: var(--primary); opacity: 1; transform: translateX(3px); }
+        
+        .btn-pulse { animation: pulse-border 2s infinite; }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+    </style>
+</head>
+<body class="staff-page">
+    <div id="staff-auth" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0B1220 0%,#0F172A 100%);overflow-y:auto;padding:1rem;">
+        <div class="login-container" style="max-width:920px;min-height:560px;">
+            
+            <!-- Left Panel: Blue Branding -->
+            <div class="login-left login-left--staff" style="flex:1;">
+                <div class="login-brand">
+                    <div class="brand-icon" style="background:rgba(255,255,255,0.18);border-radius:14px;">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.375rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">Portal relawan &amp; staf</div>
+                        <div style="font-size:0.8rem;color:rgba(255,255,255,0.65);">Absensi &amp; tugas lapangan — MBG</div>
+                    </div>
+                </div>
+
+                <p style="font-size:0.9rem;color:rgba(255,255,255,0.75);line-height:1.65;margin-bottom:0.5rem;">
+                    Platform absensi dan manajemen tugas relawan dapur MBG. Gunakan pengenalan wajah biometrik untuk masuk lebih cepat dan aman.
+                </p>
+
+                <ul class="sp-feature-list">
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-user-lock"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Absensi Biometrik</strong>
+                            <span>Scan wajah instan tanpa perlu mengingat kata sandi atau PIN</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-camera-retro"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Pendaftaran Mandiri</strong>
+                            <span>Daftarkan data biometrik Anda sendiri dalam hitungan detik</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-sitemap"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Panel Koordinator</strong>
+                            <span>Kelola tugas divisi dan rekap absensi harian secara terpadu</span>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="mt-auto" style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin-top:2.5rem;">
+                    &copy; 2026 DJATI CORP — Manajemen Dapur MBG
+                </div>
+            </div>
+
+            <!-- Right Panel: Landing Grid -->
+            <div class="login-right" style="flex:1;background:var(--bg-card); display:flex; flex-direction:column; justify-content:center; padding: 2.5rem;">
+                
+                <!-- LANDING SECTION -->
+                <div id="staff-landing">
+                    <div style="margin-bottom:2rem;">
+                        <h2 style="font-size:1.6rem;font-weight:800;color:var(--text-main);letter-spacing:-0.03em;margin-bottom:0.4rem;">Selamat datang</h2>
+                        <p style="font-size:0.875rem;color:var(--text-muted);">Pilih cara masuk atau daftar wajah baru — ikuti arahan koordinator dapur Anda.</p>
+                        <div id="st_landing_msg" class="p-3 my-3 hidden" style="background:var(--success-soft-bg); color:var(--success); border-radius:var(--radius); border-left:4px solid var(--success); font-weight:500; font-size:0.85rem;"></div>
+                    </div>
+                    
+                    <div class="landing-grid">
+                        <div class="landing-card" onclick="window.location.href='staff_login.html'">
+                            <div class="landing-card-icon" style="background: var(--primary-light); color: var(--primary);"><i class="fas fa-keyboard"></i></div>
+                            <div class="landing-card-body">
+                                <div class="landing-card-title">Login manual</div>
+                                <div class="landing-card-desc">Kode staf dan PIN (tanpa kamera)</div>
+                            </div>
+                            <i class="fas fa-chevron-right landing-card-arrow"></i>
+                        </div>
+
+                        <div class="landing-card" onclick="window.location.href='staff_face_login.html?v=8'">
+                            <div class="landing-card-icon" style="background: rgba(124, 58, 237, 0.1); color: #7C3AED;"><i class="fas fa-user-circle"></i></div>
+                            <div class="landing-card-body">
+                                <div class="landing-card-title">Absensi wajah</div>
+                                <div class="landing-card-desc">Pindai wajah untuk masuk lebih cepat</div>
+                            </div>
+                            <i class="fas fa-chevron-right landing-card-arrow"></i>
+                        </div>
+
+                        <div class="landing-card" onclick="window.location.href='staff_register.html?v=2'">
+                            <div class="landing-card-icon" style="background: var(--bg-hover); color: var(--text-muted);"><i class="fas fa-camera"></i></div>
+                            <div class="landing-card-body">
+                                <div class="landing-card-title">Daftar wajah baru</div>
+                                <div class="landing-card-desc">Pendaftaran biometrik untuk staf baru</div>
+                            </div>
+                            <i class="fas fa-chevron-right landing-card-arrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DASHBOARD (Only visible after initStaffPage logic handles it) -->
+                <div id="staff-attendance" class="hidden w-full">
+                    <!-- ... hidden during landing ... -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN PORTAL WRAPPER (POST LOGIN) -->
+    <div id="staff-main-portal" class="hidden" style="min-height:100vh; background:var(--bg-body); padding: 2rem;">
+        <div class="container" style="max-width: 900px; margin: 0 auto;">
+            <div id="staff-attendance">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <div class="text-sm text-muted">Login sebagai</div>
+                        <div class="text-xl font-bold" id="st_user_label">-</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="staffLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="form-grid">
+                        <div class="form-full">
+                            <label class="input-label">Nama</label>
+                            <input id="att_name" class="input-field" placeholder="Nama" />
+                        </div>
+                        <div class="form-full">
+                            <label class="input-label">Divisi</label>
+                            <select id="att_division" class="input-field"></select>
+                        </div>
+                        <div class="form-full">
+                            <label class="input-label">Foto</label>
+                            <div class="grid-cols-2 gap-3">
+                                <div>
+                                    <video id="att_video" class="w-full" style="border-radius: var(--radius); border:1px solid var(--border); background:#000;" playsinline autoplay muted></video>
+                                    <div class="flex gap-2 mt-2">
+                                        <button class="btn btn-secondary btn-sm" onclick="startCamera()"><i class="fas fa-camera"></i> Kamera</button>
+                                        <button class="btn btn-secondary btn-sm" onclick="capturePhoto()"><i class="fas fa-image"></i> Ambil</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <img id="att_preview" alt="preview" style="width:100%; border-radius: var(--radius); border:1px solid var(--border); background:#111; min-height:180px; object-fit:cover;" />
+                                    <div class="mt-2">
+                                        <input id="att_upload" type="file" accept="image/*" class="input-field" onchange="uploadPhotoFile()" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-cols-2 gap-3 mb-4">
+                    <button class="btn btn-primary" onclick="sendAttendanceEvent('CLOCK_IN')"><i class="fas fa-play"></i> Clock In</button>
+                    <button class="btn btn-secondary" onclick="sendAttendanceEvent('CLOCK_OUT')"><i class="fas fa-stop"></i> Clock Out</button>
+                </div>
+
+                <div class="card mt-4" style="padding: 1rem; border-radius: var(--radius); background: var(--bg-card); box-shadow: var(--shadow);">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="font-bold" style="font-size: 0.9rem;">Riwayat Hari Ini</div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadMyTodayEvents()" style="font-size: 0.75rem; padding: 4px 8px;"><i class="fas fa-sync"></i> Refresh</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full" style="font-size: 0.8rem;">
+                            <thead>
+                                <tr>
+                                    <th class="p-3 text-left font-bold text-muted uppercase" style="font-size: 0.75rem;">Waktu</th>
+                                    <th class="p-3 text-left font-bold text-muted uppercase" style="font-size: 0.75rem;">Event</th>
+                                    <th class="p-3 text-left font-bold text-muted uppercase" style="font-size: 0.75rem;">Divisi</th>
+                                    <th class="p-3 text-left font-bold text-muted uppercase" style="font-size: 0.75rem;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="att_today_rows">
+                                <tr><td colspan="4" class="text-center p-8 text-muted italic">Memuat riwayat...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="st_action_error" class="field-error p-4 hidden"></div>
+            </div>
+
+            <!-- CARD JOBDESC / TUGAS SAYA (semua role) -->
+            <div id="jobdesc-panel" class="hidden mt-4">
+                <div class="card" style="border-left: 4px solid #3b82f6;">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-3">
+                            <div style="width:40px;height:40px;background:#3b82f6;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-clipboard-list" style="color:#fff;"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold">Jobdesc / Tugas Saya</div>
+                                <div class="text-sm text-muted" id="jobdesc_scope_label">—</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="jobdesc_count_badge" class="chip" style="background:#eff6ff;color:#1d4ed8;font-weight:700;">0</span>
+                            <button class="btn btn-secondary btn-sm" onclick="loadKoorTasks()" title="Refresh" style="font-size:0.7rem;"><i class="fas fa-sync"></i></button>
+                            <button class="btn btn-primary btn-sm" onclick="toggleJobdescPanel()" id="jobdesc_toggle_btn" style="font-size:0.7rem;">Buka</button>
+                        </div>
+                    </div>
+                    <div id="koor-task-container" class="hidden mt-2 pt-3" style="border-top:1px solid var(--border);">
+                        <div id="koor_task_list" class="flex flex-column gap-2">
+                            <!-- Tasks will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL KOORDINATOR DIVISI (fitur tambahan khusus koordinator) -->
+            <div id="koordinator-panel" class="hidden mt-4">
+                <div class="card" style="border-left: 4px solid var(--accent);">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div style="width:40px;height:40px;background:var(--accent);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-sitemap" style="color:#fff;"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold">Koordinator Divisi</div>
+                            <div class="text-sm text-muted" id="koor_division_label">—</div>
+                        </div>
+                    </div>
+                    <div class="grid-cols-2 gap-3" style="display:grid;" id="koor_feature_grid">
+                        <div class="card text-center" style="padding:1rem; cursor:pointer; border:1px solid var(--border);" onclick="openKoorAttendanceRecap()" title="Rekap kehadiran anggota divisi Anda">
+                            <i class="fas fa-users fa-lg mb-2" style="color: var(--primary);"></i>
+                            <div class="text-sm font-bold">Rekap Absensi</div>
+                            <div class="text-xs text-muted mt-1">Kehadiran anggota divisi</div>
+                        </div>
+                        <div class="card text-center" style="padding:1rem; cursor:pointer; border:1px solid var(--border);" onclick="openKoorKpiPanel()" title="Penilaian KPI anggota divisi">
+                            <i class="fas fa-star fa-lg mb-2" style="color: var(--secondary);"></i>
+                            <div class="text-sm font-bold">Penilaian KPI</div>
+                            <div class="text-xs text-muted mt-1">Kedisiplinan, 5R, Improvement</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-area" class="toast-area"></div>
+
+    <!-- Modal overlay (dipakai openModalUi / closeModalUi dari core.js) -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Modal</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeModalUi()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div id="modal-error" class="field-error p-4 hidden"></div>
+            <div class="modal-actions" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <script src='js/core.js?v=31'></script>
+    <script src='js/staff_attendance.js?v=37'></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Tasks · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Tasks</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+    <div class="row">
+      <a class="btn btn-primary" href="/app/tasks/new">Create Task</a>
+    </div>
+  </section>
+
+  {% if message.is_some() %}
+    <div class="alert alert-success">{{ message.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card" id="task-list">
+    <h2 class="h2">Task list</h2>
+    <div class="table">
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Division</th>
+            <th>Due</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+            <tr>
+              <td>{{ t.title }}</td>
+              <td>{{ t.division }}</td>
+              <td class="mono">{{ t.due_date }}</td>
+              <td>{{ t.status }}</td>
+            </tr>
+          {% endfor %}
+          {% if tasks.len() == 0 %}
+            <tr><td colspan="4" class="muted">No tasks</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Finance · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Finance</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+    <div class="row">
+      <a class="btn btn-primary" href="/app/finance/expenses/new">Add Expense</a>
+      <a class="btn btn-secondary" href="/app/finance?report=1">Preview Report</a>
+    </div>
+  </section>
+
+  {% if message.is_some() %}
+    <div class="alert alert-success">{{ message.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card" id="finance-summary">
+    <h2 class="h2">Finance Summary</h2>
+    <div class="muted">Summary</div>
+    <div class="grid-2">
+      <div class="kpi">
+        <div class="kpi-label">Total cost</div>
+        <div class="kpi-value">{{ total_cost }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avg cost per portion</div>
+        <div class="kpi-value">{{ avg_cost_per_portion }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="h2">Transactions</h2>
+    <div class="table">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in txns %}
+            <tr>
+              <td>{{ t.category }}</td>
+              <td class="mono">{{ t.amount }}</td>
+              <td>{{ t.description }}</td>
+            </tr>
+          {% endfor %}
+          {% if txns.len() == 0 %}
+            <tr><td colspan="3" class="muted">No transactions</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if show_report %}
+    <section class="card">
+      <h2 class="h2">Report</h2>
+      <div class="muted">Preview report</div>
+    </section>
+  {% endif %}
+{% endblock %}
+

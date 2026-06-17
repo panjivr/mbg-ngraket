@@ -1,0 +1,2582 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Dapur MBG by DJATI CORP</title>
+    <script src="js/brand.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20260424g">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-left">
+                <div class="mb-4">
+                    <div class="logo-placeholder">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-1">Manajemen Dapur MBG</h1>
+                    <p class="text-sm mb-2 opacity-80">oleh <strong>DJATI CORP</strong></p>
+                    <h2 class="text-xl font-bold mb-4 opacity-90">Sistem Manajemen Dapur MBG</h2>
+                    <p class="opacity-80 text-sm leading-relaxed">Ringkas, jelas, dan aman untuk operasional dapur skala SPPG &amp; catering.</p>
+                </div>
+                <div class="mt-auto text-sm opacity-80">
+                    &copy; DJATI CORP
+                </div>
+            </div>
+            
+            <div class="login-right">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-primary mb-2" data-i18n="login.title">Silakan Login</h2>
+                    <p class="text-muted text-sm" data-i18n="login.subtitle">Masuk menggunakan akun yang Anda miliki</p>
+                </div>
+
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="input-group">
+                        <label class="input-label" data-i18n="login.role">Role / Jabatan</label>
+                        <select id="login-role" class="input-field" required>
+                            <option value="" disabled selected>Pilih Jabatan...</option>
+                            <option value="kepala_sppg">Kepala SPPG</option>
+                            <option value="yayasan">Yayasan</option>
+                            <option value="akuntan">Akuntan</option>
+                            <option value="ahli_gizi">Ahli Gizi</option>
+                            <option value="asisten_lapangan">Asisten Lapangan</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" id="login-tenant-group">
+                        <label class="input-label" data-i18n="login.tenant">Kode dapur / kitchen</label>
+                        <input type="text" id="login-tenant" class="input-field" placeholder="Kode atau nama kitchen dari pengelola">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" data-i18n="login.username">Nama Akun</label>
+                        <input type="text" id="login-user" class="input-field" placeholder="Username / Email" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" data-i18n="login.password">Kata Sandi</label>
+                        <div style="position:relative;">
+                            <input type="password" id="login-pass" class="input-field" placeholder="••••••••" required style="padding-right:44px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('login-pass', this)" aria-label="Toggle Password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:8px; border-radius:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label" data-i18n="login.security">Verifikasi Keamanan</label>
+                        <div class="flex gap-2 mb-2">
+                            <div id="captcha-display" class="captcha-box">
+                                <!-- Captcha Code will be injected here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary" title="Refresh Captcha" aria-label="Refresh Captcha" onclick="generateCaptcha()"><i class="fas fa-sync"></i></button>
+                        </div>
+                        <input type="text" id="login-captcha-input" class="input-field" placeholder="Masukkan kode di atas" required>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4 text-sm">
+                        <a href="#" class="text-primary hover:underline" onclick="showSignupScreen(event)">Daftar Akun (Sign Up)</a>
+                        <a href="#" class="text-muted hover:text-primary" onclick="showForgotPasswordScreen(event)">Lupa Password?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full py-2 mb-4 justify-center text-base">
+                        <span data-i18n="login.submit">Masuk Portal</span> <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    
+                    <div class="grid-cols-2 gap-2 mt-4 text-center">
+                        <a href="#" class="btn btn-secondary text-xs py-2 justify-center" onclick="openBilling(event)">
+                            <i class="fas fa-money-bill-wave mr-1"></i> Pembayaran
+                        </a>
+                        <a href="#" class="btn btn-secondary text-xs py-2 justify-center">
+                            <i class="fas fa-user-lock mr-1"></i> Request Access
+                        </a>
+                    </div>
+                </form>
+
+                <div id="login_error" class="field-error mt-4"></div>
+                
+                <div class="text-center mt-6 text-xs text-muted flex gap-4 justify-center">
+                    <a href="#" class="text-muted hover:text-primary">Terms</a>
+                    <a href="#" class="text-muted hover:text-primary">Privacy</a>
+                    <a href="#" class="text-muted hover:text-primary">Help</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="signup-screen" class="hidden">
+        <div class="login-container">
+            <div class="login-left">
+                <div class="mb-4">
+                    <div class="logo-placeholder">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-1">Manajemen Dapur MBG</h1>
+                    <p class="text-sm mb-2 opacity-80">oleh <strong>DJATI CORP</strong></p>
+                    <h2 class="text-xl font-bold mb-4 opacity-90">Buat Akun Baru</h2>
+                    <p class="opacity-80 text-sm leading-relaxed">Daftarkan kitchen / SPPG Anda untuk mulai memakai sistem.</p>
+                </div>
+                <div class="mt-auto text-sm opacity-80">
+                    &copy; DJATI CORP
+                </div>
+            </div>
+            <div class="login-right">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-primary mb-2">Sign Up</h2>
+                    <p class="text-muted text-sm">Lengkapi data untuk membuat tenant.</p>
+                </div>
+
+                <form id="signup-form" onsubmit="handleSignup(event)">
+                    <div class="input-group">
+                        <label class="input-label">Nama Bisnis / Dapur</label>
+                        <input type="text" id="signup-tenant-name" class="input-field" placeholder="Contoh: Berkah Catering" required>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Email</label>
+                        <input type="email" id="signup-email" class="input-field" placeholder="nama@domain.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Kata Sandi</label>
+                        <div style="position:relative;">
+                            <input type="password" id="signup-pass" class="input-field" placeholder="••••••••" required style="padding-right:44px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('signup-pass', this)" aria-label="Toggle Password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:8px; border-radius:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Konfirmasi Kata Sandi</label>
+                        <div style="position:relative;">
+                            <input type="password" id="signup-pass2" class="input-field" placeholder="••••••••" required style="padding-right:44px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('signup-pass2', this)" aria-label="Toggle Password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:8px; border-radius:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full py-2 mb-4 justify-center text-base">
+                        Buat Akun <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <div class="text-center text-sm">
+                        <a href="#" class="text-muted hover:text-primary" onclick="showLoginScreen(event)">Sudah punya akun? Login</a>
+                    </div>
+                </form>
+
+                <div id="signup_error" class="field-error mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="forgot-password-screen" class="hidden">
+        <div class="login-container">
+            <div class="login-left">
+                <div class="mb-4">
+                    <div class="logo-placeholder">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-1">Manajemen Dapur MBG</h1>
+                    <p class="text-sm mb-2 opacity-80">oleh <strong>DJATI CORP</strong></p>
+                    <h2 class="text-xl font-bold mb-4 opacity-90">Reset Password</h2>
+                    <p class="opacity-80 text-sm leading-relaxed">Masukkan email terdaftar. Tautan atau kode reset akan dikirim sesuai pengaturan server.</p>
+                </div>
+                <div class="mt-auto text-sm opacity-80">
+                    &copy; DJATI CORP
+                </div>
+            </div>
+            <div class="login-right">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-primary mb-2">Lupa Password</h2>
+                    <p class="text-muted text-sm">Kami akan mengirimkan tautan atau kode reset ke email Anda.</p>
+                </div>
+
+                <form id="forgot-form" onsubmit="handleForgotPassword(event)">
+                    <div class="input-group">
+                        <label class="input-label">Email</label>
+                        <input type="email" id="forgot-email" class="input-field" placeholder="nama@domain.com" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full py-2 mb-4 justify-center text-base">
+                        Kirim Token <i class="fas fa-paper-plane ml-2"></i>
+                    </button>
+                    <div class="text-center text-sm">
+                        <a href="#" class="text-muted hover:text-primary" onclick="showResetPasswordScreen(event)">Sudah punya token? Reset sekarang</a>
+                        <div style="margin-top:8px;">
+                            <a href="#" class="text-muted hover:text-primary" onclick="showLoginScreen(event)">Kembali</a>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="forgot_info" class="field-error mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reset-password-screen" class="hidden">
+        <div class="login-container">
+            <div class="login-left">
+                <div class="mb-4">
+                    <div class="logo-placeholder">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold mb-1">Manajemen Dapur MBG</h1>
+                    <p class="text-sm mb-2 opacity-80">oleh <strong>DJATI CORP</strong></p>
+                    <h2 class="text-xl font-bold mb-4 opacity-90">Buat Password Baru</h2>
+                    <p class="opacity-80 text-sm leading-relaxed">Masukkan kode reset dan password baru Anda.</p>
+                </div>
+                <div class="mt-auto text-sm opacity-80">
+                    &copy; DJATI CORP
+                </div>
+            </div>
+            <div class="login-right">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-primary mb-2">Reset Password</h2>
+                    <p class="text-muted text-sm">Token berlaku 1 jam.</p>
+                </div>
+
+                <form id="reset-form" onsubmit="handleResetPassword(event)">
+                    <div class="input-group">
+                        <label class="input-label">Token Reset</label>
+                        <input type="text" id="reset-token" class="input-field" placeholder="Tempel token di sini" required>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password Baru</label>
+                        <div style="position:relative;">
+                            <input type="password" id="reset-pass" class="input-field" placeholder="••••••••" required style="padding-right:44px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('reset-pass', this)" aria-label="Toggle Password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:8px; border-radius:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Konfirmasi Password Baru</label>
+                        <div style="position:relative;">
+                            <input type="password" id="reset-pass2" class="input-field" placeholder="••••••••" required style="padding-right:44px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('reset-pass2', this)" aria-label="Toggle Password" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); padding:8px; border-radius:10px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full py-2 mb-4 justify-center text-base">
+                        Ubah Password <i class="fas fa-check ml-2"></i>
+                    </button>
+                    <div class="text-center text-sm">
+                        <a href="#" class="text-muted hover:text-primary" onclick="showLoginScreen(event)">Kembali ke Login</a>
+                    </div>
+                </form>
+
+                <div id="reset_error" class="field-error mt-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP SHELL -->
+    <div id="app-shell" class="hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <div class="brand">
+                <div class="logo-sm">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 4v2a3 3 0 0 0 3 3m0 0V4m0 5v11M8 9a3 3 0 0 0 3-3V4m5 8V4c3 2 3 4 3 8h-3Zm0 0v8"/>
+                    </svg>
+                </div>
+                <span>Manajemen Dapur MBG</span>
+            </div>
+            
+            <nav class="nav-menu" id="nav-menu">
+                <!-- Links will be injected by JS based on role -->
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar" id="user-avatar">U</div>
+                <div class="flex-1 overflow-hidden">
+                    <div class="font-bold text-sm truncate" id="user-name">User</div>
+                    <div class="text-muted text-xs truncate" id="user-role-label">Role</div>
+                </div>
+                <button onclick="logout()" class="btn btn-secondary btn-sm" title="Logout" aria-label="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <header class="flex justify-between items-center mb-4 pb-2 border-b">
+                <div class="flex items-center gap-3">
+                    <button class="btn btn-secondary btn-sm" id="menu-toggle-btn" aria-label="Toggle Sidebar" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+                    <div>
+                        <h2 class="text-2xl font-bold" id="page-title">Dashboard</h2>
+                        <p class="text-muted text-sm" id="current-date">Today</p>
+                        <div id="upgrade-banner" class="hidden text-xs text-muted mt-2" style="cursor:pointer">
+                            <span id="upgrade-banner-text">Upgrade untuk unlock fitur premium.</span>
+                            <span class="text-primary hover:underline ml-2" onclick="openBilling(event)">Pembayaran</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary btn-sm" id="quick-actions-btn" aria-label="Quick Actions" onclick="openCommandPalette()" title="Quick Actions (Ctrl/Cmd+K)"><i class="fas fa-search"></i></button>
+                    <button class="btn btn-secondary btn-sm" id="density-btn" aria-label="Toggle Density" onclick="toggleDensityMode()" title="Compact Density"><i class="fas fa-compress-alt"></i></button>
+                    <button class="btn btn-secondary btn-sm" id="notif-btn" aria-label="Notifications" onclick="openNotifications()"><i class="fas fa-bell"></i></button>
+                    <button class="btn btn-secondary btn-sm" id="billing-btn" aria-label="Pembayaran & Langganan" onclick="openBilling()"><i class="fas fa-money-bill-wave"></i></button>
+                    <button class="btn btn-secondary btn-sm" id="settings-btn" aria-label="Settings" onclick="openAppSettings()"><i class="fas fa-cog"></i></button>
+                </div>
+            </header>
+
+            <!-- DYNAMIC VIEWS -->
+            
+            <!-- 1. SPPG / Manager Dashboard -->
+            <div id="view-dashboard-sppg" class="view-section hidden">
+                <!-- Welcome hero -->
+                <div class="dash-hero mb-4">
+                    <div class="dash-hero-left">
+                        <div class="dash-hero-greeting" id="dash-hero-greeting">Selamat datang</div>
+                        <div class="dash-hero-subtitle" id="dash-hero-subtitle">Ringkasan operasional SPPG Anda hari ini.</div>
+                    </div>
+                    <div class="dash-hero-right">
+                        <div class="dash-hero-date" id="dash-hero-date">-</div>
+                        <div class="flex gap-2 mt-2 justify-end flex-wrap">
+                            <button class="btn btn-secondary btn-sm" onclick="loadDashboard()" title="Refresh dashboard"><i class="fas fa-sync"></i> Refresh</button>
+                            <button class="btn btn-primary btn-sm" onclick="switchView('prod-draft')"><i class="fas fa-robot"></i> War Room</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary KPI grid -->
+                <div class="dash-kpi-grid mb-4">
+                    <div class="dash-kpi-card dash-kpi--primary" onclick="switchView('prod-plan')" role="button" tabindex="0" title="Lihat monitoring live">
+                        <div class="dash-kpi-icon"><i class="fas fa-utensils"></i></div>
+                        <div class="dash-kpi-body">
+                            <div class="dash-kpi-label">Produksi Hari Ini</div>
+                            <div class="dash-kpi-value" id="dash-today-production">-</div>
+                            <div class="dash-kpi-note" id="dash-today-production-note">Total porsi dari batch hari ini</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card dash-kpi--warning" onclick="switchView('inventory')" role="button" tabindex="0" title="Buka inventaris">
+                        <div class="dash-kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="dash-kpi-body">
+                            <div class="dash-kpi-label">Inventory Alert</div>
+                            <div class="dash-kpi-value" id="dash-low-stock">-</div>
+                            <div class="dash-kpi-note" id="dash-low-stock-note">Item di bawah threshold</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card dash-kpi--info" onclick="switchView('finance')" role="button" tabindex="0" title="Buka finance">
+                        <div class="dash-kpi-icon"><i class="fas fa-wallet"></i></div>
+                        <div class="dash-kpi-body">
+                            <div class="dash-kpi-label">Cost per Porsi</div>
+                            <div class="dash-kpi-value" id="dash-avg-cost">-</div>
+                            <div class="dash-kpi-note" id="dash-avg-cost-note">Rata-rata plan aktif</div>
+                        </div>
+                    </div>
+                    <div class="dash-kpi-card dash-kpi--success" onclick="switchView('prod-plan')" role="button" tabindex="0" title="Lihat monitoring live">
+                        <div class="dash-kpi-icon"><i class="fas fa-layer-group"></i></div>
+                        <div class="dash-kpi-body">
+                            <div class="dash-kpi-label">Batch Aktif</div>
+                            <div class="dash-kpi-value" id="dash-active-batches">-</div>
+                            <div class="dash-kpi-note" id="dash-active-batches-note">Sedang berjalan</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini stats row -->
+                <div class="dash-mini-grid mb-4" id="dash-mini-grid">
+                    <div class="dash-mini-card">
+                        <div class="dash-mini-label"><i class="fas fa-calendar-day mr-1"></i> Total Plan</div>
+                        <div class="dash-mini-value" id="dash-mini-plans">-</div>
+                    </div>
+                    <div class="dash-mini-card">
+                        <div class="dash-mini-label"><i class="fas fa-running mr-1"></i> Task Berjalan</div>
+                        <div class="dash-mini-value" id="dash-mini-tasks-running">-</div>
+                    </div>
+                    <div class="dash-mini-card">
+                        <div class="dash-mini-label"><i class="fas fa-hourglass-half mr-1"></i> Task Pending</div>
+                        <div class="dash-mini-value" id="dash-mini-tasks-pending">-</div>
+                    </div>
+                    <div class="dash-mini-card">
+                        <div class="dash-mini-label"><i class="fas fa-coins mr-1"></i> Belanja Bulan Ini</div>
+                        <div class="dash-mini-value" id="dash-mini-expenses">-</div>
+                    </div>
+                </div>
+
+                <!-- Content grid -->
+                <div class="dash-content-grid">
+                    <div class="card dash-panel">
+                        <div class="dash-panel-header">
+                            <div>
+                                <h3 class="font-bold">Rencana Produksi Terbaru</h3>
+                                <div class="text-sm text-muted" id="dash-plans-note">Top 5 plan aktif berdasarkan delivery terdekat.</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="switchView('prod-plan')" title="Lihat semua">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="table-responsive mt-2">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Plan</th>
+                                        <th>Target</th>
+                                        <th>Delivery</th>
+                                        <th>Status</th>
+                                        <th class="text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dash-plans-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card dash-panel">
+                        <div class="dash-panel-header">
+                            <div>
+                                <h3 class="font-bold">Tugas Pending</h3>
+                                <div class="text-sm text-muted" id="dash-tasks-note">Prioritas dari task yang belum selesai.</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="switchView('tasks')" title="Lihat semua">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        <div class="dash-tasks-list mt-2" id="dash-tasks-rows"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Nutrisurvey (Ahli Gizi) -->
+            <div id="view-nutrisurvey" class="view-section hidden">
+                <div id="nutri-maintenance" class="card mb-4 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="font-bold">NutriSurvey</h3>
+                            <div class="text-sm text-muted">Under Maintenance</div>
+                        </div>
+                    </div>
+                    <div class="text-sm text-muted leading-relaxed">
+                        Modul NutriSurvey sedang dinonaktifkan sementara untuk perbaikan data dan alur operasional.
+                        Silakan lanjutkan proses produksi seperti biasa.
+                        Jika butuh perhitungan gizi, gunakan export menu/ingredient untuk dihitung manual.
+                    </div>
+                </div>
+
+                <div id="nutri-live">
+                <div class="card mb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="font-bold">NutriSurvey</h3>
+                            <div class="text-sm text-muted" id="nutri_status">Loading...</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="openNutriColumns()"><i class="fas fa-columns"></i> Columns</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openNutriHistory()"><i class="fas fa-history"></i> History</button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportNutriJson()"><i class="fas fa-file-export"></i> Export JSON</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openNutriDataHelp()"><i class="fas fa-database"></i> Setup Data</button>
+                            <button class="btn btn-primary btn-sm" onclick="saveNutriMenuRecipe()"><i class="fas fa-save"></i> Save Qty</button>
+                        </div>
+                    </div>
+
+                    <div class="grid-cols-2 mb-4">
+                        <div class="input-group">
+                            <label class="input-label">Menu / Recipe</label>
+                            <select id="nutri_menu_select" class="input-field" onchange="loadNutriMenu()"></select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Target / Standar Gizi (Opsional)</label>
+                            <select id="nutri_target_set" class="input-field" onchange="loadNutriMenu()"></select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-4">
+                        <button class="btn btn-primary btn-sm" onclick="nutriCalculate()"><i class="fas fa-calculator"></i> Calculate</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openNutriTargetHelp()"><i class="fas fa-circle-info"></i> Apa itu Target?</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openNutriAddIngredient()"><i class="fas fa-plus"></i> Add Ingredient</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openNutriLinkMissing()"><i class="fas fa-link"></i> Link Missing</button>
+                    </div>
+
+                    <div class="card p-0 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead id="nutri_head"></thead>
+                                <tbody id="nutri_rows"></tbody>
+                                <tfoot id="nutri_foot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="font-bold">Nutri Diary (MBG)</h3>
+                            <div class="text-sm text-muted" id="nutri_diary_status">Loading...</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="nutriDiaryLoadSelectedDate()"><i class="fas fa-sync"></i> Load</button>
+                            <button class="btn btn-secondary btn-sm" onclick="nutriDiarySave()"><i class="fas fa-save"></i> Save</button>
+                            <button class="btn btn-primary btn-sm" onclick="nutriDiaryCalc()"><i class="fas fa-calculator"></i> Calculate</button>
+                        </div>
+                    </div>
+
+                    <div class="grid-cols-2 mb-4">
+                        <div class="input-group">
+                            <label class="input-label">Tanggal</label>
+                            <input id="nutri_diary_date" class="input-field" type="date" onchange="nutriDiaryLoadSelectedDate()" />
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Target / Standar Gizi (Opsional)</label>
+                            <select id="nutri_diary_target_set" class="input-field" onchange="nutriDiaryMarkDirty()"></select>
+                        </div>
+                    </div>
+
+                    <div class="input-group mb-4">
+                        <label class="input-label">Judul (Opsional)</label>
+                        <input id="nutri_diary_title" class="input-field" placeholder="Contoh: Menu MBG - SDN 01" oninput="nutriDiaryMarkDirty()" />
+                    </div>
+
+                    <div class="flex gap-2 mb-4">
+                        <button class="btn btn-secondary btn-sm" onclick="openNutriDiaryAddMenu()"><i class="fas fa-plus"></i> Add Menu</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openNutriDiaryAddFood()"><i class="fas fa-plus"></i> Add Food (DB)</button>
+                        <button class="btn btn-danger btn-sm" onclick="nutriDiaryClear()"><i class="fas fa-trash"></i> Clear</button>
+                    </div>
+
+                    <div class="card p-0 overflow-hidden">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead id="nutri_diary_head"></thead>
+                                <tbody id="nutri_diary_rows"></tbody>
+                                <tfoot id="nutri_diary_foot"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- 3. Coordinator Dashboard -->
+            <div id="view-dashboard-coord" class="view-section hidden">
+                <div class="grid-cols-2">
+                    <div class="card text-center">
+                        <h3 class="font-bold mb-4">Team Performance</h3>
+                        <div class="speedometer-container">
+                            <div class="speedometer-bg"></div>
+                            <div class="speedometer-needle" id="perf-needle"></div>
+                            <div class="speedometer-center"></div>
+                        </div>
+                        <div class="text-2xl font-bold mt-4" id="perf-score">85%</div>
+                        <p class="text-muted text-sm">Efficiency Score</p>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="font-bold mb-4">Active Task</h3>
+                        <div class="text-center p-6 border rounded mb-4 bg-dark-overlay border-border">
+                            <div class="text-muted text-sm mb-1">Current Batch: #204 - Pemotongan Sayur</div>
+                            <div class="text-4xl font-bold font-mono text-accent mb-2" id="task-timer">00:45:12</div>
+                            <div class="flex justify-center gap-2">
+                                <button class="btn btn-secondary"><i class="fas fa-pause"></i> Pause</button>
+                                <button class="btn btn-primary" onclick="finishTask()"><i class="fas fa-check"></i> Selesai</button>
+                            </div>
+                        </div>
+                        <div class="text-sm text-muted"><i class="fas fa-info-circle"></i> Click "Selesai" to upload report photo.</div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <h3 class="font-bold mb-4">Task Queue</h3>
+                    <div class="flex flex-col gap-2">
+                        <div class="p-3 bg-dark-overlay rounded flex justify-between items-center border border-border">
+                            <div>
+                                <div class="font-bold">Persiapan Bumbu (Batch #205)</div>
+                                <div class="text-sm text-muted">Est. 30 mins</div>
+                            </div>
+                            <span class="badge warning">Pending</span>
+                        </div>
+                        <!-- More tasks -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 4. Driver Dashboard -->
+            <div id="view-dashboard-driver" class="view-section hidden">
+                <div class="card">
+                    <h3 class="font-bold mb-4">Delivery Route (Rute Pengiriman)</h3>
+                    <!-- Placeholder Map -->
+                    <div class="bg-dark rounded-xl flex items-center justify-center text-muted h-64 w-full">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-map-marked-alt fa-3x mb-2"></i>
+                            <span>Map Interface Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4 class="font-bold mb-2">Stops</h4>
+                        <div class="flex flex-col gap-2">
+                            <div class="p-3 bg-dark-overlay rounded border border-border flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold">SDN 01 Jakarta</div>
+                                    <div class="text-sm text-muted">Jl. Merdeka No. 1 • 50 Pax</div>
+                                </div>
+                                <button class="btn btn-primary btn-sm">Navigasi</button>
+                            </div>
+                            <div class="p-3 bg-dark-overlay rounded border border-border flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold">SMPN 45 Jakarta</div>
+                                    <div class="text-sm text-muted">Jl. Sudirman No. 45 • 120 Pax</div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm">Pending</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Reporting Dashboard -->
+            <div id="view-reports" class="view-section hidden">
+                <div class="card mb-4">
+                    <h3 class="font-bold mb-4">Centralized Reporting</h3>
+                    <div id="report-overview" class="mb-4">
+                        <div class="text-sm text-muted">Mempersiapkan ringkasan laporan...</div>
+                    </div>
+                    <div class="flex gap-2 mb-4">
+                        <button class="btn btn-secondary btn-sm" onclick="compileMonthlyReport()"><i class="fas fa-calendar-alt"></i> Compile Bulanan</button>
+                        <button class="btn btn-secondary btn-sm" onclick="compileQuarterlyReport()"><i class="fas fa-layer-group"></i> Compile Triwulanan</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openAuditLog()"><i class="fas fa-clipboard-list"></i> Audit Log</button>
+                    </div>
+                    <div class="grid-dashboard">
+                        <div class="p-4 border border-border rounded flex flex-col gap-2">
+                            <div class="font-bold">Production Report</div>
+                            <p class="text-sm text-muted">Daily batch performance and yield.</p>
+                            <div class="flex gap-2 mt-auto">
+                                <button class="btn btn-primary btn-sm" onclick="openReportPreview('production')"><i class="fas fa-eye"></i> Preview</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('production','pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('production','excel')"><i class="fas fa-file-excel"></i> Excel</button>
+                            </div>
+                        </div>
+                        <div class="p-4 border border-border rounded flex flex-col gap-2">
+                            <div class="font-bold">Financial Report</div>
+                            <p class="text-sm text-muted">Cost analysis and expenditure.</p>
+                            <div class="flex gap-2 mt-auto">
+                                <button class="btn btn-primary btn-sm" onclick="openReportPreview('finance')"><i class="fas fa-eye"></i> Preview</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('finance','pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('finance','excel')"><i class="fas fa-file-excel"></i> Excel</button>
+                            </div>
+                        </div>
+                        <div class="p-4 border border-border rounded flex flex-col gap-2">
+                            <div class="font-bold">Inventory Log</div>
+                            <p class="text-sm text-muted">Stock movements and waste.</p>
+                            <div class="flex gap-2 mt-auto">
+                                <button class="btn btn-primary btn-sm" onclick="openReportPreview('inventory')"><i class="fas fa-eye"></i> Preview</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('inventory','pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('inventory','excel')"><i class="fas fa-file-excel"></i> Excel</button>
+                            </div>
+                        </div>
+                        <div class="p-4 border border-border rounded flex flex-col gap-2">
+                            <div class="font-bold">Staff Performance</div>
+                            <p class="text-sm text-muted">Attendance and task completion.</p>
+                            <div class="flex gap-2 mt-auto">
+                                <button class="btn btn-primary btn-sm" onclick="openReportPreview('staff')"><i class="fas fa-eye"></i> Preview</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('staff','pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('staff','excel')"><i class="fas fa-file-excel"></i> Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-production-v2" class="view-section hidden">
+                <!-- Hero header -->
+                <div class="monitor-hero mb-4">
+                    <div class="monitor-hero-left">
+                        <div class="monitor-hero-title">
+                            <span class="monitor-pulse" id="monitor-live-pulse" aria-hidden="true"></span>
+                            <span>Monitoring Plan (Live)</span>
+                        </div>
+                        <div class="text-sm text-muted" id="monitor-hero-subtitle">Runtime produksi per plan — refresh otomatis tiap 30 detik.</div>
+                    </div>
+                    <div class="monitor-hero-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="loadMonitoringPlans()" title="Refresh daftar plan"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openProductionSettings()"><i class="fas fa-cog"></i> Pengaturan</button>
+                        <button class="btn btn-primary btn-sm" onclick="switchView('prod-draft')"><i class="fas fa-robot"></i> War Room</button>
+                    </div>
+                </div>
+
+                <!-- KPI strip -->
+                <div class="monitor-kpi-strip mb-4">
+                    <div class="monitor-kpi-card">
+                        <div class="monitor-kpi-icon" style="background: var(--primary-light); color: var(--primary);"><i class="fas fa-layer-group"></i></div>
+                        <div>
+                            <div class="monitor-kpi-label">Plan Aktif</div>
+                            <div class="monitor-kpi-value" id="monitor-kpi-plans">-</div>
+                        </div>
+                    </div>
+                    <div class="monitor-kpi-card">
+                        <div class="monitor-kpi-icon" style="background: rgba(245,158,11,0.15); color: var(--warning);"><i class="fas fa-utensils"></i></div>
+                        <div>
+                            <div class="monitor-kpi-label">Total Porsi Target</div>
+                            <div class="monitor-kpi-value" id="monitor-kpi-portions">-</div>
+                        </div>
+                    </div>
+                    <div class="monitor-kpi-card">
+                        <div class="monitor-kpi-icon" style="background: rgba(16,185,129,0.15); color: var(--success);"><i class="fas fa-running"></i></div>
+                        <div>
+                            <div class="monitor-kpi-label">Tasks Berjalan</div>
+                            <div class="monitor-kpi-value" id="monitor-kpi-running">-</div>
+                        </div>
+                    </div>
+                    <div class="monitor-kpi-card">
+                        <div class="monitor-kpi-icon" style="background: rgba(99,102,241,0.15); color: #6366f1;"><i class="fas fa-clock"></i></div>
+                        <div>
+                            <div class="monitor-kpi-label">Delivery Terdekat</div>
+                            <div class="monitor-kpi-value" id="monitor-kpi-eta">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plans list -->
+                <div class="card card-tight mb-4">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <div>
+                            <div class="font-bold">Daftar Plan</div>
+                            <div class="text-sm text-muted">Pilih plan untuk mulai monitoring real-time.</div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="monitor-filter-chips" role="tablist" aria-label="Filter status plan">
+                                <button type="button" class="monitor-filter-chip active" data-filter="all" onclick="setMonitorFilter('all')">Semua</button>
+                                <button type="button" class="monitor-filter-chip" data-filter="scheduled" onclick="setMonitorFilter('scheduled')">Terjadwal</button>
+                                <button type="button" class="monitor-filter-chip" data-filter="running" onclick="setMonitorFilter('running')">Berjalan</button>
+                            </div>
+                            <input id="monitor-search" type="search" class="input-field input-sm" placeholder="Cari kode plan…" oninput="setMonitorSearch(this.value)" style="max-width: 220px;" />
+                        </div>
+                    </div>
+                    <div class="mt-3 table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Plan</th>
+                                    <th>Target</th>
+                                    <th>Delivery</th>
+                                    <th style="width: 18%;">Progress</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prod-orders-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Monitor card (hidden until a plan is selected) -->
+                <div class="card card-tight hidden" id="prod-monitor-card">
+                    <div class="flex justify-between items-start flex-wrap gap-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="monitor-pulse monitor-pulse--active" aria-hidden="true"></span>
+                                <div class="font-bold text-lg" id="prod-monitor-title">-</div>
+                            </div>
+                            <div class="text-sm text-muted mt-1" id="prod-monitor-subtitle">Memuat data plan…</div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap justify-end">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="refreshMonitorOrder()"><i class="fas fa-sync"></i> Refresh</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="closePlanMonitor()" title="Hentikan refresh otomatis dan tutup panel; plan tetap bisa dibuka lagi dari tabel"><i class="fas fa-times"></i> Tutup</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="stopMonitorOrder()" title="Batalkan plan di server (jobdesc & delivery) lalu hentikan monitor"><i class="fas fa-stop"></i> Stop</button>
+                        </div>
+                    </div>
+
+                    <!-- Per-plan KPIs -->
+                    <div class="monitor-kpi-strip monitor-kpi-strip--inner mt-3">
+                        <div class="monitor-kpi-mini">
+                            <div class="monitor-kpi-label">Progress</div>
+                            <div class="monitor-kpi-value" id="mon-k-progress">-</div>
+                            <div class="prod-progress-bar mt-1"><div class="prod-progress-bar-fill" id="mon-progress-fill" style="width:0%"></div></div>
+                        </div>
+                        <div class="monitor-kpi-mini">
+                            <div class="monitor-kpi-label">Tasks</div>
+                            <div class="monitor-kpi-value" id="mon-k-tasks">-</div>
+                            <div class="text-xs text-muted" id="mon-k-tasks-sub">done/total</div>
+                        </div>
+                        <div class="monitor-kpi-mini">
+                            <div class="monitor-kpi-label">Batches</div>
+                            <div class="monitor-kpi-value" id="mon-k-batches">-</div>
+                            <div class="text-xs text-muted" id="mon-k-batches-sub">done/total</div>
+                        </div>
+                        <div class="monitor-kpi-mini">
+                            <div class="monitor-kpi-label">Slack / ETA</div>
+                            <div class="monitor-kpi-value" id="mon-k-slack">-</div>
+                            <div class="text-xs text-muted" id="mon-k-slack-sub">terhadap delivery</div>
+                        </div>
+                    </div>
+
+                    <div class="monitor-grid mt-3">
+                        <div class="card card-tight" style="min-height: 260px;">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="font-bold">Timeline Produksi (per Divisi)</div>
+                                <div class="text-xs text-muted" id="mon-timeline-summary">-</div>
+                            </div>
+                            <div id="prod-metrics" class="monitor-timeline-scroll">-</div>
+                        </div>
+                        <div class="card card-tight overflow-auto" style="max-height:500px;">
+                            <div class="font-bold mb-2">Batch Memasak</div>
+                            <div class="table-responsive">
+                                <table class="nutri-table w-full">
+                                    <thead><tr><th>Menu</th><th>Batch</th><th>Size</th><th>Waktu</th><th>Status</th><th class="text-right">Aksi</th></tr></thead>
+                                    <tbody id="prod-cook-rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3" style="padding:12px; max-height:220px; overflow:auto;">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold">Event Log</div>
+                            <button class="btn btn-secondary btn-sm" onclick="clearProdEvents()" title="Bersihkan event"><i class="fas fa-eraser"></i></button>
+                        </div>
+                        <div id="prod-events" class="text-sm text-muted">Belum ada event tercatat.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCTION PLANNER WAR ROOM -->
+            <div id="view-production-planner" class="view-section hidden">
+                <!-- Content injected by production_planner.js -->
+            </div>
+
+            <!-- 6. Production View -->
+            <div id="view-production" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Plan</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="switchView('equipment')"><i class="fas fa-tools"></i> Alat</button>
+                        <button class="btn btn-primary btn-sm" onclick="openGeneratePlan()"><i class="fas fa-plus"></i> Buat Plan</button>
+                    </div>
+                </div>
+                <div class="card mb-4">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Plan</th>
+                                    <th>Target</th>
+                                    <th>Delivery</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plans-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card hidden" id="plan-details-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Detail Plan</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="closePlanDetails()"><i class="fas fa-times"></i> Tutup</button>
+                    </div>
+                    <div class="grid-cols-2 mb-4">
+                        <div>
+                            <div class="text-muted text-sm">Plan ID</div>
+                            <div class="font-mono text-sm" id="plan-details-id">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted text-sm">Status</div>
+                            <div class="text-sm" id="plan-details-status">-</div>
+                        </div>
+                    </div>
+                    <div class="card mb-4 bg-dark-overlay card-tight">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-bold">Dokumen Produksi</div>
+                                <div class="text-sm text-muted">Generate Menu, Invoice Bahan, dan Timeline (PDF/Excel)</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="openKitchenDocConfig()"><i class="fas fa-cog"></i> Kop SPPG</button>
+                                <button class="btn btn-primary btn-sm" onclick="generatePlanDocs()"><i class="fas fa-magic"></i> Generate</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-3" id="plan-docs-downloads">
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('menu','pdf')"><i class="fas fa-file-pdf"></i> Menu PDF</button>
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('menu','xlsx')"><i class="fas fa-file-excel"></i> Menu Excel</button>
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('invoice','pdf')"><i class="fas fa-file-pdf"></i> Invoice PDF</button>
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('invoice','xlsx')"><i class="fas fa-file-excel"></i> Invoice Excel</button>
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('timeline','pdf')"><i class="fas fa-file-pdf"></i> Timeline PDF</button>
+                            <button class="btn btn-secondary btn-sm" onclick="downloadPlanDoc('timeline','xlsx')"><i class="fas fa-file-excel"></i> Timeline Excel</button>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-sm text-muted mb-2">History Generate</div>
+                            <div id="plan-docs-history" class="text-sm text-muted">Belum ada</div>
+                        </div>
+                    </div>
+                    <h4 class="font-bold mb-2">Batches</h4>
+                    <div class="table-responsive mb-4">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Batch</th>
+                                    <th>Menu</th>
+                                    <th>Divisi</th>
+                                    <th>Size</th>
+                                    <th>Mulai</th>
+                                    <th>Selesai</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plan-batches-rows"></tbody>
+                        </table>
+                    </div>
+                    <h4 class="font-bold mb-2">Tasks</h4>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Tugas</th>
+                                    <th>Divisi</th>
+                                    <th>Mulai</th>
+                                    <th>Selesai</th>
+                                    <th>Durasi</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plan-tasks-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Equipment View -->
+            <div id="view-equipment" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Kitchen Equipment</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openEquipmentModal()"><i class="fas fa-plus"></i> Tambah Alat</button>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Tipe</th>
+                                    <th>Kapasitas (Porsi)</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="equipment-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Kitchen Setup View (Master-Detail) -->
+            <div id="view-kitchen-setup" class="view-section hidden">
+                <div class="flex h-screen-minus-150">
+                    <div class="flex-1 overflow-y-auto">
+                         <div id="setup-content">
+                            <!-- Injected by JS -->
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. Batches View (Plan List) -->
+            <div id="view-batches" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Plan</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="loadBatchOrders()"><i class="fas fa-sync"></i> Refresh Orders</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadBatches()"><i class="fas fa-sync"></i> Refresh Batches</button>
+                    </div>
+                </div>
+                <div class="card mb-4" style="padding:12px;">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-bold">Orders Produksi & Plan</div>
+                            <div class="text-sm text-muted">Buat plan target timeline dan export dokumen dari order.</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="openProductionSettings()"><i class="fas fa-cog"></i> Pengaturan</button>
+                            <button class="btn btn-primary btn-sm" onclick="openCreateProductionOrder()"><i class="fas fa-plus"></i> Buat Order</button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Order</th>
+                                        <th>Food</th>
+                                        <th>Target</th>
+                                        <th>Delivery</th>
+                                        <th>Status</th>
+                                        <th>Plan Ref</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="b2-orders-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="font-bold">Daftar Plan (Jadwal Produksi)</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Plan Code</th>
+                                    <th>Target</th>
+                                    <th>Delivery</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plans-rows-summary"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Batch</th>
+                                    <th>Plan</th>
+                                    <th>Menu</th>
+                                    <th>Size</th>
+                                    <th>Mulai</th>
+                                    <th>Selesai</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batches-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Inventory View -->
+            <div id="view-inventory" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Inventory & Stock</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="loadInventory()"><i class="fas fa-sync"></i> Refresh</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Stock</th>
+                                    <th>Unit</th>
+                                    <th>Harga Est.</th>
+                                    <th>Value</th>
+                                    <th>Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card mt-4">
+                    <h3 class="font-bold mb-2">Movements</h3>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Item</th>
+                                    <th>Perubahan</th>
+                                    <th>Stok Akhir</th>
+                                    <th>Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-movements-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-ingredient" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Ingredients</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="loadIngredients()"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn btn-primary btn-sm" onclick="openIngredientCreate()"><i class="fas fa-plus"></i> Tambah</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Unit</th>
+                                    <th>Harga Est.</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ingredients-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7b. Recipes Library -->
+            <div id="view-recipes" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-xl">Library Resep</h3>
+                        <div class="text-muted text-sm">Bill of Materials (BOM), satuan gram|pcs, alat opsional. Standalone, dipakai ulang lintas menu.</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="typeof loadRecipesLibrary==='function' && loadRecipesLibrary()"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn btn-primary btn-sm" onclick="typeof openRecipeEditor==='function' && openRecipeEditor(null)"><i class="fas fa-plus"></i> Tambah Resep</button>
+                    </div>
+                </div>
+                <div id="recipes-library-body">
+                    <div class="card p-4 text-muted">Memuat...</div>
+                </div>
+            </div>
+
+            <!-- 7c. Workflows Library -->
+            <div id="view-workflows" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-xl">Library Workflow Pengolahan</h3>
+                        <div class="text-muted text-sm">Step-step teknis pemrosesan bahan (DAG). Metadata lengkap (activity_type, skill, suhu, dependencies) sebagai input AI Kitchen Planner.</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="typeof loadWorkflowsLibrary==='function' && loadWorkflowsLibrary()"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn btn-primary btn-sm" onclick="typeof openWorkflowEditor==='function' && openWorkflowEditor(null)"><i class="fas fa-plus"></i> Tambah Workflow</button>
+                    </div>
+                </div>
+                <div id="workflows-library-body">
+                    <div class="card p-4 text-muted">Memuat...</div>
+                </div>
+            </div>
+
+            <!-- 8. Menu View — workspace di atas, lalu Library Food + Library Menu -->
+            <div id="view-menu" class="view-section hidden">
+                <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-xl">Food dan Menu</h3>
+                        <p class="text-muted text-sm mt-1" style="max-width:52rem;">Di atas: <strong>workspace</strong> untuk Food yang dipilih dan menu tertautnya. Di bawah: <strong>library</strong> berisi semua Food (paket sajian) dan semua Menu (resep + workflow) untuk referensi cepat.</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap shrink-0">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="typeof refreshFoodAndMenuLibraries==='function' && refreshFoodAndMenuLibraries()" title="Muat ulang daftar Food dan Menu"><i class="fas fa-sync"></i> Refresh semua</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="openProductionHelp()"><i class="fas fa-circle-info"></i> Panduan</button>
+                    </div>
+                </div>
+
+                <!-- Workspace: Food terpilih + menu tertaut (paling atas) -->
+                <div id="food-workspace-card" class="card mb-4" style="padding:12px;">
+                    <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+                        <div>
+                            <div class="font-bold">Workspace — Food terpilih</div>
+                            <div class="text-sm text-muted">Kelola menu yang tertaut ke satu Food. Pilih dari dropdown atau tombol <strong>Kelola</strong> pada Library Food di bawah.</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 flex gap-2 items-center flex-wrap">
+                        <div class="text-sm text-muted" style="min-width:90px;">Pilih Food</div>
+                        <select id="prod-food-select" class="input-field" style="max-width:420px;" onchange="onSelectFoodV2()"></select>
+                        <button id="btn-edit-food" class="btn btn-secondary btn-sm" style="display:none;" onclick="openEditFood(currentFoodId)">
+                            <i class="fas fa-pen"></i> Edit Food (Final Packaging)
+                        </button>
+                        <button id="btn-delete-food" class="btn btn-danger btn-sm" style="display:none;" onclick="deleteFoodFromList()">
+                            <i class="fas fa-trash"></i> Hapus Food
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Menu</th><th>Resep</th><th>Workflow</th><th>Action</th></tr></thead>
+                                <tbody id="prod-menus-rows"></tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openAddMenuToFood()"><i class="fas fa-link"></i> Tautkan Menu (dari Library)</button>
+                        </div>
+                        <div class="text-xs text-muted mt-2"><i class="fas fa-info-circle"></i> Hubungkan menu yang sudah ada di <strong>Library Menu</strong> ke Food ini. Untuk menu baru (inline), gunakan tombol hijau di kartu Library Menu di bawah — pilih Food di workspace terlebih dahulu.</div>
+                    </div>
+                </div>
+
+                <style>
+                    #view-menu .mbg-food-menu-lib-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-bottom:1rem;}
+                    @media (min-width:1280px){#view-menu .mbg-food-menu-lib-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+                </style>
+                <div class="mbg-food-menu-lib-grid">
+
+                    <!-- Library Food -->
+                    <div class="card flex flex-col mbg-lib-food-card" style="padding:0;min-height:280px;overflow:visible;border-radius:var(--radius-lg,14px);">
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-2 shrink-0">
+                            <div class="flex flex-wrap justify-between items-start gap-2">
+                                <div>
+                                    <div class="font-bold">Library Food</div>
+                                    <div class="text-xs text-muted">Semua paket sajian &amp; final packaging. Klik <strong>Kelola</strong> untuk fokus ke workspace di atas.</div>
+                                </div>
+                                <div class="flex gap-1 flex-wrap justify-end">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="openCreateFood()"><i class="fas fa-plus"></i> Tambah</button>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="openImportFood()"><i class="fas fa-file-excel"></i> Import</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadFoodsV2()" title="Refresh daftar Food"><i class="fas fa-sync"></i></button>
+                                </div>
+                            </div>
+                            <input type="search" id="library-food-search" class="input-field input-sm" placeholder="Cari nama food…" autocomplete="off" oninput="typeof filterLibraryFoodTable==='function' && filterLibraryFoodTable(this.value)">
+                        </div>
+                        <div class="table-responsive mbg-lib-food-scroll" style="max-height:380px;overflow:auto;min-height:7rem;flex:1 1 auto;width:100%;">
+                            <table class="nutri-table w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Food</th>
+                                        <th>Final packaging</th>
+                                        <th>Tanggal</th>
+                                        <th style="min-width:11rem;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="library-food-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Library Menu -->
+                    <div class="card flex flex-col" style="padding:0;min-height:280px;overflow:visible;border-radius:var(--radius-lg,14px);">
+                        <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-2 shrink-0">
+                            <div class="flex flex-wrap justify-between items-start gap-2">
+                                <div>
+                                    <div class="font-bold">Library Menu</div>
+                                    <div class="text-xs text-muted">Semua menu (BOM resep + workflow). <strong>Buat Menu Baru (Inline)</strong> menyimpan ke library dan menaut ke Food yang sedang dipilih di workspace. Tautkan ke Food lain lewat <strong>Tautkan Menu</strong> di workspace.</div>
+                                </div>
+                                <div class="flex gap-1 flex-wrap justify-end">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="openCreateMenuInline()" title="Pilih Food di workspace atas dulu; menu baru otomatis masuk library dan tertaut ke Food itu."><i class="fas fa-plus"></i> Buat Menu Baru (Inline)</button>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="typeof openImportMenu==='function' && openImportMenu()" title="Import jadwal menu dari Excel"><i class="fas fa-file-import"></i> Import</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadMenu()" title="Refresh daftar Menu"><i class="fas fa-sync"></i></button>
+                                </div>
+                            </div>
+                            <input type="search" id="library-menu-search" class="input-field input-sm" placeholder="Cari menu, resep, workflow…" autocomplete="off" oninput="typeof filterLibraryMenuTable==='function' && filterLibraryMenuTable(this.value)">
+                        </div>
+                        <div class="table-responsive" style="max-height:380px;overflow:auto;min-height:7rem;flex:1 1 auto;width:100%;">
+                            <table class="nutri-table w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Menu</th>
+                                        <th>Resep</th>
+                                        <th>Workflow</th>
+                                        <th style="min-width:9rem;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="library-menu-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Infographic / Help Section (Hidden by default, toggled by Panduan button) -->
+                <div id="production-help-panel" class="hidden mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200 transition-all duration-500">
+                    <h4 class="font-bold text-blue-800 mb-3"><i class="fas fa-book-open"></i> Panduan Food & Menu</h4>
+                    <div class="flex flex-col md:flex-row gap-4 items-start">
+                         <div class="flex-1 space-y-4">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</div>
+                                <div>
+                                    <div class="font-bold text-sm">Buat Food (Paket)</div>
+                                    <div class="text-xs text-gray-600">Klik "Tambah Food" → isi nama (misal "Paket Siang A") dan susun <b>final packaging stack</b> (ompreng, sterefoam, spunbound, plastik oval, dll).</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</div>
+                                <div>
+                                    <div class="font-bold text-sm">Isi Menu ke Food</div>
+                                    <div class="text-xs text-gray-600">Di workspace: "Tautkan Menu" untuk reuse dari library. Di kartu Library Menu: "Buat Menu Baru (Inline)" untuk menu custom (pilih Food di workspace dulu).</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</div>
+                                <div>
+                                    <div class="font-bold text-sm">Resep & Workflow</div>
+                                    <div class="text-xs text-gray-600">Tiap Menu merujuk ke <b>Resep</b> (BOM/ingredients) dan <b>Workflow</b> (langkah pemrosesan: prep → cook → pre-pack).</div>
+                                </div>
+                            </div>
+                         </div>
+                         <div class="flex-1 bg-white p-3 rounded border border-gray-200 shadow-sm">
+                            <div class="text-xs font-bold text-gray-500 mb-2">FLOWCHART DATA</div>
+                            <div class="flex items-center justify-center text-xs gap-2 flex-wrap">
+                                <div class="border rounded px-2 py-1 bg-blue-50">Food (Final Pack)</div>
+                                <i class="fas fa-arrow-right text-gray-400"></i>
+                                <div class="border rounded px-2 py-1 bg-yellow-50">Menu</div>
+                                <i class="fas fa-arrow-right text-gray-400"></i>
+                                <div class="border rounded px-2 py-1 bg-purple-50">Resep + Workflow</div>
+                                <i class="fas fa-arrow-right text-gray-400"></i>
+                                <div class="border rounded px-2 py-1 bg-green-50">Ingredients</div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. Finance View -->
+            <div id="view-finance" class="view-section hidden">
+                <div class="card mb-4" id="finance-toolbar-card">
+                    <div class="flex justify-between items-center mb-0 flex-wrap gap-2">
+                        <div class="font-bold">Lapkeu SPPG - Format Resmi</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="switchFinanceTab('lapkeu_home')"><i class="fas fa-th-large"></i> Menu utama</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadFinance(true)"><i class="fas fa-sync"></i> Refresh</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-lapkeu-home" class="finance-lapkeu-home">
+                    <div class="finance-lapkeu-home__head">
+                        <div class="finance-lapkeu-home__title-wrap">
+                            <h1 class="finance-lapkeu-home__title">Aplikasi Pelaporan Keuangan SPPG</h1>
+                            <p class="finance-lapkeu-home__subtitle" id="finance-lapkeu-nama-sppg">Nama SPPG</p>
+                        </div>
+                        <div class="finance-lapkeu-home__meta">
+                            <span class="finance-lapkeu-home__date" id="finance-lapkeu-menu-date"></span>
+                            <span class="finance-lapkeu-home__version">versi04@2025</span>
+                        </div>
+                    </div>
+                    <div class="finance-lapkeu-home__tray nav-menu">
+                        <div class="finance-lapkeu-nav-section">
+                            <div class="nav-item-header finance-lapkeu-nav-section__head">
+                                <i class="fas fa-edit"></i>
+                                <span>Menu Input</span>
+                            </div>
+                            <div class="nav-submenu finance-lapkeu-nav-section__items">
+                                <div class="nav-subitem" onclick="switchFinanceTab('setup')"><i class="fas fa-user-cog"></i> SETUP USER</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('saldo_buku')"><i class="fas fa-book"></i> SALDO AWAL BUKU</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('anggaran_bahan')"><i class="fas fa-coins"></i> ANGGARAN</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('transaksi')"><i class="fas fa-exchange-alt"></i> TRANSAKSI</div>
+                            </div>
+                        </div>
+                        <div class="finance-lapkeu-nav-section">
+                            <div class="nav-item-header finance-lapkeu-nav-section__head">
+                                <i class="fas fa-print"></i>
+                                <span>Cetak Buku</span>
+                            </div>
+                            <div class="nav-submenu finance-lapkeu-nav-section__items">
+                                <div class="nav-subitem" onclick="openFinancePrint('bku')"><i class="fas fa-file-invoice"></i> BUKU KAS UMUM (BKU)</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bp-bank')"><i class="fas fa-university"></i> BP - KAS DI BANK</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bp-petty')"><i class="fas fa-wallet"></i> BP - PETTY CASH</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bp-bahan')"><i class="fas fa-box"></i> BP - BAHAN BAKU</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bp-operasional')"><i class="fas fa-tools"></i> BP - OPERASIONAL</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bp-fasilitas')"><i class="fas fa-hand-holding-usd"></i> BP - INSENTIF FASILITAS</div>
+                            </div>
+                        </div>
+                        <div class="finance-lapkeu-nav-section">
+                            <div class="nav-item-header finance-lapkeu-nav-section__head">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Cetak Laporan</span>
+                            </div>
+                            <div class="nav-submenu finance-lapkeu-nav-section__items">
+                                <div class="nav-subitem" onclick="openFinancePrint('lpa')"><i class="fas fa-chart-pie"></i> LP DANA/ANGGARAN</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('sptj')"><i class="fas fa-file-signature"></i> SP TANGGUNG JAWAB</div>
+                                <div class="nav-subitem" onclick="openFinancePrint('bapsd')"><i class="fas fa-file-contract"></i> BAP SISA DANA</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('dafnom')"><i class="fas fa-list"></i> DAFTAR NOMINATIF</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('catatan')"><i class="fas fa-sticky-note"></i> CATATAN PENGELUARAN</div>
+                            </div>
+                        </div>
+                        <div class="finance-lapkeu-nav-section">
+                            <div class="nav-item-header finance-lapkeu-nav-section__head">
+                                <i class="fas fa-warehouse"></i>
+                                <span>Barang Persediaan</span>
+                            </div>
+                            <div class="nav-submenu finance-lapkeu-nav-section__items">
+                                <div class="nav-subitem" onclick="switchFinanceTab('ref_brg')"><i class="fas fa-barcode"></i> REFERENSI BARANG</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('saldo_brg')"><i class="fas fa-boxes"></i> SALDO AWAL BARANG</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('masuk')"><i class="fas fa-arrow-down"></i> PENERIMAAN BARANG</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('keluar')"><i class="fas fa-arrow-up"></i> PENGELUARAN BARANG</div>
+                                <div class="nav-subitem" onclick="switchFinanceTab('stock_brg_r')"><i class="fas fa-chart-bar"></i> LAPORAN STOCK BARANG</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-detail-stack" class="hidden">
+                <div id="finance-panel-master_sheet" class="hr-panel">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                            <div id="finance-master-sheet-title" class="font-bold text-lg">Sheet: Menu</div>
+                            <div class="flex gap-2 items-center flex-wrap">
+                                <div id="finance-sheet-period-wrap" class="finance-sheet-period hidden">
+                                    <label class="input-label text-xs">Periode</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input id="finance-sheet-from" class="input-field input-sm" type="date" />
+                                        <span>s.d.</span>
+                                        <input id="finance-sheet-to" class="input-field input-sm" type="date" />
+                                    </div>
+                                </div>
+                                <div id="finance-sheet-header-btn"></div>
+                                <div id="finance-master-sheet-actions" class="flex gap-2"></div>
+                            </div>
+                        </div>
+                        <div id="cek-saldo-results-area" class="finance-cek-saldo-results hidden mb-3">
+                            <div class="flex gap-4 flex-wrap text-sm">
+                                <div class="finance-cek-saldo__row"><span class="text-muted">BKU</span> <span id="cek-bku" class="font-semibold">-</span></div>
+                                <div class="finance-cek-saldo__row"><span class="text-muted">BP Kas</span> <span id="cek-bp-kas" class="font-semibold">-</span></div>
+                                <div class="finance-cek-saldo__row"><span class="text-muted">BP Banper</span> <span id="cek-bp-banper" class="font-semibold">-</span></div>
+                                <div class="mt-2 w-full" id="cek-status"></div>
+                            </div>
+                        </div>
+                        <div id="finance-sheet-summary" class="finance-sheet-summary hidden mb-4"></div>
+                        <div id="finance-sheet-content" class="finance-sheet-content">
+                            <div class="table-responsive">
+                                <table class="nutri-table w-full finance-table">
+                                    <thead><tr><th style="width:80px">Row</th><th>Datasheet</th></tr></thead>
+                                    <tbody id="finance-master-sheet-rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-setup" class="hr-panel hidden">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="finance-setup-title">SETUP USER</h2>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="switchFinanceTab('lapkeu_home')"><i class="fas fa-home"></i> Menu utama</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="loadFinanceSetup()"><i class="fas fa-sync"></i> Refresh</button>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="saveFinanceSetupForm()"><i class="fas fa-save"></i> Simpan Semua</button>
+                            </div>
+                        </div>
+                        <div id="finance-setup-status" class="text-sm text-muted mb-3">-</div>
+                        <div class="finance-setup-form-wrap">
+                            <table class="finance-setup-table">
+                                <thead>
+                                    <tr>
+                                        <th class="finance-setup-th-item">ITEM</th>
+                                        <th class="finance-setup-th-uraian">URAIAN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finance-setup-form-body">
+                                    <!-- Filled by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-coa" class="hr-panel hidden">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="font-bold">Chart of Accounts</div>
+                            <button class="btn btn-primary btn-sm" onclick="openCoaCreate()"><i class="fas fa-plus"></i> Tambah Akun</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Kode</th><th>Nama Akun</th><th>Group</th><th>Normal</th><th>Status</th></tr></thead>
+                                <tbody id="finance-coa-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-journal" class="hr-panel hidden">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="font-bold">Jurnal Umum</div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="openLapkeuTransaksiInput()"><i class="fas fa-file-pen"></i> Input Transaksi Lapkeu</button>
+                                <button class="btn btn-primary btn-sm" onclick="openJournalCreate()"><i class="fas fa-plus"></i> Tambah Jurnal</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Tanggal</th><th>No Jurnal</th><th>Deskripsi</th><th>Status</th><th>Debit</th><th>Kredit</th><th>Action</th></tr></thead>
+                                <tbody id="finance-journal-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-ledger" class="hr-panel hidden">
+                    <div class="card">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Tanggal</th><th>No</th><th>Akun</th><th>Memo</th><th>Debit</th><th>Kredit</th></tr></thead>
+                                <tbody id="finance-ledger-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-trial" class="hr-panel hidden">
+                    <div class="card">
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Kode</th><th>Nama Akun</th><th>Debit</th><th>Kredit</th><th>Balance</th></tr></thead>
+                                <tbody id="finance-trial-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-lr" class="hr-panel hidden">
+                    <div class="card">
+                        <h3 class="font-bold mb-3">Laporan/Resume Penerimaan dan Pengeluaran</h3>
+                        <div id="finance-lr-body" class="text-sm text-muted">-</div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-neraca" class="hr-panel hidden">
+                    <div class="card">
+                        <h3 class="font-bold mb-3">Neraca</h3>
+                        <div id="finance-neraca-body" class="text-sm text-muted">-</div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-cashflow" class="hr-panel hidden">
+                    <div class="card">
+                        <h3 class="font-bold mb-3">Arus Kas</h3>
+                        <div id="finance-cashflow-body" class="text-sm text-muted">-</div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-formal" class="hr-panel hidden">
+                    <div class="grid-dashboard">
+                        <div class="card"><h3 class="font-bold mb-2">LPA</h3><div id="finance-lpa-body" class="text-sm text-muted">-</div></div>
+                        <div class="card"><h3 class="font-bold mb-2">SPTJ</h3><div id="finance-sptj-body" class="text-sm text-muted">-</div></div>
+                        <div class="card"><h3 class="font-bold mb-2">BAPSD</h3><div id="finance-bapsd-body" class="text-sm text-muted">-</div></div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-stock" class="hr-panel hidden">
+                    <div class="card mb-3">
+                        <h3 class="font-bold mb-3">Stock Rekap</h3>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Kode Kelompok</th><th>Jumlah Item</th><th>Total Qty</th></tr></thead>
+                                <tbody id="finance-stock-rekap-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold mb-3">Stock Detail</h3>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead><tr><th>Kode</th><th>Nama Barang</th><th>Satuan</th><th>Saldo Akhir</th></tr></thead>
+                                <tbody id="finance-stock-detail-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="finance-panel-print" class="hr-panel hidden">
+                    <div class="card">
+                        <h3 class="font-bold mb-3">Print Dokumen Resmi</h3>
+                        <div class="grid-2" style="margin:0 0 12px 0">
+                            <div>
+                                <label class="input-label">From</label>
+                                <input id="f_print_from" class="input-field" type="date" />
+                            </div>
+                            <div>
+                                <label class="input-label">To</label>
+                                <input id="f_print_to" class="input-field" type="date" />
+                            </div>
+                        </div>
+                        <div class="flex gap-4 items-center mb-2" style="flex-wrap:wrap">
+                            <label class="flex gap-2 items-center" style="cursor:pointer">
+                                <input id="f_print_lr_detail" type="checkbox" />
+                                <span>LR Mode: Detail (rincian)</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-3 items-center mb-3" style="flex-wrap:wrap">
+                            <label class="flex gap-2 items-center" style="cursor:pointer">
+                                <input id="f_print_lr" type="checkbox" checked />
+                                <span>LR</span>
+                            </label>
+                            <label class="flex gap-2 items-center" style="cursor:pointer">
+                                <input id="f_print_lpa" type="checkbox" checked />
+                                <span>LPA</span>
+                            </label>
+                            <label class="flex gap-2 items-center" style="cursor:pointer">
+                                <input id="f_print_sptj" type="checkbox" checked />
+                                <span>SPTJ</span>
+                            </label>
+                            <label class="flex gap-2 items-center" style="cursor:pointer">
+                                <input id="f_print_bapsd" type="checkbox" checked />
+                                <span>BAPSD</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-2 mb-3" style="flex-wrap:wrap">
+                            <button class="btn btn-primary btn-sm" onclick="printSelectedSurat()">
+                                <i class="fas fa-print"></i> Print Surat Terpilih
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bku')">Print BKU</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-bank')">Print BP Bank</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-petty')">Print BP Petty Cash</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-bahan')">Print BP Bahan</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-operasional')">Print BP Operasional</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-fasilitas')">Print BP Fasilitas</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('bp-pajak')">Print BP Pajak</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('stock-detail')">Print Stock Detail</button>
+                            <button class="btn btn-secondary btn-sm" onclick="openFinancePrint('stock-rekap')">Print Stock Rekap</button>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- 10. Staff View -->
+            <div id="view-staff" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">HR: Staff, Absensi & Payroll</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="initHrModule(true)"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="btn btn-primary btn-sm" onclick="openStaffCreate()"><i class="fas fa-user-plus"></i> Tambah Staff</button>
+                    </div>
+                </div>
+
+                <div class="tab-list" id="hr-tab-list">
+                    <div class="tab-item active" data-tab="staff" onclick="switchHrTab('staff')">Staff (Portal Relawan)</div>
+                    <div class="tab-item hidden" data-tab="users" data-requires-role="kepala_sppg" onclick="switchHrTab('users')"><i class="fas fa-user-shield mr-1"></i> User Pengelola</div>
+                    <div class="tab-item" data-tab="shifts" onclick="switchHrTab('shifts')">Shifts</div>
+                    <div class="tab-item" data-tab="attendance" onclick="switchHrTab('attendance')">Absensi</div>
+                    <div class="tab-item" data-tab="policy" onclick="switchHrTab('policy')">Kebijakan &amp; Rekap</div>
+                    <div class="tab-item" data-tab="payroll" onclick="switchHrTab('payroll')">Payroll</div>
+                    <div class="tab-item" data-tab="staff_performance" onclick="switchHrTab('staff_performance')">KPI Staff</div>
+                </div>
+
+                <div id="hr-panel-staff" class="hr-panel">
+                    <div class="grid-dashboard mb-3">
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Total Staff</div>
+                            <div class="text-2xl font-bold" id="staff-stat-total">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">PIN Sudah Diset</div>
+                            <div class="text-2xl font-bold text-success" id="staff-stat-pin-set">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Divisi Aktif</div>
+                            <div class="text-2xl font-bold" id="staff-stat-division">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Role Aktif</div>
+                            <div class="text-2xl font-bold" id="staff-stat-role">0</div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3" style="background: var(--primary-soft-bg); border-color: var(--primary-border);">
+                        <div class="flex justify-between items-center" style="gap:10px;flex-wrap:wrap">
+                            <div>
+                                <div class="font-bold text-primary"><i class="fas fa-key mr-2"></i>PIN Pendaftaran Portal</div>
+                                <div class="text-xs text-muted">PIN ini digunakan relawan untuk mendaftar wajah.</div>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <div id="staff-portal-pin-value" style="background: var(--bg-body); border:1px solid var(--border); padding: 0.5rem 1rem; border-radius: var(--radius); font-family: monospace; font-weight: bold; color: var(--primary); font-size: 1.125rem; letter-spacing: 2px;">
+                                    ------
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="confirmResetPin()"><i class="fas fa-sync-alt"></i> Reset Acak</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="font-bold mb-2">Filter Staff</div>
+                        <div class="form-grid">
+                            <div class="form-full">
+                                <label class="input-label">Cari Staff</label>
+                                <input id="staff-filter-keyword" class="input-field" placeholder="Cari nama / kode staff / role / divisi" />
+                            </div>
+                            <div>
+                                <label class="input-label">Filter Role</label>
+                                <select id="staff-filter-role" class="input-field">
+                                    <option value="">Semua Role</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="input-label">Filter Divisi</label>
+                                <select id="staff-filter-division" class="input-field">
+                                    <option value="">Semua Divisi</option>
+                                </select>
+                            </div>
+                            <div class="form-full flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="resetStaffFilters()"><i class="fas fa-undo"></i> Reset Filter</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportStaffCsv()"><i class="fas fa-file-csv"></i> Export CSV</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-2" style="gap:10px;flex-wrap:wrap">
+                            <div class="font-bold">Daftar Staff</div>
+                            <div class="text-sm text-muted" id="staff-table-summary">0 data</div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Kode Staff</th>
+                                        <th>Role</th>
+                                        <th>Divisi</th>
+                                        <th>Keahlian</th>
+                                        <th>PIN</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staff-rows">
+                                    <tr><td colspan="7" class="text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-users" class="hr-panel hidden">
+                    <div class="card mb-3" style="background: var(--primary-soft-bg); border-color: var(--primary-border);">
+                        <div class="flex justify-between items-center" style="gap:10px;flex-wrap:wrap">
+                            <div>
+                                <div class="font-bold text-primary"><i class="fas fa-user-shield mr-2"></i>Manajemen User Pengelola</div>
+                                <div class="text-xs text-muted">
+                                    User di tabel ini login ke <strong>Portal Pengelola</strong> (app.html) dengan <strong>email + password</strong>.
+                                    Role yang diizinkan: Kepala SPPG, Asisten Lapangan, Ahli Gizi, Akuntan, Yayasan, Admin, Driver.
+                                    Koordinator Divisi dan Relawan wajib memakai Portal Relawan (tab "Staff").
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="loadPortalUsers()"><i class="fas fa-sync"></i> Refresh</button>
+                                <button class="btn btn-primary btn-sm" onclick="openPortalUserForm()"><i class="fas fa-user-plus"></i> Tambah User</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="font-bold mb-2">Filter User</div>
+                        <div class="form-grid">
+                            <div class="form-full">
+                                <label class="input-label">Cari</label>
+                                <input id="pu-filter-keyword" class="input-field" placeholder="Cari email / nama / role" oninput="renderPortalUsers()" />
+                            </div>
+                            <div>
+                                <label class="input-label">Filter Role</label>
+                                <select id="pu-filter-role" class="input-field" onchange="renderPortalUsers()">
+                                    <option value="">Semua Role</option>
+                                    <option value="kepala_sppg">Kepala SPPG</option>
+                                    <option value="asisten_lapangan">Asisten Lapangan</option>
+                                    <option value="ahli_gizi">Ahli Gizi</option>
+                                    <option value="akuntan">Akuntan</option>
+                                    <option value="yayasan">Yayasan</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="driver">Driver</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-2" style="gap:10px;flex-wrap:wrap">
+                            <div class="font-bold">Daftar User Pengelola</div>
+                            <div class="text-sm text-muted" id="pu-table-summary">0 data</div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pu-rows">
+                                    <tr><td colspan="4" class="text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-shifts" class="hr-panel hidden">
+                    <div class="card mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div>
+                                <div class="font-bold">Shift Configuration</div>
+                                <div class="text-xs text-muted">Daftar shift default per divisi. Digunakan otomatis untuk absensi harian.</div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="openShiftCreate()"><i class="fas fa-plus"></i> Tambah Shift</button>
+                        </div>
+                        <div id="shifts-container" class="grid-cols-2 gap-4"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Shift Assignment</div>
+                                <div class="text-xs text-muted">
+                                    Shift otomatis mengikuti divisi staff. Baris di bawah adalah shift <strong>efektif</strong> untuk tanggal terpilih.
+                                    Anda hanya perlu melakukan <em>override</em> bila staff menjalankan shift selain default divisinya.
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="loadShiftAssignments()"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div>
+                                <label class="input-label">Tanggal</label>
+                                <input id="asgn_date" class="input-field" type="date" title="Wajib: tanggal untuk resolve shift efektif" />
+                            </div>
+                            <div>
+                                <label class="input-label">Staff (opsional)</label>
+                                <select id="asgn_staff" class="input-field"></select>
+                            </div>
+                            <div class="form-full">
+                                <button class="btn btn-secondary btn-sm" onclick="loadShiftAssignments()"><i class="fas fa-filter"></i> Tampilkan</button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-muted mt-2" id="assignments-summary">-</div>
+                        <div class="table-responsive mt-2">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Staff</th>
+                                        <th>Divisi</th>
+                                        <th>Shift Efektif</th>
+                                        <th>Sumber</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assignments-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-attendance" class="hr-panel hidden">
+                    <div class="grid-dashboard mb-3">
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Baris Absensi Harian</div>
+                            <div class="text-2xl font-bold" id="att-stat-daily-rows">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Event Absensi</div>
+                            <div class="text-2xl font-bold" id="att-stat-event-rows">0</div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Absensi Harian</div>
+                                <div class="text-xs text-muted">Kelola hasil harian dari event clock-in/out dan input manual.</div>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button class="btn btn-primary btn-sm" onclick="recomputeAttendanceTodayFromEvents()" title="Hitung ulang menit kerja hari ini dari event clock-in/out (staff terdeteksi)">
+                                    <i class="fas fa-calendar-day mr-1"></i> Perbarui hari ini dari event
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="openAttendanceRecompute()"><i class="fas fa-calculator"></i> Recompute</button>
+                                <button class="btn btn-secondary btn-sm" onclick="openAttendanceDailyCreate()"><i class="fas fa-plus"></i> Input Absensi</button>
+                                <button class="btn btn-secondary btn-sm" onclick="loadAttendanceDaily()"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div>
+                                <label class="input-label" title="Kosongkan untuk menampilkan semua tanggal (hingga batas server)">Tanggal</label>
+                                <input id="att_date" class="input-field" type="date" title="Kosong = semua tanggal" />
+                            </div>
+                            <div>
+                                <label class="input-label">Staff (opsional)</label>
+                                <select id="att_staff" class="input-field"></select>
+                            </div>
+                            <div class="form-full flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="loadAttendanceDaily()"><i class="fas fa-filter"></i> Tampilkan</button>
+                                <button class="btn btn-secondary btn-sm" onclick="resetAttendanceFilters()"><i class="fas fa-undo"></i> Reset</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-4">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Staff</th>
+                                        <th>Shift</th>
+                                        <th>Clock In</th>
+                                        <th>Clock Out</th>
+                                        <th>Durasi Kerja</th>
+                                        <th>Terlambat</th>
+                                        <th>Lembur</th>
+                                        <th>Status</th>
+                                        <th>Catatan</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-daily-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Attendance Events (Clock-in/out)</div>
+                                <div class="text-xs text-muted">Event mentah untuk analisis wajah, lokasi, dan validasi absensi.</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="openAttendanceEventCreate()"><i class="fas fa-plus"></i> Tambah Event</button>
+                                <button class="btn btn-secondary btn-sm" onclick="loadAttendanceEvents()"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                        </div>
+                            <div class="form-grid">
+                                <div>
+                                    <label class="input-label" title="Filter tanggal wajib untuk menjaga performa">Dari</label>
+                                    <input id="evt_from" class="input-field" type="datetime-local" title="Default: hari ini 00:00" />
+                                </div>
+                                <div>
+                                    <label class="input-label" title="Filter tanggal wajib untuk menjaga performa">Sampai</label>
+                                    <input id="evt_to" class="input-field" type="datetime-local" title="Default: hari ini 23:59" />
+                                </div>
+                                <div class="form-full">
+                                    <label class="input-label">Staff (opsional)</label>
+                                    <select id="evt_staff" class="input-field"></select>
+                                </div>
+                                <div class="form-full">
+                                    <button class="btn btn-secondary btn-sm" onclick="setAttendanceEventsTodayRange()"><i class="fas fa-calendar-day"></i> Hari Ini</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="loadAttendanceEvents()"><i class="fas fa-filter"></i> Tampilkan</button>
+                                </div>
+                            </div>
+                            <div class="card mt-3" style="border-color: var(--secondary); background: var(--bg-card-soft);">
+                                <div class="flex justify-between items-center mb-2" style="padding: 0.75rem 0.75rem 0 0.75rem;">
+                                    <div class="font-bold">Titik GPS Dapur (klik peta)</div>
+                                    <button class="btn btn-secondary btn-xs" onclick="saveKitchenGpsPoint()">Simpan</button>
+                                </div>
+                                <div id="kitchen-gps-map" style="height: 220px; margin: 0 0.75rem 0.5rem 0.75rem; border-radius: var(--radius); overflow:hidden; border:1px solid var(--border);"></div>
+                                <div class="form-grid" style="padding: 0 0.75rem 0.75rem 0.75rem;">
+                                    <div class="form-full">
+                                        <label class="input-label">Paste Koordinat (lat,lng)</label>
+                                        <input id="kitchen_gps_pair" class="input-field" type="text" placeholder="-6.200000, 106.816666" />
+                                        <button class="btn btn-secondary btn-xs w-full mt-2" type="button" onclick="setKitchenGpsFromPair()">Set dari Paste</button>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Latitude</label>
+                                        <input id="kitchen_gps_lat" class="input-field" type="text" />
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Longitude</label>
+                                        <input id="kitchen_gps_lng" class="input-field" type="text" />
+                                    </div>
+                                    <div class="form-full">
+                                        <label class="input-label">Analisis Absen Relawan</label>
+                                        <button class="btn btn-primary btn-sm w-full" onclick="analyzeRelawanAttendanceBulk()">
+                                            <i class="fas fa-magic mr-1"></i> Analisis Absen (Bulk)
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm w-full mt-2" onclick="analyzeRelawanFaceMismatchRetry()">
+                                            <i class="fas fa-redo mr-1"></i> Deteksi ulang — hanya &quot;Wajah tidak cocok&quot;
+                                        </button>
+                                        <div class="text-xs text-muted mt-1">Bulk: semua event di rentang tanggal di atas. Deteksi ulang: hanya event yang catatannya persis &quot;Wajah tidak cocok&quot; (foto di meta diproses lagi ke layanan wajah).</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive mt-3">
+                                <table class="nutri-table w-full">
+                                    <thead>
+                                        <tr>
+                                            <th style="cursor:pointer;" onclick="toggleAttendanceEventsSort()" title="Klik untuk sortir tanggal">Waktu <span id="attendance-events-sort-icon"></span></th>
+                                            <th>Staff</th>
+                                            <th>Event</th>
+                                            <th>Source</th>
+                                            <th>Bukti / Lokasi</th>
+                                            <th>Catatan</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attendance-events-rows"></tbody>
+                                </table>
+                            </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-policy" class="hr-panel hidden">
+                    <div class="grid-dashboard mb-3">
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Jam Kerja (rekap)</div>
+                            <div class="text-2xl font-bold" id="att-stat-recap-hours">0.00</div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Kebijakan Absensi</div>
+                                <div class="text-xs text-muted">Atur standar jam kerja, lembur, toleransi terlambat, dan radius GPS valid.</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="saveAttendancePolicy()"><i class="fas fa-save"></i> Simpan Kebijakan</button>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div>
+                                <label class="input-label">Jam Kerja Normal / Hari</label>
+                                <input id="att_policy_work_hours" class="input-field" type="number" min="1" max="24" step="0.5" />
+                            </div>
+                            <div>
+                                <label class="input-label">Lembur Mulai Setelah (jam)</label>
+                                <input id="att_policy_overtime_after" class="input-field" type="number" min="1" max="24" step="0.5" />
+                            </div>
+                            <div>
+                                <label class="input-label">Toleransi Terlambat (menit)</label>
+                                <input id="att_policy_late_grace" class="input-field" type="number" min="0" max="180" step="1" />
+                            </div>
+                            <div>
+                                <label class="input-label">Radius GPS Valid (meter)</label>
+                                <input id="att_policy_radius" class="input-field" type="number" min="10" max="2000" step="5" />
+                            </div>
+                            <div>
+                                <label class="input-label">Siklus Rekap 2 Mingguan (hari)</label>
+                                <input id="att_policy_biweekly_days" class="input-field" type="number" min="7" max="31" step="1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Rekap Kehadiran</div>
+                                <div class="text-xs text-muted">Lihat rekap harian atau 2 mingguan berbasis kebijakan di atas.</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="loadAttendanceRecap()"><i class="fas fa-sync"></i> Refresh Rekap</button>
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div>
+                                <label class="input-label">Mode Rekap</label>
+                                <select id="att_recap_cycle" class="input-field">
+                                    <option value="daily">Harian</option>
+                                    <option value="biweekly">2 Mingguan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="input-label">Dari</label>
+                                <input id="att_recap_from" class="input-field" type="date" />
+                            </div>
+                            <div>
+                                <label class="input-label">Sampai</label>
+                                <input id="att_recap_to" class="input-field" type="date" />
+                            </div>
+                            <div>
+                                <label class="input-label">Staff (opsional)</label>
+                                <select id="att_recap_staff" class="input-field"></select>
+                            </div>
+                            <div class="form-full">
+                                <button class="btn btn-secondary btn-sm" onclick="loadAttendanceRecap()"><i class="fas fa-filter"></i> Tampilkan Rekap</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Staff</th>
+                                        <th>Divisi</th>
+                                        <th>Periode</th>
+                                        <th>Hadir/Hari</th>
+                                        <th>Jam Kerja</th>
+                                        <th>Lembur</th>
+                                        <th>Terlambat</th>
+                                        <th>Rata2 Jam/Hari</th>
+                                        <th>Foto Absensi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-recap-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-payroll" class="hr-panel hidden">
+                    <div class="grid-dashboard mb-3">
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Rate Kompensasi</div>
+                            <div class="text-2xl font-bold" id="payroll-stat-comp-count">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Period Draft</div>
+                            <div class="text-2xl font-bold" id="payroll-stat-period-draft">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Period Posted</div>
+                            <div class="text-2xl font-bold" id="payroll-stat-period-posted">0</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Total Net Period Aktif</div>
+                            <div class="text-2xl font-bold" id="payroll-stat-selected-net">Rp 0</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-cols-2 gap-4">
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <div class="font-bold">Kompensasi (Rate)</div>
+                                    <div class="text-xs text-muted">Tarif dasar payroll per staff yang menjadi acuan perhitungan.</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="btn btn-secondary btn-sm" onclick="openCompensationCreate()"><i class="fas fa-plus"></i> Tambah Rate</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="loadCompensation()"><i class="fas fa-sync"></i> Refresh</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="nutri-table w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Staff</th>
+                                            <th>Pay Type</th>
+                                            <th>Rate</th>
+                                            <th>Efektif</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payroll-comp-rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <div class="font-bold">Payroll Period</div>
+                                    <div class="text-xs text-muted">Siklus payroll untuk kalkulasi dan posting ke pencatatan keuangan.</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="btn btn-secondary btn-sm" onclick="openPayrollPeriodCreate()"><i class="fas fa-plus"></i> Buat Period</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="loadPayrollPeriods()"><i class="fas fa-sync"></i> Refresh</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="nutri-table w-full">
+                                    <thead>
+                                        <tr>
+                                            <th>Start</th>
+                                            <th>End</th>
+                                            <th>Status</th>
+                                            <th>Total Net</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="payroll-period-rows"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <div class="font-bold">Payroll Items</div>
+                                <div class="text-xs text-muted">Rincian komponen payroll untuk period terpilih (gross, potongan, net).</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-secondary btn-sm" onclick="openPayrollItemUpsert()"><i class="fas fa-pen"></i> Input Manual</button>
+                                <button class="btn btn-secondary btn-sm" onclick="reloadSelectedPayrollItems()"><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center gap-2 flex-wrap">
+                            <div class="text-sm text-muted" id="payroll-selected-info">Pilih period untuk melihat detail.</div>
+                            <div class="text-xs text-muted">Jumlah Item: <span id="payroll-stat-item-count">0</span></div>
+                        </div>
+                        <div class="table-responsive mt-3">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Staff</th>
+                                        <th>Pay Type</th>
+                                        <th>Rate</th>
+                                        <th>Menit</th>
+                                        <th>Gross</th>
+                                        <th>Deduction</th>
+                                        <th>Net</th>
+                                        <th>Currency</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="payroll-item-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="hr-panel-staff_performance" class="hr-panel hidden">
+                    <div class="grid-dashboard mb-3">
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Rata-rata kehadiran (tepat waktu)</div>
+                            <div class="text-2xl font-bold" id="perf-stat-staff-kehadiran">—</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Rata kedisiplinan</div>
+                            <div class="text-2xl font-bold" id="perf-stat-staff-kedisiplinan">—</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Rata 5R</div>
+                            <div class="text-2xl font-bold" id="perf-stat-staff-five-r">—</div>
+                        </div>
+                        <div class="card">
+                            <div class="text-xs text-muted mb-1">Rata improvement</div>
+                            <div class="text-2xl font-bold" id="perf-stat-staff-improvement">—</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <div class="font-bold">KPI Staff (per individu, 30 hari terakhir)</div>
+                            <div class="text-xs text-muted"><strong>Kehadiran</strong> dari absensi (tepat waktu). <strong>Kedisiplinan, 5R, improvement</strong> diisi penilaian (0–100) per staff. Metrik operasional BGN per divisi (SOP, distribusi, cakupan, keamanan pangan) ada di menu <strong>Kinerja operasi (divisi)</strong>.</div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadStaffPerformance()"><i class="fas fa-sync"></i> Refresh</button>
+                    </div>
+                    <div class="card">
+                        <div class="font-bold mb-2">Detail KPI per staff</div>
+                        <div class="table-responsive">
+                            <table class="nutri-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Staff</th>
+                                        <th>Divisi</th>
+                                        <th>Kehadiran</th>
+                                        <th>Kedisiplinan</th>
+                                        <th>5R</th>
+                                        <th>Improvement</th>
+                                        <th>Catatan</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staff-performance-rows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 11. Purchases View -->
+            <div id="view-purchases" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Purchasing & Procurement</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openPurchaseCreate()"><i class="fas fa-cart-plus"></i> New Purchase</button>
+                </div>
+                <div class="card mb-4">
+                    <div class="form-grid">
+                        <div>
+                            <label class="input-label">Start Date</label>
+                            <input id="pur_start" class="input-field" type="date" />
+                        </div>
+                        <div>
+                            <label class="input-label">End Date</label>
+                            <input id="pur_end" class="input-field" type="date" />
+                        </div>
+                        <div class="form-full flex gap-2">
+                            <button class="btn btn-secondary btn-sm" onclick="loadPurchases()"><i class="fas fa-filter"></i> Apply</button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearPurchasesFilter()"><i class="fas fa-undo"></i> Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Ingredient</th>
+                                    <th>Qty</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchases-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 12. Performance View — KPI BGN per divisi (operasional) -->
+            <div id="view-performance" class="view-section hidden">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h3 class="font-bold">Kinerja operasi (divisi)</h3>
+                        <p class="text-xs text-muted max-w-3xl">
+                            Ringkasan <strong>30 hari terakhir</strong>: SOP 35% · ketepatan distribusi 30% · cakupan penerima 20% (agregat <code>pm_distribution_events</code>, sama per baris divisi) · keamanan pangan 15%.
+                            Penilaian <strong>kehadiran, kedisiplinan, 5R, improvement</strong> per orang: <strong>Manajemen Staff → KPI Staff</strong>.
+                            Acuan: BGN_JUKNIS_MATRIX.md, <a href="https://www.bgn.go.id/juknis" class="text-primary" target="_blank" rel="noopener noreferrer">Juknis BGN</a>.
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadDivisionKpiView()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div class="grid-dashboard mb-3">
+                    <div class="card">
+                        <div class="text-xs text-muted mb-1">Rata-rata SOP Produksi</div>
+                        <div class="text-2xl font-bold" id="div-kpi-stat-sop">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-xs text-muted mb-1">Rata-rata Ketepatan Distribusi</div>
+                        <div class="text-2xl font-bold" id="div-kpi-stat-dist">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-xs text-muted mb-1">Cakupan penerima (dapur)</div>
+                        <div class="text-2xl font-bold" id="div-kpi-stat-coverage">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-xs text-muted mb-1">Rata-rata Keamanan Pangan</div>
+                        <div class="text-2xl font-bold" id="div-kpi-stat-food">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-xs text-muted mb-1">Rata-rata Skor KPI BGN</div>
+                        <div class="text-2xl font-bold" id="div-kpi-stat-score">—</div>
+                    </div>
+                </div>
+                <p class="text-xs text-muted mb-3">Ringkasan batch: ketepatan waktu selesai rencana produksi per divisi. Tabel BGN: agregat operasional per divisi; cakupan porsi = indikator tingkat dapur (nilai sama di tiap baris).</p>
+                <div class="card mb-4">
+                    <div class="font-bold mb-1">SOP / produksi per divisi (batch)</div>
+                    <div class="text-xs text-muted mb-2">Ketepatan waktu selesai batch — data <code>plans</code> / <code>batches</code>.</div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Divisi</th>
+                                    <th>Total batch</th>
+                                    <th>On-time</th>
+                                    <th>Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="division-kpi-division-batches-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="font-bold mb-2">Metrik BGN per divisi</div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Divisi</th>
+                                    <th>SOP Produksi</th>
+                                    <th>Ketepatan Distribusi</th>
+                                    <th>Cakupan Penerima</th>
+                                    <th>Keamanan Pangan</th>
+                                    <th>Skor KPI BGN</th>
+                                </tr>
+                            </thead>
+                            <tbody id="division-kpi-bgn-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 13. Pricing View -->
+            <div id="view-pricing" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Pricing</h3>
+                    <div class="flex gap-2">
+                        <button class="btn btn-warning btn-sm" onclick="importSiskaperbapoToDb()"><i class="fas fa-file-import"></i> Import to DB</button>
+                        <button class="btn btn-primary btn-sm" onclick="pricingSync()"><i class="fas fa-cloud-download-alt"></i> Sync</button>
+                    </div>
+                </div>
+                <div class="card mb-4">
+                    <div class="font-bold mb-2">Harga Pasar (Siskaperbapo)</div>
+                    <div class="grid-cols-2">
+                        <div>
+                            <div class="text-sm text-muted mb-1">Tanggal</div>
+                            <input id="pricing-date" type="date" class="input w-full">
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted mb-1">Wilayah</div>
+                            <select id="pricing-region" class="input w-full"></select>
+                        </div>
+                    </div>
+                    <div class="text-sm text-muted mt-2" id="pricing-status">Klik Sync untuk mengambil harga, atau Tampilkan untuk melihat data yang sudah tersimpan.</div>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="font-bold">Daftar Harga</div>
+                        <input id="pricing-filter" type="text" class="input" placeholder="Filter komoditas..." style="max-width:260px;">
+                    </div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Komoditas</th>
+                                    <th>Unit</th>
+                                    <th>Harga</th>
+                                    <th>Sumber</th>
+                                    <th>Tanggal Harga</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricing-market-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 14. Jobdesc View — acuan BGN (401.1/2025) + BGN_JUKNIS_MATRIX.md -->
+            <div id="view-jobdesc" class="view-section hidden">
+                <div class="mb-4">
+                    <h2 class="text-2xl font-bold">Jobdesc &amp; Tugas</h2>
+                    <p class="text-sm text-muted mt-1" style="max-width:52rem;line-height:1.5">
+                        Peran, matriks RACI, dan SOP operasional diselaraskan dengan indikator Juknis BGN untuk MBG/SPPG.
+                        Daftar tugas di bawah tetap terhubung ke <code>/api/tasks</code>.
+                    </p>
+                </div>
+
+                <div id="jobdesc-bgn-ref" class="card mb-4" style="padding:14px 16px"></div>
+
+                <div id="jobdesc-juknis-panel" class="card mb-4" style="padding:14px 16px"></div>
+
+                <div class="grid-cols-2 gap-4 mb-4" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+                    <div class="card" style="padding:14px 16px">
+                        <h3 class="font-bold mb-2" style="margin-top:0">Peran &amp; tanggung jawab</h3>
+                        <p class="text-xs text-muted mb-3" style="margin:0">Data dari <code>/api/jobdesc</code> (seed Juknis BGN).</p>
+                        <div id="jobdesc-roles"></div>
+                    </div>
+                    <div class="card" style="padding:14px 16px">
+                        <h3 class="font-bold mb-2" style="margin-top:0">Matriks RACI</h3>
+                        <p class="text-xs text-muted mb-3" style="margin:0">Aktivitas lintas peran — sumber <code>/api/raci</code>.</p>
+                        <div id="jobdesc-raci"></div>
+                    </div>
+                </div>
+
+                <div class="card mb-4" style="padding:14px 16px">
+                    <h3 class="font-bold mb-1" style="margin-top:0">SOP operasional (katalog)</h3>
+                    <p class="text-xs text-muted mb-3" style="margin:0;line-height:1.45">
+                        Dibuat berdasarkan pemetaan <strong>BGN_JUKNIS_MATRIX.md</strong> di repositori aplikasi (ketepatan distribusi, cakupan PM, SOP produksi, keamanan pangan, pelaporan periodik, kualitas data).
+                        Klik judul untuk membuka detail; tombol <strong>Cetak / PDF</strong> membuka pratinjau cetak (gunakan &quot;Simpan sebagai PDF&quot; di browser).
+                    </p>
+                    <div id="jobdesc-sop-root"></div>
+                </div>
+
+                <div class="card mt-4" style="padding:14px 16px">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                        <h3 class="font-bold" style="margin:0">Daftar tugas (Jobdesc)</h3>
+                        <button class="btn btn-primary btn-sm" onclick="openTaskCreate()"><i class="fas fa-plus"></i> Tambah Task</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="nutri-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Judul</th>
+                                    <th>Deskripsi</th>
+                                    <th>Ditugaskan</th>
+                                    <th>Jatuh tempo</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-rows"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-tasks" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">My Tasks</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="loadMyTasks()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div id="mytasks-list"></div>
+            </div>
+
+            <!-- DIVISION CONFIG VIEWS -->
+            <div id="view-division-config" class="view-section hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" id="div-cfg-title">Konfigurasi Divisi</h2>
+                </div>
+                <div id="div-cfg-container"></div>
+            </div>
+
+            <!-- OPERATIONAL MATERIALS -->
+            <div id="view-operational-materials" class="view-section hidden"></div>
+
+            <!-- PENERIMA MANFAAT -->
+            <div id="view-penerima-manfaat" class="view-section hidden">
+                <div id="pm-container"><!-- Rendered by penerima-manfaat.js --></div>
+            </div>
+
+            <!-- DISTRIBUSI -->
+            <div id="view-distribusi" class="view-section hidden">
+                <div id="dist-container"><!-- Rendered by distribusi.js --></div>
+            </div>
+
+            <!-- ABSENSI SAYA -->
+            <div id="view-absensi-saya" class="view-section hidden">
+                <div id="absensi-saya-container"><!-- Rendered by absensi-saya.js --></div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">Modal</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeModalUi()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div id="modal-error" class="field-error p-4 hidden"></div>
+            <div class="modal-actions" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar Form -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden">
+        <div class="sidebar-panel">
+            <div class="sidebar-header">
+                <h3 class="sidebar-title" id="sidebar-title">Title</h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeSidebarUi()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="sidebar-body" id="sidebar-body"></div>
+            <div class="sidebar-footer">
+                <div id="sidebar-error" class="field-error p-4 hidden"></div>
+                <div class="sidebar-actions" id="sidebar-actions"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legacy Backdrop (if needed for transition, but we'll remove it or alias it) -->
+    <!-- <div id="modal-backdrop" class="modal-backdrop">...</div> -->
+
+    <div id="toast-area" class="toast-area"></div>
+
+    <div id="modal-photo" class="hidden fixed-inset-0 bg-black-80 z-200 flex items-center justify-center">
+        <div class="card w-400">
+            <h3 class="font-bold mb-4">Upload Bukti Pekerjaan</h3>
+            <div class="photo-upload-area">
+                <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                <span class="text-muted text-sm">Ambil Foto / Upload</span>
+            </div>
+            <div class="flex gap-2">
+                <button class="btn btn-secondary w-full" onclick="closeModal('modal-photo')">Batal</button>
+                <button class="btn btn-primary w-full" onclick="submitTaskReport()">Kirim Laporan</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <script src='js/mbg_canonical.js?v=20260423'></script>
+    <script src='js/core.js?v=20260424g'></script>
+    <script src='js/auth.js?v=20260423'></script>
+    <script src='js/views/dashboard.js?v=20260423'></script>
+    <script src='js/views/production.js?v=20260424b'></script>
+    <script src='js/views/production_planner.js?v=20260424s'></script>
+    <script src='js/views/inventory.js?v=20260423'></script>
+    <script src='js/views/menu.js?v=20260424q'></script>
+    <script src='js/views/recipes_library.js?v=20260423'></script>
+    <script src='js/views/workflows_library.js?v=20260424'></script>
+    <script src='js/views/nutrisurvey.js?v=20260423'></script>
+    <script src='js/views/finance.js?v=20260423'></script>
+    <script src='js/views/hr.js?v=20260424e'></script>
+    <script src='js/views/tasks.js?v=20260423h'></script>
+    <script src='js/views/settings.js?v=20260423'></script>
+    <script src='js/views/reports.js?v=20260423'></script>
+    <script src='js/views/pricing.js?v=20260423'></script>
+    <script src='js/views/operational_materials.js?v=20260423'></script>
+    <script src='js/views/penerima-manfaat.js?v=20260423'></script>
+    <script src='js/views/distribusi.js?v=20260423g'></script>
+    <script src='js/views/jobdesc.js?v=20260423i'></script>
+    <script src='js/views/absensi-saya.js?v=20260423'></script>
+    <script src='js/app.js?v=20260424b'></script>
+</body>
+</html>

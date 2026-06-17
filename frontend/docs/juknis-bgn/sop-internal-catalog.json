@@ -1,0 +1,836 @@
+{
+  "version": 1,
+  "generated": "2026-04-23",
+  "categories": [
+    {
+      "category": "Menu, gizi & AKG",
+      "matrixRef": "Menu / AKG PM; kepatuhan gizi",
+      "items": [
+        {
+          "code": "SOP-BGN-MN-01",
+          "title": "Penyusunan menu operasional sesuai AKG kategori PM",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "portal_juknis"
+          ],
+          "purpose": "Menjamin setiap siklus menu memenuhi kebutuhan gizi PM dan jejak audit ke Juknis BGN.",
+          "scope": "Ahli Gizi (otoritas teknis), Kepala SPPG (approval), Koordinator Divisi (koordinasi eksekusi), Admin (master data pendukung).",
+          "definitions": [
+            {
+              "term": "AKG",
+              "text": "Angka Kecukupan Gizi — acuan komposisi gizi per kelompok PM (Kemenkes / Juknis)."
+            },
+            {
+              "term": "Menu terkunci",
+              "text": "Versi menu yang telah disetujui dan dipakai War Room serta produksi pada tanggal layan."
+            }
+          ],
+          "prerequisites": [
+            "Data PM & kategori AKG di sistem sudah benar.",
+            "Bahan pangan referensi dan resep dasar tersedia."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Perencanaan",
+              "items": [
+                "Susun pola menu periode (harian/mingguan) dengan variasi yang realistis untuk kapasitas dapur.",
+                "Petakan asupan makro dan mikro kritikal per kategori PM."
+              ],
+              "checkpoint": "Draft menu tersimpan di sistem dengan nomor versi."
+            },
+            {
+              "phase": "2. Validasi gizi",
+              "items": [
+                "Jalankan pengecekan NutriSurvey / kalkulator gizi internal.",
+                "Tandai menu peringatan bila mendekati atau melampaui batas AKG."
+              ],
+              "checkpoint": "Ahli Gizi memberi status validasi pada versi menu."
+            },
+            {
+              "phase": "3. Persetujuan",
+              "items": [
+                "Ajukan approval bertingkat (Ahli Gizi → Kepala SPPG) sesuai kebijakan tenant.",
+                "Dokumentasikan revisi dan alasan perubahan."
+              ],
+              "checkpoint": "Status menu APPROVED tercatat dengan timestamp."
+            },
+            {
+              "phase": "4. Publikasi ke operasi",
+              "items": [
+                "Kunci menu untuk tanggal layan terkait.",
+                "Informasikan perubahan ke divisi lewat briefing atau task Jobdesc."
+              ],
+              "checkpoint": "Plan War Room hanya merefer menu terkunci."
+            }
+          ],
+          "outputs": [
+            "Versi menu ter-approve",
+            "Ringkasan validasi gizi (ekspor/screenshot bila diperlukan)"
+          ],
+          "records": [
+            "Log approval menu",
+            "Riwayat revisi menu"
+          ],
+          "systemLinks": "Modul Menu, NutriSurvey, War Room (draft plan)",
+          "tips": "Jika terjadi perubahan bahan, aktifkan SOP-BGN-MN-02."
+        },
+        {
+          "code": "SOP-BGN-MN-02",
+          "title": "Substitusi bahan & perubahan menu darurat",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "portal_juknis"
+          ],
+          "purpose": "Mengendalikan perubahan mendadak tanpa mengorbankan keamanan pangan dan kepatuhan AKG.",
+          "scope": "Ahli Gizi, Kepala SPPG, Koordinator Divisi, Admin pembelian (dukungan).",
+          "definitions": [
+            {
+              "term": "Substitusi setara",
+              "text": "Pengganti bahan dengan profil gizi dan profil risiko alergen yang setara atau lebih aman."
+            }
+          ],
+          "prerequisites": [
+            "Penyebab insiden teridentifikasi (ketersediaan, recall, kerusakan lot).",
+            "Batch belum melewati titik proses yang tidak dapat dikembalikan."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Dokumentasi insiden",
+              "items": [
+                "Catat waktu, nomor lot, supplier, dan gejala ketidaksesuaian.",
+                "Ambil foto bukti untuk kasus kualitas fisik."
+              ],
+              "checkpoint": "Log insiden tersimpan."
+            },
+            {
+              "phase": "2. Analisis dampak gizi",
+              "items": [
+                "Hitung ulang komposisi dengan substitusi.",
+                "Evaluasi alergen baru atau perubahan pada garam, gula, lemak jenuh, dan natrium."
+              ],
+              "checkpoint": "Keputusan teknis Ahli Gizi tercatat."
+            },
+            {
+              "phase": "3. Persetujuan operasional",
+              "items": [
+                "Kepala SPPG menyetujui bila ada implikasi biaya atau volume signifikan.",
+                "Perbarui BOM dan resep di sistem agar konsisten dengan produksi."
+              ],
+              "checkpoint": "Resep/BOM sinkron dengan menu terbit."
+            },
+            {
+              "phase": "4. Komunikasi lapangan",
+              "items": [
+                "Briefing singkat ke koordinator divisi.",
+                "Buat task Jobdesc untuk tindakan lanjutan (stok alternatif, penyesuaian shift)."
+              ],
+              "checkpoint": "Divisi produksi mengakui perubahan sebelum eksekusi."
+            }
+          ],
+          "outputs": [
+            "Log substitusi",
+            "Versi resep terbaru"
+          ],
+          "records": [
+            "Approval Ahli Gizi & Kepala SPPG",
+            "Foto atau berita acara inspeksi"
+          ],
+          "systemLinks": "Menu, Resep, Jobdesc & Tasks",
+          "tips": "Untuk recall nasional, ikuti arahan resmi BGN/Kemenkes dan komunikasi yayasan."
+        }
+      ]
+    },
+    {
+      "category": "Bahan baku & gudang",
+      "matrixRef": "Keamanan pangan rantai pasok; akurasi stok",
+      "items": [
+        {
+          "code": "SOP-BGN-BB-01",
+          "title": "Penerimaan bahan baku & inspeksi awal",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "jdih_keputusan"
+          ],
+          "purpose": "Mencegah bahan tidak layak masuk zona produksi.",
+          "scope": "Admin gudang, Koordinator Divisi, Ahli Gizi (kritikal), Kepala SPPG (eskalasi).",
+          "definitions": [
+            {
+              "term": "GRN",
+              "text": "Goods Receipt Note — bukti penerimaan resmi ke gudang."
+            }
+          ],
+          "prerequisites": [
+            "Jadwal kedatangan diketahui.",
+            "Area receiving bersih dan siap inspeksi."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Verifikasi dokumen",
+              "items": [
+                "Cocokkan PO atau surat jalan dengan fisik (nama, kuantitas, satuan).",
+                "Periksa sertifikat halal, BPOM, atau dokumen lain jika menjadi syarat kontrak."
+              ],
+              "checkpoint": "Dokumen lengkap atau ada catatan kekurangan yang ditindaklanjuti."
+            },
+            {
+              "phase": "2. Inspeksi fisik dan suhu",
+              "items": [
+                "Untuk chilled atau frozen: ukur suhu inti pada sampel representatif.",
+                "Periksa kemasan utuh, tidak basi, tidak bocor, tidak terkontaminasi."
+              ],
+              "checkpoint": "Suhu penerimaan tercatat pada formulir."
+            },
+            {
+              "phase": "3. Disposisi",
+              "items": [
+                "Terima masuk zona penyimpanan yang sesuai, atau tolak, atau kuarantina.",
+                "Untuk penolakan: buat berita acara dan foto."
+              ],
+              "checkpoint": "Status lot di sistem: DITERIMA, DITOLAK, atau KARANTINA."
+            },
+            {
+              "phase": "4. Entri stok",
+              "items": [
+                "Masukkan batch, lot, dan tanggal kedaluwarsa ke sistem.",
+                "Tempel label rak sesuai FIFO atau FEFO."
+              ],
+              "checkpoint": "Stok sistem cocok dengan fisik awal penerimaan."
+            }
+          ],
+          "outputs": [
+            "GRN lengkap",
+            "Label rak"
+          ],
+          "records": [
+            "Berita acara penolakan",
+            "Log suhu penerimaan"
+          ],
+          "systemLinks": "Purchases, Inventory, ingredient_lots",
+          "tips": "Selaraskan dengan SOP-BGN-SP-01 untuk sanitasi area receiving."
+        },
+        {
+          "code": "SOP-BGN-BB-02",
+          "title": "Penyimpanan, FIFO/FEFO, dan pelabelan",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Mengurangi risiko kadaluarsa dan kontaminasi silang.",
+          "scope": "Admin gudang, Koordinator Divisi, Kepala SPPG (audit).",
+          "prerequisites": [
+            "Zona penyimpanan sudah ditetapkan (kering, dingin, bebas alergen tertentu)."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Penataan",
+              "items": [
+                "Terapkan FIFO atau FEFO secara konsisten.",
+                "Pisahkan bahan yang memicu alergen silang.",
+                "Label jelas: nama bahan, tanggal terima, ED, shift penanggung jawab."
+              ],
+              "checkpoint": "Tidak ada bahan mendekati ED di posisi depan tanpa alasan dokumentasi."
+            },
+            {
+              "phase": "2. Sanitasi berkala",
+              "items": [
+                "Jadwalkan pembersihan rak dan cold room.",
+                "Catat pada checklist 5R."
+              ],
+              "checkpoint": "Checklist mingguan terisi."
+            }
+          ],
+          "outputs": [
+            "Area gudang laik sanitasi"
+          ],
+          "records": [
+            "Checklist sanitasi",
+            "Foto audit"
+          ],
+          "systemLinks": "Inventory, Stock opname",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-BB-03",
+          "title": "Issuing ke produksi & rekonsiliasi harian",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Jejak bahan ke batch sesuai BOM dan akurasi nilai persediaan.",
+          "scope": "Koordinator Divisi, Admin gudang, Akuntan.",
+          "prerequisites": [
+            "Plan batch atau picking list tersedia."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Picking",
+              "items": [
+                "Keluar bahan sesuai BOM; catat kuantitas aktual.",
+                "Catat selisih awal seperti spillage ringan."
+              ],
+              "checkpoint": "Pick list ditandatangani atau disetujui koordinator."
+            },
+            {
+              "phase": "2. Rekonsiliasi",
+              "items": [
+                "Akhir shift: bandingkan stok fisik cepat versus sistem untuk item pergerakan tinggi.",
+                "Selisih di atas batas internal: investigasi pada hari yang sama."
+              ],
+              "checkpoint": "Notulen selisih dan tindakan perbaikan."
+            }
+          ],
+          "outputs": [
+            "Mutasi stok harian"
+          ],
+          "records": [
+            "Lembar issuing",
+            "Nota investigasi selisih"
+          ],
+          "systemLinks": "Batches, Inventory",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Produksi, batch & SOP divisi",
+      "matrixRef": "Kepatuhan SOP produksi; batch on-time",
+      "items": [
+        {
+          "code": "SOP-BGN-PR-01",
+          "title": "Briefing shift & aktivasi tugas Jobdesc",
+          "legalRefIds": [
+            "portal_juknis",
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Menyelaraskan personil dengan target batch, titik kendali kritis, dan komitmen distribusi.",
+          "scope": "Koordinator Divisi, Kepala SPPG, seluruh staf shift.",
+          "prerequisites": [
+            "Plan terbit dan daftar tugas tersedia di sistem."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Review rencana",
+              "items": [
+                "Buka plan terbit dan tugas otomatis dari War Room.",
+                "Tekankan prioritas porsi, PM kritis, dan batas waktu batch."
+              ],
+              "checkpoint": "Setiap personel memahami tugas melalui Jobdesc."
+            },
+            {
+              "phase": "2. CCP dan alat",
+              "items": [
+                "Ingatkan titik suhu masak, waktu chilling, sanitasi silang.",
+                "Cek ketersediaan dan kalibrasi alat ukur."
+              ],
+              "checkpoint": "Tidak ada alat ukur yang tidak siap pakai."
+            }
+          ],
+          "outputs": [
+            "Briefing tercatat melalui task selesai dan catatan singkat"
+          ],
+          "records": [
+            "Foto briefing opsional"
+          ],
+          "systemLinks": "Jobdesc & Tasks, War Room, Batches",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-PR-02",
+          "title": "Pelaksanaan produksi per divisi (prep — cook — pack)",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Output batch sesuai porsi, waktu, dan persyaratan QA minimum.",
+          "scope": "Koordinator Divisi, Ahli Gizi (QA), Kepala SPPG.",
+          "prerequisites": [
+            "Workflow dan recipe steps untuk menu aktif sudah valid."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Eksekusi workflow",
+              "items": [
+                "Ikuti urutan langkah resep; isi setiap checkpoint suhu dan waktu.",
+                "Dilarang melewati langkah CCP."
+              ],
+              "checkpoint": "Log langkah tercatat pada batch."
+            },
+            {
+              "phase": "2. HOLD dan RELEASE",
+              "items": [
+                "Jika parameter CCP gagal: tahan batch dan isolasi produk.",
+                "Lanjut hanya setelah Ahli Gizi menyetujui tindakan korektif."
+              ],
+              "checkpoint": "Status batch konsisten antara dapur dan sistem."
+            }
+          ],
+          "outputs": [
+            "Batch selesai atau ditahan dengan alasan jelas"
+          ],
+          "records": [
+            "Log HACCP",
+            "Task divisi"
+          ],
+          "systemLinks": "Batches, POST /api/batches/:id/haccp-check",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-PR-03",
+          "title": "Pengemasan porsi & holding produk jadi",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Menjaga mutu hingga titik serah ke distribusi.",
+          "scope": "Divisi packing, Ahli Gizi (sampling), Koordinator Divisi.",
+          "prerequisites": [
+            "Standar berat atau isi porsi dan jenis kemasan sudah ditetapkan."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Standar porsi",
+              "items": [
+                "Timbang atau isi porsi sesuai standar; periksa kemasan dan segel.",
+                "Pasang label identitas PM bila diperlukan kontrak internal."
+              ],
+              "checkpoint": "Sampling acak sesuai frekuensi kebijakan dapur."
+            },
+            {
+              "phase": "2. Holding",
+              "items": [
+                "Pantau suhu dan batas waktu holding sebelum loading.",
+                "Jika lampaui batas: pemusnahan sesuai kebijakan HACCP."
+              ],
+              "checkpoint": "Log suhu holding tersedia."
+            }
+          ],
+          "outputs": [
+            "Produk siap dimuat ke kendaraan"
+          ],
+          "records": [
+            "Checklist packing",
+            "Hasil organoleptik spot"
+          ],
+          "systemLinks": "Distribusi (wave)",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Keamanan pangan, sanitasi & HACCP",
+      "matrixRef": "Keamanan pangan dan sanitasi",
+      "items": [
+        {
+          "code": "SOP-BGN-SP-01",
+          "title": "Sanitasi personil & 5R area kerja",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "portal_juknis"
+          ],
+          "purpose": "Mencegah kontaminasi dari manusia dan lingkungan.",
+          "scope": "Semua staf dapur; Koordinator Divisi; Ahli Gizi saat audit.",
+          "prerequisites": [
+            "SOP kebersihan diri dan larangan sakit menular sudah sosialisasi."
+          ],
+          "procedure": [
+            {
+              "phase": "1. Personil",
+              "items": [
+                "Cuci tangan pada titik kritis masuk area dan setelah kontaminasi.",
+                "Seragam, hairnet, masker, dan larangan akses saat sakit."
+              ],
+              "checkpoint": "Checklist kehadiran dan kesehatan harian."
+            },
+            {
+              "phase": "2. 5R",
+              "items": [
+                "Ringkas, Rapi, Resik, Rawat, Rajin sesuai zona kerja."
+              ],
+              "checkpoint": "Audit foto mingguan atau skor 5R diisi koordinator."
+            }
+          ],
+          "outputs": [
+            "Lingkungan kerja laik produksi"
+          ],
+          "records": [
+            "Checklist sanitasi harian"
+          ],
+          "systemLinks": "Performance (penilaian 5R)",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-SP-02",
+          "title": "Monitoring CCP & penyimpangan proses",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Setiap titik kendali kritis terukur dan korektif dilakukan segera.",
+          "scope": "Ahli Gizi, Koordinator Divisi, Kepala SPPG.",
+          "procedure": [
+            {
+              "phase": "1. Identifikasi",
+              "items": [
+                "Petakan CCP dari recipe_steps.",
+                "Tetapkan frekuensi pengukuran untuk setiap CCP."
+              ],
+              "checkpoint": "Daftar CCP per menu aktif tersedia."
+            },
+            {
+              "phase": "2. Di luar batas",
+              "items": [
+                "Hentikan proses terkait; isolasi produk; catat akar masalah singkat.",
+                "Dokumentasikan korektif sebelum rilis."
+              ],
+              "checkpoint": "Approval QA sebelum melanjutkan."
+            }
+          ],
+          "outputs": [
+            "Log CCP lengkap"
+          ],
+          "records": [
+            "batch_haccp_checks"
+          ],
+          "systemLinks": "POST /api/batches/:id/haccp-check",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-SP-03",
+          "title": "Uji organoleptik & keputusan mutu",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Verifikasi sensorik sebelum distribusi sesuai kebutuhan menu.",
+          "scope": "Ahli Gizi, Koordinator Divisi.",
+          "procedure": [
+            {
+              "phase": "1. Sampling",
+              "items": [
+                "Ambil sampel representatif per batch atau slot waktu."
+              ],
+              "checkpoint": "Formulir organoleptik terisi lengkap."
+            },
+            {
+              "phase": "2. Keputusan",
+              "items": [
+                "Baik: lanjut distribusi.",
+                "Tidak baik: tahan produk dan jalankan SOP penyimpangan mutu."
+              ],
+              "checkpoint": "Tanda tangan petugas uji."
+            }
+          ],
+          "outputs": [
+            "Form organoleptik"
+          ],
+          "records": [
+            "Arsip sesuai retensi kebijakan yayasan"
+          ],
+          "systemLinks": "Distribusi — cetak Uji Org. per sekolah",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Distribusi & logistik",
+      "matrixRef": "Ketepatan waktu distribusi makanan",
+      "items": [
+        {
+          "code": "SOP-BGN-DS-01",
+          "title": "Perencanaan wave, surat jalan, dan muat kendaraan",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Rute dan waktu wave terdokumentasi dan aman.",
+          "scope": "Kepala SPPG, Asisten Lapangan, Driver, Admin (master kendaraan).",
+          "procedure": [
+            {
+              "phase": "1. Perencanaan wave",
+              "items": [
+                "Sinkronkan plan War Room ke wave distribusi.",
+                "Pastikan satu lokasi hanya pada satu wave per hari."
+              ],
+              "checkpoint": "Semua surat jalan atau dokumen muat tersedia di sistem."
+            },
+            {
+              "phase": "2. Muat",
+              "items": [
+                "Urutkan penurunan; periksa cooler box dan termometer.",
+                "Catat suhu awal cold chain bila menjadi indikator."
+              ],
+              "checkpoint": "Foto muat opsional tersimpan."
+            }
+          ],
+          "outputs": [
+            "Paket dokumen pengiriman"
+          ],
+          "records": [
+            "order_deliveries",
+            "surat jalan"
+          ],
+          "systemLinks": "Distribusi",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-DS-02",
+          "title": "Pelaksanaan rute & serah terima di titik PM",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Memenuhi komitmen waktu dan bukti layanan di lokasi PM.",
+          "scope": "Driver, Asisten Lapangan.",
+          "procedure": [
+            {
+              "phase": "1. Eksekusi rute",
+              "items": [
+                "Patuhi jadwal wave; catat keterlambatan beserta alasan di sistem."
+              ],
+              "checkpoint": "Timestamp tiba diperbarui."
+            },
+            {
+              "phase": "2. Di titik PM",
+              "items": [
+                "Lakukan serah terima; unggah foto bukti dan tanda terima bila digunakan.",
+                "Catat suhu serah bila diwajibkan kontrak internal."
+              ],
+              "checkpoint": "Status evidence pada event distribusi."
+            }
+          ],
+          "outputs": [
+            "Bukti layanan lengkap"
+          ],
+          "records": [
+            "pm_distribution_events"
+          ],
+          "systemLinks": "Distribusi",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-DS-03",
+          "title": "Retur, sisa porsi, dan disposition",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Pengelolaan sisa aman dan pelaporan akurat.",
+          "scope": "Asisten Lapangan, Ahli Gizi, Kepala SPPG.",
+          "procedure": [
+            {
+              "phase": "1. Pencatatan",
+              "items": [
+                "Catat retur dengan alasan, kuantitas, dan kondisi."
+              ],
+              "checkpoint": "Entri pada event distribusi."
+            },
+            {
+              "phase": "2. Disposition",
+              "items": [
+                "Tentukan redistribusi atau pemusnahan sesuai HACCP.",
+                "Dokumentasikan pemusnahan dengan berita acara bila diperlukan."
+              ],
+              "checkpoint": "Laporan harian konsisten."
+            }
+          ],
+          "outputs": [
+            "Keputusan disposition"
+          ],
+          "records": [
+            "Berita acara pemusnahan",
+            "Foto"
+          ],
+          "systemLinks": "Distribusi, Reports",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Penerima manfaat & cakupan layanan",
+      "matrixRef": "Jumlah PM dilayani sesuai target",
+      "items": [
+        {
+          "code": "SOP-BGN-PM-01",
+          "title": "Master PM, lokasi, dan kalender libur",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Target porsi dan penugasan wave sesuai kondisi lapangan.",
+          "scope": "Admin, Kepala SPPG, Yayasan (pengawasan).",
+          "procedure": [
+            {
+              "phase": "1. Validasi data",
+              "items": [
+                "Pastikan lokasi, kategori PM, dan default porsi akurat.",
+                "Isi libur per sekolah sebelum cut-off produksi."
+              ],
+              "checkpoint": "Tidak ada penugasan wave pada hari libur lokasi."
+            }
+          ],
+          "outputs": [
+            "Dataset PM konsisten"
+          ],
+          "records": [
+            "pm_lokasi",
+            "pm_lokasi_holidays"
+          ],
+          "systemLinks": "Penerima Manfaat, Distribusi",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-PM-02",
+          "title": "Monitoring cakupan & rekonsiliasi porsi terhidangkan",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Bukti PM menerima layanan sesuai target operasional.",
+          "scope": "Kepala SPPG, Yayasan, Asisten Lapangan.",
+          "procedure": [
+            {
+              "phase": "1. Analisis harian",
+              "items": [
+                "Bandingkan target porsi dengan porsi terhidangkan per event.",
+                "Investigasi gap besar pada hari yang sama dan dokumentasikan akar masalah."
+              ],
+              "checkpoint": "Notulen tindakan perbaikan."
+            }
+          ],
+          "outputs": [
+            "Ringkasan cakupan harian"
+          ],
+          "records": [
+            "Reports",
+            "Ringkasan distribusi"
+          ],
+          "systemLinks": "/api/penerima-manfaat/distribution-summary",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Pelaporan & tata kelola data",
+      "matrixRef": "Pelaporan periodik; kualitas data",
+      "items": [
+        {
+          "code": "SOP-BGN-LP-01",
+          "title": "Laporan harian internal SPPG",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "jdih_keputusan"
+          ],
+          "purpose": "Menyatukan indikator operasional per hari.",
+          "scope": "Kepala SPPG, Ahli Gizi, Koordinator Divisi, Admin.",
+          "procedure": [
+            {
+              "phase": "1. Pengisian",
+              "items": [
+                "Catat insiden mutu, keterlambatan, kendala bahan, dan tindakan.",
+                "Lampirkan referensi ID batch atau event distribusi bila relevan."
+              ],
+              "checkpoint": "Review dan persetujuan Kepala SPPG."
+            }
+          ],
+          "outputs": [
+            "Laporan harian tersubmit"
+          ],
+          "records": [
+            "daily_reports"
+          ],
+          "systemLinks": "/api/reports/daily",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-LP-02",
+          "title": "Pelaporan bulanan Tauwas & agregasi",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "jdih_keputusan"
+          ],
+          "purpose": "Memenuhi kewajiban pelaporan ke pemangku daerah atau nasional.",
+          "scope": "Yayasan atau Tauwas, Kepala SPPG, Akuntan.",
+          "procedure": [
+            {
+              "phase": "1. Kompilasi",
+              "items": [
+                "Jalankan agregat bulanan dari data harian.",
+                "Perbaiki temuan guardrail kualitas data sebelum publikasi."
+              ],
+              "checkpoint": "Versi final dipublikasikan dan diarsipkan."
+            }
+          ],
+          "outputs": [
+            "Laporan bulanan final"
+          ],
+          "records": [
+            "monthly compile metadata"
+          ],
+          "systemLinks": "/api/reports/monthly/compile",
+          "tips": null
+        },
+        {
+          "code": "SOP-BGN-LP-03",
+          "title": "Evaluasi triwulanan & PDCA",
+          "legalRefIds": [
+            "portal_juknis",
+            "juknis_tata_kelola_mbg"
+          ],
+          "purpose": "Perbaikan berkelanjutan berbasis data.",
+          "scope": "Yayasan, Kepala SPPG, Ahli Gizi.",
+          "procedure": [
+            {
+              "phase": "1. Tinjauan KPI",
+              "items": [
+                "Tinjau tren ketepatan distribusi, SOP produksi, cakupan PM, dan food safety.",
+                "Susun rencana aksi dan tugaskan melalui Jobdesc."
+              ],
+              "checkpoint": "Notulen rapat dan daftar tindak lanjut."
+            }
+          ],
+          "outputs": [
+            "Rencana aksi triwulan"
+          ],
+          "records": [
+            "quarterly compile",
+            "MoM rapat"
+          ],
+          "systemLinks": "Reports, Performance",
+          "tips": null
+        }
+      ]
+    },
+    {
+      "category": "Keuangan & efisiensi",
+      "matrixRef": "Cost per meal; rekonsiliasi",
+      "items": [
+        {
+          "code": "SOP-BGN-KU-01",
+          "title": "Rekonsiliasi biaya bahan & cost per meal",
+          "legalRefIds": [
+            "juknis_tata_kelola_mbg",
+            "jdih_keputusan"
+          ],
+          "purpose": "Angka akuntabel untuk audit yayasan dan efisiensi dapur.",
+          "scope": "Akuntan, Kepala SPPG, Admin.",
+          "procedure": [
+            {
+              "phase": "1. Rekap",
+              "items": [
+                "Rekap pemakaian bahan terhadap batch dan menu aktual.",
+                "Selaraskan dengan hasil stok opname."
+              ],
+              "checkpoint": "Opname periodik selesai."
+            },
+            {
+              "phase": "2. Cost per meal",
+              "items": [
+                "Hitung indikator efisiensi; jelaskan anomaly.",
+                "Kepala SPPG menyetujui narasi laporan."
+              ],
+              "checkpoint": "Laporan cost per meal terbit."
+            }
+          ],
+          "outputs": [
+            "Laporan efisiensi periode"
+          ],
+          "records": [
+            "Jurnal",
+            "Laporan stok"
+          ],
+          "systemLinks": "Finance, Inventory, KPI definitions",
+          "tips": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Create Task · MBG{% endblock %}
+
+{% block topnav %}
+<a class="btn btn-ghost" href="/app">Dashboard</a>
+<a class="btn btn-ghost" href="/app/plans">Production</a>
+<a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+<a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+<a class="btn btn-ghost" href="/app/finance">Finance</a>
+<a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+<form method="post" action="/logout" class="inline">
+  <button class="btn btn-secondary" type="submit">Logout</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1 class="h1">Create Task</h1>
+    <div class="muted">Tenant: {{ tenant_id }}</div>
+  </div>
+</section>
+
+{% if error.is_some() %}
+<div class="alert alert-danger">{{ error.as_ref().unwrap() }}</div>
+{% else %}
+<div class="muted">Required fields missing</div>
+{% endif %}
+
+<section class="card">
+  <form method="post" action="/app/tasks/new" class="form">
+    <label class="label" for="title">Task title</label>
+    <input class="input" id="title" name="title" type="text" value="{{ title }}" />
+
+    <label class="label" for="division">Division</label>
+    <select class="input" id="division" name="division">
+      {% for d in divisions %}
+      <option value="{{ d }}" {% if d.as_str()==division.as_str() %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="label" for="due_date">Due date</label>
+    <input class="input" id="due_date" name="due_date" type="date" value="{{ due_date }}" />
+
+    <div class="row">
+      <button class="btn btn-primary" type="submit">Save Task</button>
+      <a class="btn btn-secondary" href="/app/tasks">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

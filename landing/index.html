@@ -1,0 +1,2443 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="description" content="Sistem Manajemen Dapur MBG by DJATI CORP — platform operasional untuk produksi, pengadaan, absensi, dan laporan terintegrasi. DJATI: kokoh fondasi, presisi eksekusi.">
+<title>Sistem Manajemen Dapur MBG by DJATI CORP — DJATI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;800;900&family=Jost:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f2ea;
+    --bg-soft: #efe7d9;
+    --paper: #ffffff;
+    --paper-soft: #fffcf8;
+    --ink: #1a150e;
+    --ink-soft: #5f4933;
+    --rule: #dbc8aa;
+    --gold: #b88c2c;
+    --gold-strong: #8c6617;
+    --gold-soft: #f3e5c2;
+    --blue: #0f52ba;
+    --blue-strong: #0a3d8f;
+    --blue-soft: #e6efff;
+    --glass: rgba(255, 255, 255, 0.72);
+    --shadow-sm: 0 8px 18px rgba(20, 15, 8, 0.07);
+    --shadow-lg: 0 30px 80px rgba(20, 15, 8, 0.12);
+    --shadow-md: 0 16px 40px rgba(20, 15, 8, 0.1);
+    --radius-xl: 24px;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    /* “Malam dapur + data” — bukan palet vendor GPU */
+    --night: #07090e;
+    --night-mid: #0e141f;
+    --night-edge: #152030;
+    --fog: rgba(245, 243, 238, 0.92);
+    --fog-muted: rgba(220, 214, 204, 0.72);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Jost', sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .container {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: linear-gradient(180deg, rgba(7, 9, 14, 0.82), rgba(7, 9, 14, 0.45));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    transition: box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
+  }
+
+  .topbar.scrolled {
+    background: linear-gradient(180deg, rgba(248, 243, 234, 0.94), rgba(248, 243, 234, 0.9));
+    border-bottom-color: rgba(26, 21, 14, 0.08);
+    box-shadow: 0 12px 26px rgba(26, 21, 14, 0.1);
+  }
+
+  .topbar:not(.scrolled) .brand-title {
+    color: var(--fog);
+    letter-spacing: 0.11em;
+  }
+
+  .topbar:not(.scrolled) .brand-sub {
+    color: var(--fog-muted);
+  }
+
+  .topbar.scrolled .brand-title {
+    color: var(--ink);
+  }
+
+  .topbar.scrolled .brand-sub {
+    color: var(--ink-soft);
+  }
+
+  .topbar:not(.scrolled) .btn-ghost {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--fog);
+    box-shadow: none;
+  }
+
+  .topbar:not(.scrolled) .btn-primary {
+    box-shadow: 0 12px 32px rgba(15, 82, 186, 0.48);
+  }
+
+  .topbar:not(.scrolled) .btn:focus-visible {
+    outline-color: rgba(230, 239, 255, 0.55);
+  }
+
+  .topbar-inner {
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    color: #fff;
+    font-size: 15px;
+    background: linear-gradient(140deg, var(--gold), var(--gold-strong));
+    box-shadow: 0 8px 18px rgba(184, 140, 44, 0.34);
+  }
+
+  .brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .brand-sub {
+    margin-top: -1px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 11px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:focus-visible {
+    outline: 3px solid rgba(15, 82, 186, 0.28);
+    outline-offset: 2px;
+  }
+
+  .topbar.scrolled .btn:focus-visible {
+    outline-color: rgba(15, 82, 186, 0.28);
+  }
+
+  .btn-ghost {
+    background: var(--glass);
+    border-color: rgba(26, 21, 14, 0.14);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(184, 140, 44, 0.35);
+  }
+
+  .topbar:not(.scrolled) .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(184, 140, 44, 0.45);
+    color: var(--fog);
+  }
+
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(15, 82, 186, 0.3);
+  }
+
+  .btn-primary:hover {
+    background: var(--blue-strong);
+    box-shadow: 0 14px 30px rgba(10, 61, 143, 0.34);
+  }
+
+  .hero {
+    position: relative;
+    padding: 88px 0 72px;
+    margin-top: -76px;
+    padding-top: calc(76px + 88px);
+    color: var(--fog);
+    background:
+      radial-gradient(ellipse 120% 90% at 78% -30%, rgba(184, 140, 44, 0.22), transparent 52%),
+      radial-gradient(ellipse 90% 70% at -5% 105%, rgba(15, 82, 186, 0.2), transparent 55%),
+      linear-gradient(168deg, var(--night) 0%, var(--night-mid) 38%, var(--night-edge) 100%);
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.35) 62%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: -20% -30% auto 40%;
+    height: 70%;
+    background: conic-gradient(from 200deg at 50% 50%, rgba(15, 82, 186, 0.14), transparent 40%, rgba(184, 140, 44, 0.1), transparent 75%);
+    filter: blur(40px);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  .hero .container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 36px;
+    align-items: center;
+  }
+
+  .hero .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(243, 229, 194, 0.95);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+
+  .hero-title {
+    font-family: 'Syne', 'Jost', sans-serif;
+    font-size: clamp(46px, 8.5vw, 86px);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .hero-title span {
+    background: linear-gradient(115deg, #f0d78c 0%, var(--gold) 38%, var(--gold-strong) 72%, #6ea8ff 100%);
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    margin-top: 20px;
+    font-size: clamp(17px, 2.2vw, 21px);
+    color: var(--fog-muted);
+    font-weight: 500;
+    max-width: 34em;
+  }
+
+  .hero-copy {
+    margin-top: 18px;
+    color: rgba(220, 214, 204, 0.82);
+    font-size: 17px;
+    max-width: 38em;
+    line-height: 1.65;
+  }
+
+  .hero-copy strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .hero-ctas {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .hero .btn-ghost {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: var(--fog);
+    box-shadow: none;
+  }
+
+  .hero .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(184, 140, 44, 0.45);
+  }
+
+  .hero .btn-primary {
+    box-shadow: 0 14px 36px rgba(15, 82, 186, 0.5);
+  }
+
+  .hero .glow {
+    opacity: 0.42;
+    filter: blur(14px);
+  }
+
+  .hero-metrics {
+    margin-top: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .hero .metric {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-md);
+    padding: 14px 14px 13px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .hero .metric:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
+    border-color: rgba(184, 140, 44, 0.35);
+  }
+
+  .hero .metric strong {
+    display: block;
+    font-size: 26px;
+    line-height: 1.1;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    background: linear-gradient(90deg, #fff, #e8eefc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero .metric span {
+    display: block;
+    font-size: 11px;
+    color: rgba(220, 214, 204, 0.72);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .hero-panel {
+    position: relative;
+    min-height: 440px;
+  }
+
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.7;
+    animation: drift 9s ease-in-out infinite;
+  }
+
+  .glow-a {
+    width: 220px;
+    height: 220px;
+    right: 30px;
+    top: 0;
+    background: radial-gradient(circle, rgba(184, 140, 44, 0.52), transparent 72%);
+  }
+
+  .glow-b {
+    width: 260px;
+    height: 260px;
+    left: 20px;
+    bottom: 20px;
+    background: radial-gradient(circle, rgba(15, 82, 186, 0.34), transparent 70%);
+    animation-delay: -3s;
+  }
+
+  .hero-card {
+    position: relative;
+    background: linear-gradient(160deg, #20170f, #101114 58%, #0f2f62);
+    border-radius: var(--radius-xl);
+    color: #fff;
+    padding: 30px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.12), transparent 32%),
+      linear-gradient(120deg, transparent 50%, rgba(255, 255, 255, 0.06) 72%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .hero-card::before {
+    content: 'DJATI';
+    position: absolute;
+    right: -32px;
+    bottom: -10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 90px;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+  }
+
+  .hero-card h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .hero-card h2 {
+    font-family: 'Playfair Display', serif;
+    margin-top: 8px;
+    font-size: 30px;
+    line-height: 1.15;
+  }
+
+  .hero-card p {
+    margin-top: 14px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+  }
+
+  .mini-list {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .mini-item {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: 11px;
+    backdrop-filter: blur(4px);
+  }
+
+  section {
+    padding: 52px 0;
+  }
+
+  /* Lembar konten: transisi “malam digital → editorial hangat” (irisan gaya produk + majalah) */
+  section#produk {
+    position: relative;
+    z-index: 2;
+    margin-top: -44px;
+    padding-top: 72px;
+    padding-bottom: 56px;
+    background:
+      radial-gradient(ellipse 70% 55% at 12% 0%, rgba(184, 140, 44, 0.1), transparent 50%),
+      radial-gradient(ellipse 60% 45% at 92% 12%, rgba(15, 82, 186, 0.06), transparent 45%),
+      var(--bg);
+    border-radius: 28px 28px 0 0;
+    border-top: 1px solid rgba(26, 21, 14, 0.07);
+    box-shadow: 0 -16px 50px rgba(8, 10, 14, 0.14);
+  }
+
+  section#cuplikan {
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+
+  section#filosofi {
+    background: var(--bg);
+    padding-top: 56px;
+  }
+
+  section#faq {
+    background: linear-gradient(180deg, var(--bg) 0%, #e8e0d2 100%);
+    padding-top: 56px;
+    padding-bottom: 40px;
+  }
+
+  .section-head {
+    margin-bottom: 22px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--gold-strong);
+    font-weight: 600;
+  }
+
+  .section-title {
+    margin-top: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.1;
+  }
+
+  .section-desc {
+    margin-top: 12px;
+    max-width: 760px;
+    color: var(--ink-soft);
+    font-size: 16px;
+  }
+
+  .modules {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 18px;
+    margin-top: 20px;
+  }
+
+  .tab-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .tab-btn {
+    width: 100%;
+    text-align: left;
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    padding: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tab-btn small {
+    display: block;
+    margin-top: 4px;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+
+  .tab-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(184, 140, 44, 0.28);
+  }
+
+  .tab-btn:focus-visible {
+    outline: 3px solid rgba(15, 82, 186, 0.24);
+    outline-offset: 2px;
+  }
+
+  .tab-btn.active {
+    border-color: rgba(15, 82, 186, 0.45);
+    background: var(--blue-soft);
+    box-shadow: 0 12px 30px rgba(15, 82, 186, 0.12);
+  }
+
+  .tab-panel {
+    background: linear-gradient(180deg, var(--paper), var(--paper-soft));
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(26, 21, 14, 0.08);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    min-height: 330px;
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .tab-content h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+  }
+
+  .tab-content p {
+    margin-top: 10px;
+    color: var(--ink-soft);
+  }
+
+  .chip-row {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    background: rgba(15, 82, 186, 0.08);
+    color: var(--blue-strong);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .philosophy-grid {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .letter-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: 14px;
+    padding: 16px 14px;
+    min-height: 176px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .letter-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 24px rgba(20, 15, 8, 0.12);
+    border-color: rgba(184, 140, 44, 0.3);
+  }
+
+  .letter-card .letter {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--gold-strong);
+  }
+
+  .letter-card h4 {
+    margin-top: 4px;
+    font-size: 16px;
+  }
+
+  .letter-card p {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .quote-card {
+    margin-top: 16px;
+    background: linear-gradient(160deg, #1c150e, #14110d);
+    color: rgba(255, 255, 255, 0.86);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .quote-card q {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(23px, 3.4vw, 34px);
+    line-height: 1.25;
+    color: #fff;
+  }
+
+  .quote-card p {
+    margin-top: 10px;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 14px;
+  }
+
+  .accordion {
+    margin-top: 16px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .acc-item {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .acc-btn {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .acc-btn:hover {
+    background: rgba(184, 140, 44, 0.08);
+  }
+
+  .acc-btn:focus-visible {
+    outline: 3px solid rgba(15, 82, 186, 0.24);
+    outline-offset: -1px;
+  }
+
+  .acc-btn span:last-child {
+    font-size: 20px;
+    line-height: 1;
+    color: var(--gold-strong);
+  }
+
+  .acc-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+    padding: 0 16px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  .acc-item.open .acc-content {
+    max-height: 240px;
+    padding-bottom: 14px;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .footer-cta {
+    margin: 24px 0 34px;
+    background: linear-gradient(180deg, var(--paper), var(--paper-soft));
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-xl);
+    padding: 26px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .footer-cta h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    line-height: 1.15;
+  }
+
+  .footer-cta p {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 28px 0 40px;
+    font-size: 13px;
+    color: rgba(210, 204, 194, 0.78);
+    background: linear-gradient(180deg, #16130f 0%, #0b0907 100%);
+  }
+
+  footer strong {
+    color: #f5f3ee;
+    font-weight: 700;
+  }
+
+  .footer-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Galeri cuplikan antarmuka */
+  .shots-section {
+    padding-top: 0;
+  }
+
+  .shots-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 8px;
+  }
+
+  .shot-card {
+    margin: 0;
+    background: var(--paper);
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .shot-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 50px rgba(20, 15, 8, 0.12);
+    border-color: rgba(184, 140, 44, 0.3);
+  }
+
+  .shot-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: #0f172a;
+    cursor: zoom-in;
+    line-height: 0;
+  }
+
+  .shot-open:focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 2px;
+  }
+
+  .shot-open img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1200 / 675;
+    object-fit: cover;
+    display: block;
+  }
+
+  .shot-card figcaption {
+    padding: 14px 16px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .shot-card figcaption span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  .shot-lightbox {
+    max-width: min(96vw, 1120px);
+    width: 100%;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 0;
+    background: #0b1220;
+    color: #e5e7eb;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.45);
+  }
+
+  .shot-lightbox::backdrop {
+    background: rgba(15, 12, 8, 0.72);
+    backdrop-filter: blur(4px);
+  }
+
+  .shot-lightbox .shot-lightbox-inner {
+    position: relative;
+    padding: 12px 12px 16px;
+  }
+
+  .shot-lightbox img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    display: block;
+    background: #111827;
+  }
+
+  .shot-caption {
+    margin-top: 10px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.82);
+    padding: 0 6px;
+  }
+
+  .shot-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .shot-close:hover {
+    background: rgba(30, 41, 59, 0.95);
+  }
+
+  .shot-close:focus-visible {
+    outline: 3px solid rgba(15, 82, 186, 0.42);
+    outline-offset: 2px;
+  }
+
+  .shot-lightbox-wrap {
+    position: relative;
+  }
+
+  /* ===== Peta Alur Operasional (mapping section) ===== */
+  section#peta-alur {
+    background:
+      radial-gradient(ellipse 60% 50% at 85% 8%, rgba(184, 140, 44, 0.09), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 8% 92%, rgba(15, 82, 186, 0.07), transparent 55%),
+      var(--bg);
+    padding-top: 64px;
+    padding-bottom: 56px;
+    border-top: 1px solid rgba(26, 21, 14, 0.06);
+  }
+
+  .flow-map {
+    margin-top: 26px;
+    background: linear-gradient(180deg, var(--paper), var(--paper-soft));
+    border: 1px solid rgba(26, 21, 14, 0.09);
+    border-radius: var(--radius-xl);
+    padding: 26px;
+    box-shadow: var(--shadow-md);
+    display: grid;
+    gap: 18px;
+  }
+
+  .flow-lane {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .flow-lane-label {
+    grid-column: 1;
+    align-self: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-strong);
+    font-weight: 700;
+    padding: 10px 14px;
+    background: var(--gold-soft);
+    border-radius: 999px;
+    text-align: center;
+  }
+
+  .flow-lane-row {
+    grid-column: 2;
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .flow-node {
+    flex: 1 1 190px;
+    min-width: 180px;
+    background: #ffffff;
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-md);
+    padding: 16px 16px 14px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .flow-node::before {
+    content: attr(data-step);
+    position: absolute;
+    top: -10px;
+    left: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    background: var(--ink);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  .flow-node:hover {
+    transform: translateY(-2px);
+    border-color: rgba(184, 140, 44, 0.4);
+    box-shadow: 0 14px 28px rgba(20, 15, 8, 0.1);
+  }
+
+  .flow-node .node-kicker {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--gold-strong);
+    font-weight: 600;
+  }
+
+  .flow-node strong {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .flow-node em {
+    font-style: normal;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+
+  .flow-node.node-plan { border-left: 4px solid var(--gold); }
+  .flow-node.node-material { border-left: 4px solid #7a5b1c; background: #fffaf0; }
+  .flow-node.node-produksi { border-left: 4px solid var(--blue); background: var(--blue-soft); }
+  .flow-node.node-distribusi { border-left: 4px solid #0a6e4e; background: #e7f6ee; }
+  .flow-node.node-pm { border-left: 4px solid #8a1c4c; background: #fbecf3; }
+
+  .flow-connector {
+    align-self: center;
+    font-size: 22px;
+    color: var(--ink-soft);
+    padding: 0 2px;
+    font-weight: 600;
+    user-select: none;
+  }
+
+  .flow-node-pair {
+    flex: 1.4 1 240px;
+    display: grid;
+    gap: 8px;
+    min-width: 220px;
+  }
+
+  .flow-lane-bridge {
+    text-align: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+    padding: 2px 0;
+    font-weight: 600;
+  }
+
+  .flow-governance {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    background: linear-gradient(140deg, #1c150e, #14110d);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 18px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .gov-node {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .gov-node .gov-icon {
+    font-size: 22px;
+    line-height: 1;
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+
+  .gov-node strong {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .gov-node em {
+    display: block;
+    font-style: normal;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12.5px;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  /* Entity mapping grid */
+  .mapping-grid {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .map-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .map-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(15, 82, 186, 0.3);
+    box-shadow: 0 16px 30px rgba(20, 15, 8, 0.1);
+  }
+
+  .map-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(26, 21, 14, 0.14);
+  }
+
+  .map-card .map-tag {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-strong);
+    font-weight: 700;
+  }
+
+  .map-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    line-height: 1.15;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .map-card > p {
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+  .map-meta {
+    display: grid;
+    gap: 8px;
+    margin: 2px 0 0;
+  }
+
+  .map-meta > div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 10px;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .map-meta dt {
+    color: var(--gold-strong);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10.5px;
+    padding-top: 2px;
+    margin: 0;
+  }
+
+  .map-meta dd {
+    color: var(--ink);
+    margin: 0;
+  }
+
+  /* RACI Table */
+  .raci-wrap {
+    margin-top: 36px;
+    background: linear-gradient(180deg, var(--paper), var(--paper-soft));
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .raci-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  .raci-desc {
+    color: var(--ink-soft);
+    margin-top: 6px;
+    font-size: 13px;
+    max-width: 760px;
+  }
+
+  .raci-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .raci-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-soft);
+  }
+
+  .raci-scroll {
+    overflow-x: auto;
+    margin-top: 16px;
+  }
+
+  .raci-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 780px;
+  }
+
+  .raci-table th,
+  .raci-table td {
+    text-align: left;
+    padding: 10px 10px;
+    border-bottom: 1px solid rgba(26, 21, 14, 0.08);
+    vertical-align: middle;
+  }
+
+  .raci-table thead th {
+    background: var(--bg-soft);
+    font-family: 'Syne', sans-serif;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .raci-table tbody th {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  .raci-table td {
+    text-align: center;
+  }
+
+  .raci-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 11px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .raci-r { background: rgba(15, 82, 186, 0.16); color: var(--blue-strong); }
+  .raci-a { background: rgba(138, 28, 76, 0.14); color: #8a1c4c; }
+  .raci-c { background: rgba(184, 140, 44, 0.2); color: var(--gold-strong); }
+  .raci-i { background: rgba(26, 21, 14, 0.08); color: var(--ink-soft); }
+
+  /* KPI formulas */
+  .kpi-wrap {
+    margin-top: 36px;
+  }
+
+  .kpi-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  .kpi-desc {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-top: 6px;
+    max-width: 780px;
+  }
+
+  .kpi-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .kpi-card {
+    background: #fff;
+    border: 1px solid rgba(26, 21, 14, 0.1);
+    border-radius: var(--radius-md);
+    padding: 14px 16px 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(184, 140, 44, 0.35);
+    box-shadow: 0 12px 24px rgba(20, 15, 8, 0.09);
+  }
+
+  .kpi-card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--ink);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .kpi-card > p {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .kpi-formula {
+    background: #1a150e;
+    color: #f3e5c2;
+    font-family: 'Consolas', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(184, 140, 44, 0.22);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
+  .kpi-meta {
+    display: grid;
+    gap: 4px;
+    font-size: 11.5px;
+  }
+
+  .kpi-meta span {
+    color: var(--ink-soft);
+  }
+
+  .kpi-meta span strong {
+    color: var(--gold-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-16px); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 980px) {
+    .hero-grid,
+    .modules {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-panel {
+      min-height: auto;
+    }
+
+    .philosophy-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .shots-grid {
+      grid-template-columns: 1fr;
+    }
+
+    section#produk {
+      margin-top: -28px;
+      border-radius: 22px 22px 0 0;
+    }
+
+    .flow-lane {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .flow-lane-label {
+      justify-self: start;
+    }
+
+    .flow-governance {
+      grid-template-columns: 1fr;
+    }
+
+    .mapping-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .container {
+      width: calc(100% - 28px);
+    }
+
+    .topbar-inner {
+      height: auto;
+      padding: 10px 0;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .hero {
+      margin-top: 0;
+      padding-top: 48px;
+    }
+
+    section#produk {
+      margin-top: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .top-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .btn {
+      padding: 10px 15px;
+      font-size: 12px;
+    }
+
+    .hero-metrics,
+    .philosophy-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-cta {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .footer-cta h3 {
+      font-size: 26px;
+    }
+
+    .mapping-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .flow-connector {
+      transform: rotate(90deg);
+      padding: 4px 0;
+    }
+
+    .map-meta > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+
+    .flow-map {
+      padding: 18px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="#top">
+      <span class="brand-mark">DJ</span>
+      <span>
+        <span class="brand-title">DJATI</span>
+        <span class="brand-sub">Kokoh Fondasi, Presisi Eksekusi</span>
+      </span>
+    </a>
+    <div class="top-actions">
+      <a class="btn btn-ghost" href="#produk">Fitur utama</a>
+      <a class="btn btn-ghost" href="#peta-alur">Peta alur</a>
+      <a class="btn btn-ghost" href="#cuplikan">Galeri tampilan</a>
+      <a class="btn btn-ghost" href="#filosofi">Filosofi</a>
+      <a class="btn btn-ghost" href="#faq">FAQ</a>
+      <a class="btn btn-primary" href="https://mbg.djati.cloud" rel="noopener noreferrer">Masuk aplikasi MBG</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="reveal">
+        <span class="kicker">Brand DJATI · Operasional dapur</span>
+        <h1 class="hero-title">DJ<span>ATI</span></h1>
+        <p class="hero-subtitle">Djari Titi — Jalan yang Kokoh dan Terukur</p>
+        <p class="hero-copy">
+          DJATI adalah prinsip eksekusi: fondasi yang kuat, proses yang rapih, dan keputusan yang presisi.
+          Filosofi ini diwujudkan dalam <strong>Sistem Manajemen Dapur MBG</strong> — platform operasional yang modern, terhubung, dan siap tumbuh lintas program.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="https://mbg.djati.cloud" rel="noopener noreferrer">Buka Sistem Manajemen Dapur MBG</a>
+          <a class="btn btn-ghost" href="#produk">Kenali kemampuan platform</a>
+        </div>
+        <div class="hero-metrics">
+          <article class="metric">
+            <strong data-target="6">0</strong>
+            <span>Modul inti operasional</span>
+          </article>
+          <article class="metric">
+            <strong data-target="100">0</strong>
+            <span>Presisi proses terstandar</span>
+          </article>
+          <article class="metric">
+            <strong data-target="24">0</strong>
+            <span>Jam ritme monitoring</span>
+          </article>
+        </div>
+      </div>
+      <div class="hero-panel reveal">
+        <div class="glow glow-a"></div>
+        <div class="glow glow-b"></div>
+        <article class="hero-card" aria-label="Ringkasan Sistem Manajemen Dapur MBG">
+          <h3>Program operasional berpola DJATI</h3>
+          <h2>Sistem Manajemen Dapur MBG</h2>
+          <p>
+            Dari perencanaan produksi, pengadaan bahan, absensi relawan, sampai laporan nutrisi dan keuangan,
+            semua proses berjalan dalam satu ekosistem terpadu.
+          </p>
+          <div class="mini-list">
+            <div class="mini-item">🍳 Produksi &amp; Batch</div>
+            <div class="mini-item">📋 Pengadaan</div>
+            <div class="mini-item">👤 Absensi Relawan</div>
+            <div class="mini-item">📊 Laporan &amp; Analitik</div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="produk">
+    <div class="container">
+      <header class="section-head reveal">
+        <p class="section-label">Sistem Manajemen Dapur MBG</p>
+        <h2 class="section-title">Satu Platform, Banyak Alur Kerja</h2>
+        <p class="section-desc">
+          Sistem Manajemen Dapur MBG memadukan prinsip DJATI ke dalam praktik operasional sehari-hari: alur jelas, data akurat,
+          dan integrasi lintas tim supaya keputusan cepat sekaligus tetap terkendali.
+        </p>
+      </header>
+
+      <div class="modules reveal">
+        <div class="tab-list" role="tablist" aria-label="Modul Sistem Manajemen Dapur MBG">
+          <button class="tab-btn active" data-tab="tab-1" role="tab" aria-selected="true">Produksi &amp; Distribusi<small>Ritme harian dapur program</small></button>
+          <button class="tab-btn" data-tab="tab-2" role="tab" aria-selected="false">Pengadaan &amp; Supplier<small>PO, harga, dan kualitas bahan</small></button>
+          <button class="tab-btn" data-tab="tab-3" role="tab" aria-selected="false">Absensi &amp; SDM<small>Face attendance dan task relawan</small></button>
+          <button class="tab-btn" data-tab="tab-4" role="tab" aria-selected="false">Keuangan &amp; laporan<small>Monitoring biaya dan transparansi</small></button>
+        </div>
+
+        <div class="tab-panel">
+          <article class="tab-content active" id="tab-1" role="tabpanel">
+            <h3>Produksi yang Presisi</h3>
+            <p>Perencanaan menu, batch, alokasi bahan, hingga distribusi penerima manfaat berjalan sesuai SOP dengan pelacakan yang mudah dibaca.</p>
+            <div class="chip-row">
+              <span class="chip">Planner produksi</span>
+              <span class="chip">Batch dashboard</span>
+              <span class="chip">Traceability menu</span>
+            </div>
+          </article>
+          <article class="tab-content" id="tab-2" role="tabpanel">
+            <h3>Pengadaan yang Terkendali</h3>
+            <p>Permintaan bahan, evaluasi supplier, dan histori harga membantu dapur mengambil keputusan pengadaan yang lebih strategis dan hemat.</p>
+            <div class="chip-row">
+              <span class="chip">Supplier portal</span>
+              <span class="chip">Purchase order</span>
+              <span class="chip">Kontrol biaya bahan</span>
+            </div>
+          </article>
+          <article class="tab-content" id="tab-3" role="tabpanel">
+            <h3>SDM Lebih Tertata</h3>
+            <p>Absensi biometrik, jadwal shift, dan manajemen tugas membuat koordinasi relawan lebih rapi, akuntabel, dan cepat dievaluasi.</p>
+            <div class="chip-row">
+              <span class="chip">Face attendance</span>
+              <span class="chip">Shift scheduling</span>
+              <span class="chip">Task tracking</span>
+            </div>
+          </article>
+          <article class="tab-content" id="tab-4" role="tabpanel">
+            <h3>Laporan Real-Time</h3>
+            <p>Dari pengeluaran, nutrisi, sampai performa dapur, seluruh data terintegrasi untuk pelaporan yang lebih cepat dan dapat dipertanggungjawabkan.</p>
+            <div class="chip-row">
+              <span class="chip">Dasbor keuangan</span>
+              <span class="chip">Nutri diary</span>
+              <span class="chip">Laporan siap audit</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="peta-alur">
+    <div class="container">
+      <header class="section-head reveal">
+        <p class="section-label">Peta Alur Operasional</p>
+        <h2 class="section-title">Dari Menu sampai Penerima Manfaat, Satu Rangkaian Data yang Utuh</h2>
+        <p class="section-desc">
+          Tidak ada proses yang berdiri sendiri. <strong>Menu</strong> menentukan apa yang dimasak,
+          <strong>food/resep</strong> memecah menu jadi komposisi per porsi, <strong>bahan baku</strong> dan
+          <strong>bahan operasional</strong> menopang dapur, <strong>produksi</strong> mencetak batch sesuai SOP,
+          <strong>distribusi</strong> mengirim ke titik layan, dan <strong>penerima manfaat</strong> menerima hidangan sesuai AKG.
+          Di atas semuanya ada <strong>jobdesc</strong> yang menetapkan siapa bertanggung jawab, dan
+          <strong>KPI</strong> dengan formula eksplisit yang mengukur apakah standar Juknis BGN tercapai.
+        </p>
+      </header>
+
+      <div class="flow-map reveal" role="img" aria-label="Diagram alur operasional MBG: Menu ke Food ke Bahan Baku dan Bahan Operasional ke Produksi ke Distribusi ke Penerima Manfaat, dengan governance Jobdesc dan KPI">
+        <div class="flow-lane">
+          <span class="flow-lane-label">Input &amp; Perencanaan</span>
+          <div class="flow-lane-row">
+            <div class="flow-node node-plan" data-step="01">
+              <span class="node-kicker">Perencanaan gizi</span>
+              <strong>Menu</strong>
+              <em>Siklus harian &amp; mingguan, kategori PM (SD / SMP / SMA / PAUD / Ibu Hamil / Balita), target AKG.</em>
+            </div>
+            <span class="flow-connector" aria-hidden="true">→</span>
+            <div class="flow-node node-plan" data-step="02">
+              <span class="node-kicker">Resep terstandar</span>
+              <strong>Food / Resep</strong>
+              <em>Komposisi per porsi, metode masak, titik kritis HACCP, alergen, gramasi, yield.</em>
+            </div>
+            <span class="flow-connector" aria-hidden="true">→</span>
+            <div class="flow-node-pair">
+              <div class="flow-node node-material" data-step="03a">
+                <span class="node-kicker">BOM dapur</span>
+                <strong>Bahan Baku (Ingredients)</strong>
+                <em>Protein, karbohidrat, sayur, buah, bumbu. Stok gudang, batch no., expiry.</em>
+              </div>
+              <div class="flow-node node-material" data-step="03b">
+                <span class="node-kicker">Pendukung dapur</span>
+                <strong>Bahan Operasional</strong>
+                <em>Kemasan ompreng / box, gas LPG, sabun, tisu, BBM, label, APD.</em>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-lane-bridge">↓ &nbsp; issuing ke lantai produksi &nbsp; ↓</div>
+
+        <div class="flow-lane">
+          <span class="flow-lane-label">Eksekusi &amp; Layan</span>
+          <div class="flow-lane-row">
+            <div class="flow-node node-produksi" data-step="04">
+              <span class="node-kicker">Lantai dapur</span>
+              <strong>Produksi (Batch)</strong>
+              <em>Issuing bahan &rarr; persiapan &rarr; memasak &rarr; QA Ahli Gizi &rarr; packaging &rarr; siap kirim.</em>
+            </div>
+            <span class="flow-connector" aria-hidden="true">→</span>
+            <div class="flow-node node-distribusi" data-step="05">
+              <span class="node-kicker">Logistik</span>
+              <strong>Distribusi</strong>
+              <em>Surat jalan, rute driver, suhu pengiriman, waktu tempuh, bukti serah terima.</em>
+            </div>
+            <span class="flow-connector" aria-hidden="true">→</span>
+            <div class="flow-node node-pm" data-step="06">
+              <span class="node-kicker">Sasaran akhir</span>
+              <strong>Penerima Manfaat</strong>
+              <em>Lokasi (SD / SMP / Posyandu / PAUD) &rarr; individu PM &rarr; foto bukti &rarr; sisa / retur.</em>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-governance" aria-label="Governance layer">
+          <div class="gov-node">
+            <span class="gov-icon" aria-hidden="true">👥</span>
+            <div>
+              <strong>Jobdesc &amp; Role</strong>
+              <em>Ahli Gizi · Kepala SPPG · Koordinator Divisi · Asisten Lapangan · Driver · Akuntan · Admin · Yayasan · Tauwas Daerah — setiap step punya owner (R/A) yang jelas.</em>
+            </div>
+          </div>
+          <div class="gov-node">
+            <span class="gov-icon" aria-hidden="true">📏</span>
+            <div>
+              <strong>KPI</strong>
+              <em>Formula eksplisit &middot; sumber tabel spesifik &middot; guardrail kualitas data &middot; publikasi harian / bulanan / triwulanan sesuai Juknis BGN 401.1/2025.</em>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mapping-grid reveal">
+        <article class="map-card">
+          <header>
+            <span class="map-tag">01 · Input</span>
+            <h3>Menu</h3>
+          </header>
+          <p>Blueprint gizi: daftar menu per tanggal &amp; kategori PM, mengunci target AKG sebelum produksi dijalankan.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>kode menu, tanggal, kategori PM, target porsi, target kalori/protein/lemak/karbo, status approval</dd></div>
+            <div><dt>Data source</dt><dd><code>menus</code>, <code>menu_cycles</code>, <code>menu_items</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Food/Resep, Produksi, NutriSurvey</dd></div>
+            <div><dt>Peran</dt><dd>Ahli Gizi (draft/approve), Kepala SPPG (finalize)</dd></div>
+            <div><dt>KPI</dt><dd>Menu approval rate, AKG fulfillment, siklus rotasi menu</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">02 · Input</span>
+            <h3>Food / Resep</h3>
+          </header>
+          <p>Pemecahan menu menjadi komposisi per porsi: BOM resep, metode masak, titik kritis keamanan pangan.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>kode resep, gramasi per porsi, yield batch, alergen, step HACCP, foto referensi</dd></div>
+            <div><dt>Data source</dt><dd><code>foods</code>, <code>recipes</code>, <code>recipe_ingredients</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Menu (parent), Bahan Baku (BOM), Produksi (eksekusi)</dd></div>
+            <div><dt>Peran</dt><dd>Ahli Gizi (owner), Kepala Dapur (eksekusi)</dd></div>
+            <div><dt>KPI</dt><dd>Recipe adherence, yield variance, HACCP compliance</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">03a · Input</span>
+            <h3>Bahan Baku (Ingredients)</h3>
+          </header>
+          <p>Inventori bahan makanan: protein, karbo, sayur, buah, bumbu. Dikelola per batch dengan tanggal kedaluwarsa.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>sku, kategori, satuan, harga, stok, batch no., expiry, supplier, dokumen halal</dd></div>
+            <div><dt>Data source</dt><dd><code>ingredients</code>, <code>stock_moves</code>, <code>purchase_orders</code>, <code>grn</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Resep (BOM), Pengadaan, Gudang, Produksi (issuing)</dd></div>
+            <div><dt>Peran</dt><dd>Admin Gudang (R), Koord. Pengadaan (A), Ahli Gizi (C mutu)</dd></div>
+            <div><dt>KPI</dt><dd>Stock accuracy, waste/expiry ratio, cost variance vs. BOM</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">03b · Input</span>
+            <h3>Bahan Operasional</h3>
+          </header>
+          <p>Konsumabel non-pangan yang wajib ada agar dapur jalan: kemasan, gas, sabun, BBM, APD, label &amp; alat tulis.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>sku, kategori (kemasan/energi/sanitasi/BBM/APD), satuan, stok, reorder point</dd></div>
+            <div><dt>Data source</dt><dd><code>operational_supplies</code>, <code>stock_moves</code>, <code>operational_po</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Produksi (packaging), Distribusi (BBM/label), Keuangan (beban operasional)</dd></div>
+            <div><dt>Peran</dt><dd>Admin Gudang (R), Kepala SPPG (A), Akuntan (I)</dd></div>
+            <div><dt>KPI</dt><dd>Reorder timeliness, stock-out incidents, biaya operasional/porsi</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">04 · Proses</span>
+            <h3>Produksi (Batch)</h3>
+          </header>
+          <p>Unit eksekusi dapur. Setiap batch terikat ke menu, resep, kategori PM, dan SOP task list yang harus dicentang.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>batch id, menu, target porsi, qty aktual, waktu mulai/selesai, suhu matang, QA status</dd></div>
+            <div><dt>Data source</dt><dd><code>batches</code>, <code>tasks</code>, <code>batch_qc</code>, <code>daily_reports</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Menu, Resep, Bahan Baku (konsumsi), Bahan Operasional (kemas), Distribusi (output)</dd></div>
+            <div><dt>Peran</dt><dd>Kepala SPPG (A), Koord. Divisi Produksi (R), Ahli Gizi (C QA)</dd></div>
+            <div><dt>KPI</dt><dd>Batch on-time, yield variance, QA pass rate, SOP task completion</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">05 · Output</span>
+            <h3>Distribusi</h3>
+          </header>
+          <p>Pengiriman dari dapur ke titik layan. Dilacak dari surat jalan, rute, suhu, hingga bukti serah terima.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>nomor surat jalan, rute, kendaraan, driver, lokasi tujuan, qty, jam berangkat/tiba, suhu</dd></div>
+            <div><dt>Data source</dt><dd><code>distribution_plans</code>, <code>distribution_events</code>, <code>surat_jalan</code>, <code>routes</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Produksi (sumber batch), Penerima Manfaat (tujuan), Bahan Operasional (BBM)</dd></div>
+            <div><dt>Peran</dt><dd>Kepala SPPG (A), Asisten Lapangan (R), Driver (R eksekusi), Tauwas Daerah (I)</dd></div>
+            <div><dt>KPI</dt><dd>On-time distribution, suhu compliance, completeness surat jalan</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">06 · Output</span>
+            <h3>Penerima Manfaat</h3>
+          </header>
+          <p>Data sasaran: lokasi layan (SD/SMP/Posyandu/PAUD) hingga individu PM, lengkap dengan bukti layanan tiap event.</p>
+          <dl class="map-meta">
+            <div><dt>Atribut</dt><dd>lokasi, kategori, kapasitas, individu PM, foto bukti, jumlah diterima, sisa/retur</dd></div>
+            <div><dt>Data source</dt><dd><code>pm_lokasi</code>, <code>pm_individu</code>, <code>pm_distribution_events</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Distribusi (event), Menu (kategori), Laporan bulanan Tauwas</dd></div>
+            <div><dt>Peran</dt><dd>Asisten Lapangan (R bukti), Kepala SPPG (A), Yayasan (I laporan)</dd></div>
+            <div><dt>KPI</dt><dd>Cakupan PM aktual vs target, kelengkapan bukti serah terima, waste PM</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">G1 · Governance</span>
+            <h3>Jobdesc &amp; Role</h3>
+          </header>
+          <p>Peran kanonik sesuai Juknis BGN — menetapkan siapa yang Responsible/Accountable per aktivitas lintas domain.</p>
+          <dl class="map-meta">
+            <div><dt>Roles</dt><dd>Ahli Gizi, Kepala SPPG, Koord. Divisi, Asisten Lapangan, Driver, Akuntan, Admin, Yayasan, Tauwas Daerah</dd></div>
+            <div><dt>Data source</dt><dd><code>users</code>, <code>roles</code>, <code>divisions</code>, <code>job_descriptions</code></dd></div>
+            <div><dt>Terhubung ke</dt><dd>Semua domain operasional &amp; laporan</dd></div>
+            <div><dt>Artefak</dt><dd>Matriks RACI, SOP per role, shift schedule, absensi biometrik</dd></div>
+            <div><dt>KPI</dt><dd>Kehadiran, kedisiplinan 5R, SOP compliance, task completion</dd></div>
+          </dl>
+        </article>
+
+        <article class="map-card">
+          <header>
+            <span class="map-tag">G2 · Governance</span>
+            <h3>KPI</h3>
+          </header>
+          <p>Ukuran kinerja dengan formula eksplisit dan sumber data spesifik — tidak mock, lolos guardrail kualitas sebelum rilis.</p>
+          <dl class="map-meta">
+            <div><dt>Unit analisis</dt><dd>Per divisi (tata kerja) &amp; per staff (batch/SOP)</dd></div>
+            <div><dt>Data source</dt><dd><code>daily_reports</code>, <code>batches</code>, <code>pm_distribution_events</code>, <code>kpi_definitions</code></dd></div>
+            <div><dt>Publikasi</dt><dd>Harian internal &middot; Bulanan Tauwas &rarr; Pusat &middot; Triwulanan BGN</dd></div>
+            <div><dt>Endpoint</dt><dd><code>/api/performance/divisions</code>, <code>/api/performance/staff</code>, <code>/api/reports/*</code></dd></div>
+            <div><dt>Guardrail</dt><dd>row_counts, warnings, generated_at, smoke-check sebelum publish</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <div class="raci-wrap reveal">
+        <h3 class="raci-title">Matriks Peran × Domain (RACI ringkas)</h3>
+        <p class="raci-desc">
+          Ringkasan tanggung jawab lintas aktivitas inti. Kolom role mengikuti peran kanonik sistem; sel menunjukkan tingkat keterlibatan.
+          Detail lengkap per endpoint dan tabel mengacu ke <strong>BGN_JUKNIS_MATRIX.md</strong>.
+        </p>
+        <div class="raci-legend" aria-label="Legenda RACI">
+          <span><span class="raci-cell raci-r">R</span> Responsible — eksekutor</span>
+          <span><span class="raci-cell raci-a">A</span> Accountable — pemilik akhir</span>
+          <span><span class="raci-cell raci-c">C</span> Consulted — diminta masukan</span>
+          <span><span class="raci-cell raci-i">I</span> Informed — diberi laporan</span>
+        </div>
+        <div class="raci-scroll">
+          <table class="raci-table">
+            <thead>
+              <tr>
+                <th scope="col">Aktivitas</th>
+                <th scope="col" title="Ahli Gizi">AG</th>
+                <th scope="col" title="Kepala SPPG">KS</th>
+                <th scope="col" title="Koordinator Divisi">KD</th>
+                <th scope="col" title="Asisten Lapangan">AL</th>
+                <th scope="col" title="Driver">Dr</th>
+                <th scope="col" title="Akuntan">Ak</th>
+                <th scope="col" title="Admin">Ad</th>
+                <th scope="col" title="Yayasan / Tauwas">Y/T</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Susun &amp; approve menu (AKG)</th>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Standar resep &amp; BOM</th>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Pengadaan bahan baku &amp; operasional</th>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Gudang, stok &amp; issuing batch</th>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Produksi batch &amp; SOP task</th>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">QA keamanan pangan &amp; HACCP</th>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Distribusi &amp; rute</th>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Serah terima Penerima Manfaat</th>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Absensi, shift &amp; payroll</th>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Laporan harian / bulanan / triwulanan</th>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-i">I</span></td>
+                <td><span class="raci-cell raci-r">R</span></td>
+                <td><span class="raci-cell raci-c">C</span></td>
+                <td><span class="raci-cell raci-a">A</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="kpi-wrap reveal">
+        <h3 class="kpi-title">Contoh Formula KPI (eksplisit, berbasis data sistem — tanpa mock)</h3>
+        <p class="kpi-desc">
+          Setiap KPI wajib punya formula, sumber tabel, jendela waktu, dan guardrail kualitas data.
+          Semua metrik dikembalikan endpoint laporan bersama <code>generated_at</code>, <code>row_counts</code>, dan <code>warnings</code> sesuai
+          prinsip Juknis BGN 401.1/2025.
+        </p>
+        <div class="kpi-grid">
+          <article class="kpi-card">
+            <h4>Ketepatan Waktu Distribusi</h4>
+            <p>Seberapa konsisten distribusi tiba sebelum jam makan / window SLA.</p>
+            <pre class="kpi-formula">on_time_rate =
+  COUNT(distribution_events
+        WHERE arrived_at &lt;= sla_window_end)
+  / COUNT(distribution_events)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>pm_distribution_events, routes</span>
+              <span><strong>Window</strong>harian, rollup bulanan</span>
+              <span><strong>Owner</strong>Kepala SPPG · Asisten Lapangan</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Cakupan Penerima Manfaat</h4>
+            <p>Rasio PM terlayani aktual vs target kontraktual per lokasi.</p>
+            <pre class="kpi-formula">coverage_rate =
+  SUM(pm_distribution_events.qty_received)
+  / SUM(pm_lokasi.target_porsi)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>pm_lokasi, pm_distribution_events</span>
+              <span><strong>Window</strong>harian &amp; bulanan</span>
+              <span><strong>Owner</strong>Kepala SPPG · Yayasan</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Menu AKG Fulfillment</h4>
+            <p>Seberapa lengkap menu yang diapprove memenuhi target gizi per kategori PM.</p>
+            <pre class="kpi-formula">akg_fulfillment =
+  COUNT(menus WHERE akg_kalori &gt;= target_kalori
+                 AND akg_protein &gt;= target_protein)
+  / COUNT(menus WHERE status = 'approved')</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>menus, menu_akg_targets</span>
+              <span><strong>Window</strong>per siklus menu</span>
+              <span><strong>Owner</strong>Ahli Gizi</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Batch On-Time (SOP Produksi)</h4>
+            <p>Rasio batch yang menyelesaikan seluruh task SOP di bawah batas waktu plan.</p>
+            <pre class="kpi-formula">batch_ontime =
+  COUNT(batches WHERE finished_at &lt;= planned_end
+                   AND qa_status = 'pass')
+  / COUNT(batches)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>batches, tasks, batch_qc</span>
+              <span><strong>Window</strong>harian, per divisi</span>
+              <span><strong>Owner</strong>Koord. Divisi Produksi</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Yield / Waste Ratio</h4>
+            <p>Selisih hasil masak aktual vs target yield resep, termasuk sisa &amp; retur.</p>
+            <pre class="kpi-formula">waste_ratio =
+  (SUM(batches.input_kg) - SUM(batches.output_kg))
+  / SUM(batches.input_kg)
+
+yield_variance =
+  SUM(batches.output_porsi)
+  / SUM(batches.target_porsi)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>batches, recipe_yield_targets</span>
+              <span><strong>Window</strong>harian</span>
+              <span><strong>Owner</strong>Ahli Gizi · Koord. Produksi</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Cost per Meal</h4>
+            <p>Biaya riil bahan baku + bahan operasional per porsi yang terdistribusi.</p>
+            <pre class="kpi-formula">cost_per_meal =
+  (SUM(ingredient_cost) + SUM(operational_cost))
+  / SUM(pm_distribution_events.qty_received)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>stock_moves, operational_po, pm_distribution_events</span>
+              <span><strong>Window</strong>bulanan</span>
+              <span><strong>Owner</strong>Akuntan · Kepala SPPG</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Stock Accuracy (Bahan Baku &amp; Operasional)</h4>
+            <p>Kesesuaian stok sistem vs stok opname fisik pada periode audit.</p>
+            <pre class="kpi-formula">stock_accuracy =
+  1 - (SUM(ABS(system_qty - physical_qty))
+       / SUM(system_qty))</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>stock_moves, stock_opname</span>
+              <span><strong>Window</strong>mingguan / bulanan</span>
+              <span><strong>Owner</strong>Admin Gudang · Akuntan</span>
+            </div>
+          </article>
+
+          <article class="kpi-card">
+            <h4>Attendance &amp; SOP Compliance per Staff</h4>
+            <p>Kehadiran biometrik + rasio SOP task yang diselesaikan staff yang bersangkutan.</p>
+            <pre class="kpi-formula">attendance_rate =
+  COUNT(attendance_logs WHERE status = 'present')
+  / COUNT(scheduled_shifts)
+
+sop_compliance =
+  COUNT(tasks WHERE status = 'done' AND on_time = true)
+  / COUNT(tasks)</pre>
+            <div class="kpi-meta">
+              <span><strong>Source</strong>attendance_logs, shifts, tasks</span>
+              <span><strong>Window</strong>harian, rollup bulanan</span>
+              <span><strong>Owner</strong>Koord. Divisi · Kepala SPPG</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cuplikan" class="shots-section">
+    <div class="container">
+      <header class="section-head reveal">
+        <p class="section-label">Galeri tampilan</p>
+        <h2 class="section-title">Antarmuka Sistem Manajemen Dapur MBG</h2>
+        <p class="section-desc">
+          Potret layar dari lingkungan produksi <strong>mbg.djati.cloud</strong>. Ketuk atau klik gambar untuk membuka tampilan lebih besar.
+          Penampilan dapat sedikit berbeda menurut peran pengguna dan pembaruan aplikasi.
+        </p>
+      </header>
+
+      <div class="shots-grid">
+        <figure class="shot-card reveal">
+          <button type="button" class="shot-open" data-full="assets/screenshots/mbg-portal-desktop.png" data-label="Pilih portal — tampilan desktop" aria-label="Perbesar: portal desktop">
+            <img src="assets/screenshots/mbg-portal-desktop.png" width="1280" height="800" loading="lazy" alt="Halaman pilih portal Staff, Relawan, dan Supplier pada layar lebar">
+          </button>
+          <figcaption>Tiga jalur akses <span>Portal staff, relawan, dan supplier dari satu halaman</span></figcaption>
+        </figure>
+        <figure class="shot-card reveal">
+          <button type="button" class="shot-open" data-full="assets/screenshots/mbg-app-login.png" data-label="Portal staff — layar login" aria-label="Perbesar: login portal staff">
+            <img src="assets/screenshots/mbg-app-login.png" width="1280" height="800" loading="lazy" alt="Layar login aplikasi dapur dengan pemilihan peran dan tenant">
+          </button>
+          <figcaption>Portal dapur terpusat <span>Login peran, tenant, dan verifikasi keamanan</span></figcaption>
+        </figure>
+        <figure class="shot-card reveal">
+          <button type="button" class="shot-open" data-full="assets/screenshots/mbg-supplier-portal.png" data-label="Portal supplier — masuk mitra" aria-label="Perbesar: portal supplier">
+            <img src="assets/screenshots/mbg-supplier-portal.png" width="1280" height="800" loading="lazy" alt="Halaman selamat datang portal supplier dengan ringkasan fitur pengadaan">
+          </button>
+          <figcaption>Pengadaan &amp; mitra <span>Order, penawaran, dan paket langganan supplier</span></figcaption>
+        </figure>
+        <figure class="shot-card reveal">
+          <button type="button" class="shot-open" data-full="assets/screenshots/mbg-staff-portal.png" data-label="Portal relawan — absensi" aria-label="Perbesar: portal relawan">
+            <img src="assets/screenshots/mbg-staff-portal.png" width="1280" height="800" loading="lazy" alt="Portal relawan dengan opsi absensi biometrik dan login manual">
+          </button>
+          <figcaption>Relawan &amp; absensi <span>Biometrik, koordinator, dan tugas divisi</span></figcaption>
+        </figure>
+        <figure class="shot-card reveal" style="grid-column: 1 / -1; max-width: 100%;">
+          <button type="button" class="shot-open" data-full="assets/screenshots/mbg-portal-mobile.png" data-label="Pilih portal — tampilan ponsel" aria-label="Perbesar: portal di ponsel">
+            <img src="assets/screenshots/mbg-portal-mobile.png" width="390" height="780" loading="lazy" alt="Halaman pilih portal pada lebar layar ponsel">
+          </button>
+          <figcaption>Responsif di ponsel <span>Alur yang sama tetap jelas di layar kecil</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <dialog id="shot-lightbox" class="shot-lightbox" aria-labelledby="shot-lightbox-title">
+    <div class="shot-lightbox-wrap shot-lightbox-inner">
+      <button type="button" class="shot-close" id="shot-lightbox-close" aria-label="Tutup gambar">×</button>
+      <img id="shot-lightbox-img" src="" alt="">
+      <p class="shot-caption" id="shot-lightbox-title"></p>
+    </div>
+  </dialog>
+
+  <section id="filosofi">
+    <div class="container">
+      <header class="section-head reveal">
+        <p class="section-label">Filosofi Nama</p>
+        <h2 class="section-title">DNA DJATI: Djari, Jalan, Akurat, Titi, Integrasi</h2>
+        <p class="section-desc">
+          DJATI bukan sekadar nama, tetapi metode berpikir: melangkah terukur di atas jembatan proses,
+          dengan fondasi seteguh pohon jati dan orientasi hasil yang nyata.
+        </p>
+      </header>
+
+      <div class="philosophy-grid reveal">
+        <article class="letter-card"><div class="letter">D</div><h4>Djari</h4><p>Jalan yang jelas dan terpetakan untuk setiap fase operasional.</p></article>
+        <article class="letter-card"><div class="letter">J</div><h4>Jalan</h4><p>Proses bertahap yang konsisten dari perencanaan hingga evaluasi.</p></article>
+        <article class="letter-card"><div class="letter">A</div><h4>Akurat</h4><p>Data dan keputusan tepat sasaran, tanpa kompromi pada kualitas.</p></article>
+        <article class="letter-card"><div class="letter">T</div><h4>Titi</h4><p>Setiap langkah diambil hati-hati, presisi, dan bertanggung jawab.</p></article>
+        <article class="letter-card"><div class="letter">I</div><h4>Integrasi</h4><p>Semua elemen sistem terhubung, tidak berjalan sendiri-sendiri.</p></article>
+      </div>
+
+      <article class="quote-card reveal">
+        <q>"Kokoh Fondasi, Presisi Eksekusi"</q>
+        <p>
+          Tagline ini merangkum karakter DJATI: berakar kuat seperti pohon jati,
+          namun tetap agile dalam eksekusi modern. Itulah alasan Sistem Manajemen Dapur MBG dibangun bukan hanya cantik,
+          tapi efektif untuk operasional nyata.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container">
+      <header class="section-head reveal">
+        <p class="section-label">FAQ</p>
+        <h2 class="section-title">Pertanyaan yang sering diajukan</h2>
+      </header>
+
+      <div class="accordion reveal">
+        <div class="acc-item open">
+          <button class="acc-btn" type="button"><span>Apa hubungan DJATI dan Sistem Manajemen Dapur MBG?</span><span>−</span></button>
+          <div class="acc-content">
+            DJATI adalah filosofi dan positioning brand, sedangkan <strong>Sistem Manajemen Dapur MBG</strong> adalah platform operasional yang mengeksekusi filosofi tersebut dalam alur kerja nyata.
+          </div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-btn" type="button"><span>Apakah halaman ini sama dengan aplikasi MBG?</span><span>+</span></button>
+          <div class="acc-content">
+            Tidak. Halaman ini memperkenalkan merek dan produk. Untuk bekerja di sistem (produksi, pengadaan, absensi, laporan), gunakan aplikasi di <strong>mbg.djati.cloud</strong>.
+          </div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-btn" type="button"><span>Siapa target utama platform ini?</span><span>+</span></button>
+          <div class="acc-content">
+            Pengelola program, tim dapur, relawan, dan pihak manajemen yang membutuhkan sistem operasional terintegrasi, terukur, dan audit-ready.
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-cta reveal">
+        <div>
+          <h3>Siap melihat platformnya langsung?</h3>
+          <p>Akses <strong>Sistem Manajemen Dapur MBG by DJATI CORP</strong> dan jalankan operasional dengan fondasi yang kuat serta eksekusi presisi.</p>
+        </div>
+        <a class="btn btn-primary" href="https://mbg.djati.cloud" rel="noopener noreferrer">Masuk ke mbg.djati.cloud</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container footer-grid">
+    <p><strong>DJATI CORP</strong> · Sistem Manajemen Dapur MBG</p>
+    <p>&copy; <span id="year"></span> DJATI CORP</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    const topbar = document.getElementById('topbar');
+    const revealElements = document.querySelectorAll('.reveal');
+    const counters = document.querySelectorAll('[data-target]');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-content');
+    const accButtons = document.querySelectorAll('.acc-btn');
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function onScroll() {
+      topbar.classList.toggle('scrolled', window.scrollY > 8);
+    }
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.16 });
+
+    revealElements.forEach((el) => revealObserver.observe(el));
+
+    const counterObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        const el = entry.target;
+        const target = Number(el.getAttribute('data-target')) || 0;
+        const duration = 1400;
+        const start = performance.now();
+
+        function tick(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const value = Math.round(target * eased);
+          el.textContent = value;
+          if (progress < 1) {
+            requestAnimationFrame(tick);
+          }
+        }
+
+        requestAnimationFrame(tick);
+        counterObserver.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+
+    counters.forEach((counter) => counterObserver.observe(counter));
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const tabId = button.getAttribute('data-tab');
+
+        tabButtons.forEach((btn) => {
+          btn.classList.remove('active');
+          btn.setAttribute('aria-selected', 'false');
+        });
+
+        tabPanels.forEach((panel) => panel.classList.remove('active'));
+
+        button.classList.add('active');
+        button.setAttribute('aria-selected', 'true');
+        const activePanel = document.getElementById(tabId);
+        if (activePanel) {
+          activePanel.classList.add('active');
+        }
+      });
+    });
+
+    accButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest('.acc-item');
+        if (!item) {
+          return;
+        }
+
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.acc-item').forEach((node) => {
+          node.classList.remove('open');
+          const sign = node.querySelector('.acc-btn span:last-child');
+          if (sign) {
+            sign.textContent = '+';
+          }
+        });
+
+        if (!isOpen) {
+          item.classList.add('open');
+          const sign = item.querySelector('.acc-btn span:last-child');
+          if (sign) {
+            sign.textContent = '−';
+          }
+        }
+      });
+    });
+
+    const shotLightbox = document.getElementById('shot-lightbox');
+    const shotLightboxImg = document.getElementById('shot-lightbox-img');
+    const shotLightboxTitle = document.getElementById('shot-lightbox-title');
+    const shotLightboxClose = document.getElementById('shot-lightbox-close');
+    if (shotLightbox && shotLightboxImg && shotLightboxTitle && shotLightboxClose) {
+      document.querySelectorAll('.shot-open').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const src = btn.getAttribute('data-full');
+          const label = btn.getAttribute('data-label') || '';
+          if (src) {
+            shotLightboxImg.src = src;
+            shotLightboxImg.alt = label;
+            shotLightboxTitle.textContent = label;
+            shotLightbox.showModal();
+          }
+        });
+      });
+      shotLightboxClose.addEventListener('click', () => shotLightbox.close());
+      shotLightbox.addEventListener('click', (ev) => {
+        if (ev.target === shotLightbox) {
+          shotLightbox.close();
+        }
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && shotLightbox.open) {
+          shotLightbox.close();
+        }
+      });
+    }
+  })();
+</script>
+</body>
+</html>

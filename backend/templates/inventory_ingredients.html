@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Ingredient Management · MBG{% endblock %}
+
+{% block topnav %}
+  <a class="btn btn-ghost" href="/app">Dashboard</a>
+  <a class="btn btn-ghost" href="/app/plans">Production</a>
+  <a class="btn btn-ghost" href="/app/tasks">Tasks</a>
+  <a class="btn btn-ghost" href="/app/inventory">Inventory</a>
+  <a class="btn btn-ghost" href="/app/finance">Finance</a>
+  <a class="btn btn-ghost" href="/app/nutrition">Nutrition</a>
+  <form method="post" action="/logout" class="inline">
+    <button class="btn btn-secondary" type="submit">Logout</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+  <section class="page-head">
+    <div>
+      <h1 class="h1">Ingredient Management</h1>
+      <div class="muted">Tenant: {{ tenant_id }}</div>
+    </div>
+    <div class="row">
+      <a class="btn btn-primary" href="/app/inventory/ingredients/new">Add Ingredient</a>
+      <a class="btn btn-secondary" href="/app/inventory">Back</a>
+    </div>
+  </section>
+
+  {% if message.is_some() %}
+    <div class="alert alert-success">{{ message.as_ref().unwrap() }}</div>
+  {% endif %}
+
+  <section class="card">
+    <div class="table">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>Nutr Code</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in ingredients %}
+            <tr>
+              <td>{{ i.name }}</td>
+              <td>{{ i.unit }}</td>
+              <td class="mono">{{ i.nutr_code }}</td>
+            </tr>
+          {% endfor %}
+          {% if ingredients.len() == 0 %}
+            <tr><td colspan="3" class="muted">No ingredients</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}
+

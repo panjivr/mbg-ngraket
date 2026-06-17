@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Langganan · MBG{% endblock %}
+
+{% block content %}
+<div class="container">
+    <header style="margin-bottom: 32px;">
+        <h1 class="h1">Langganan & Pembayaran</h1>
+        <p class="muted">Kelola paket langganan dapur Anda.</p>
+    </header>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2 class="h2">Status Saat Ini</h2>
+            <div style="margin-top: 16px;">
+                <div class="kpi-label">Paket Aktif</div>
+                <div class="kpi-value" style="color: var(--primary-2);">{{ current_plan_name }}</div>
+            </div>
+            <div style="margin-top: 16px;">
+                <div class="kpi-label">Status</div>
+                <div class="badge {% if is_active %}success{% else %}danger{% endif %}" style="font-size: 14px; padding: 8px 16px;">
+                    {{ current_status }}
+                </div>
+            </div>
+            <div style="margin-top: 16px;">
+                <div class="kpi-label">Berlaku Sampai</div>
+                <div style="font-weight: 600;">{{ current_period_end }}</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="h2">Tagihan Mendatang</h2>
+            <p class="muted">Tidak ada tagihan tertunda saat ini.</p>
+            <button class="btn btn-secondary" style="margin-top: 16px;" disabled>Lihat Riwayat Invoice</button>
+        </div>
+    </div>
+
+    <h2 class="h2" style="margin-top: 40px; margin-bottom: 20px;">Pilih Paket Langganan</h2>
+    <div class="grid-3">
+        {% for plan in available_plans %}
+        <div class="card" style="display: flex; flex-direction: column; {% if plan.code == current_plan_code %}border-color: var(--primary-2); box-shadow: 0 0 0 2px var(--primary-2);{% endif %}">
+            <h3 class="h2">{{ plan.name }}</h3>
+            <div style="font-size: 24px; font-weight: 800; margin: 16px 0;">
+                {{ plan.currency }} {{ plan.price_formatted }} <span style="font-size: 14px; font-weight: 400; color: var(--muted);">/ bulan</span>
+            </div>
+            <ul class="list" style="flex: 1; margin-bottom: 24px;">
+                {% for feature in plan.feature_list %}
+                <li>{{ feature }}</li>
+                {% endfor %}
+            </ul>
+            {% if plan.code == current_plan_code %}
+                <button class="btn btn-secondary" disabled>Paket Anda Saat Ini</button>
+            {% else %}
+                <form method="post" action="/app/billing/subscribe">
+                    <input type="hidden" name="plan_code" value="{{ plan.code }}">
+                    <button class="btn btn-primary" style="width: 100%;">Pilih Paket</button>
+                </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal pemasok — Sistem Manajemen Dapur MBG by DJATI CORP</title>
+    <script src="js/brand.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="staff-page">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         AUTH SCREEN — full-screen overlay, hidden after login
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <div id="sp-auth" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0B1A14 0%,#0B1220 100%);overflow-y:auto;padding:1rem;">
+        <div class="login-container" style="max-width:920px;min-height:560px;">
+
+            <!-- Left Panel: Green Branding -->
+            <div class="login-left login-left--supplier" style="flex:1;">
+                <div class="login-brand">
+                    <div class="brand-icon" style="background:rgba(255,255,255,0.18);border-radius:14px;">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.375rem;font-weight:800;color:#fff;letter-spacing:-0.02em;">Portal pemasok</div>
+                        <div style="font-size:0.8rem;color:rgba(255,255,255,0.65);">Pengadaan bahan untuk dapur MBG</div>
+                    </div>
+                </div>
+
+                <p style="font-size:0.9rem;color:rgba(255,255,255,0.75);line-height:1.65;margin-bottom:0.5rem;">
+                    Platform pengadaan bahan baku dapur MBG. Daftar sebagai mitra supplier dan mulai terima Purchase Order dari dapur-dapur terdekat.
+                </p>
+
+                <ul class="sp-feature-list">
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-list-alt"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Lihat Order Tersedia</strong>
+                            <span>Akses Purchase Order dari berbagai tenant secara real-time</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-gavel"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Ajukan Penawaran (Bid)</strong>
+                            <span>Berikan harga terbaik untuk setiap item yang diminta</span>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="sp-feat-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="sp-feat-text">
+                            <strong>Paket Fleksibel</strong>
+                            <span>Free 2 order/bulan · Pro 4 order/minggu · Ultra unlimited</span>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="mt-auto" style="font-size:0.75rem;color:rgba(255,255,255,0.35);margin-top:2.5rem;">
+                    &copy; 2026 DJATI CORP — Manajemen Dapur MBG
+                </div>
+            </div>
+
+            <!-- Right Panel: Login / Signup Forms -->
+            <div class="login-right" style="flex:1;background:var(--bg-card);">
+
+                <!-- Login Form -->
+                <div id="sp-login-form">
+                    <div style="margin-bottom:1.75rem;">
+                        <h2 style="font-size:1.5rem;font-weight:700;color:var(--text-main);letter-spacing:-0.02em;margin-bottom:0.375rem;">Selamat datang</h2>
+                        <p style="font-size:0.875rem;color:var(--text-muted);">Masuk dengan email dan kata sandi akun pemasok Anda.</p>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Email</label>
+                        <input id="sp_email" class="input-field" type="email" placeholder="email@perusahaan.com" autocomplete="email">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Password</label>
+                        <div style="position:relative;">
+                            <input id="sp_password" class="input-field" type="password" placeholder="••••••••" style="padding-right:44px;" autocomplete="current-password">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="togglePasswordField('sp_password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);padding:8px;border-radius:8px;" tabindex="-1">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="sp-login-error" class="field-error mb-3"></div>
+
+                    <button class="btn btn-primary w-full py-3 mb-4" onclick="spLogin()" style="background:linear-gradient(135deg,#059669,#047857);border:none;font-size:0.9rem;">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Masuk
+                    </button>
+
+                    <div style="text-align:center;font-size:0.875rem;color:var(--text-muted);">
+                        Belum punya akun?
+                        <a href="#" onclick="spShowSignup(); return false;" style="color:#059669;font-weight:600;margin-left:0.25rem;">Daftar Sekarang</a>
+                    </div>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="sp-signup-form" class="hidden">
+                    <div style="margin-bottom:1.5rem;">
+                        <h2 style="font-size:1.5rem;font-weight:700;color:var(--text-main);letter-spacing:-0.02em;margin-bottom:0.375rem;">Daftar pemasok</h2>
+                        <p style="font-size:0.875rem;color:var(--text-muted);">Buat akun baru; aktivasi setelah disetujui pengelola dapur.</p>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-full">
+                            <label class="input-label">Email <span style="color:var(--danger);">*</span></label>
+                            <input id="sp_s_email" class="input-field" type="email" placeholder="email@perusahaan.com">
+                        </div>
+                        <div class="form-full">
+                            <label class="input-label">Password <span style="color:var(--danger);">*</span></label>
+                            <input id="sp_s_password" class="input-field" type="password" placeholder="Minimal 6 karakter">
+                        </div>
+                        <div>
+                            <label class="input-label">Nama PIC <span style="color:var(--danger);">*</span></label>
+                            <input id="sp_s_name" class="input-field" placeholder="Nama penanggung jawab">
+                        </div>
+                        <div>
+                            <label class="input-label">Nama Perusahaan</label>
+                            <input id="sp_s_company" class="input-field" placeholder="PT / CV / UD ...">
+                        </div>
+                        <div>
+                            <label class="input-label">No. Telepon</label>
+                            <input id="sp_s_phone" class="input-field" placeholder="08xxx">
+                        </div>
+                        <div>
+                            <label class="input-label">Kota / Wilayah</label>
+                            <input id="sp_s_address" class="input-field" placeholder="Kota / Kabupaten">
+                        </div>
+                    </div>
+
+                    <div id="sp-signup-error" class="field-error mt-2 mb-3"></div>
+
+                    <button class="btn btn-primary w-full py-3 mt-1 mb-4" onclick="spSignup()" style="background:linear-gradient(135deg,#059669,#047857);border:none;font-size:0.9rem;">
+                        <i class="fas fa-user-plus mr-2"></i>Daftar sebagai pemasok
+                    </button>
+
+                    <div style="text-align:center;font-size:0.875rem;color:var(--text-muted);">
+                        Sudah punya akun?
+                        <a href="#" onclick="spShowLogin(); return false;" style="color:#059669;font-weight:600;margin-left:0.25rem;">Login di sini</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         MAIN PORTAL — shown after successful login
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <div id="sp-main" class="hidden" style="min-height:100vh;background:var(--bg-body);">
+
+        <!-- Top Navbar -->
+        <div class="sp-navbar">
+            <div class="sp-navbar-brand">
+                <div class="sp-navbar-icon">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div>
+                    <div class="sp-navbar-title">Portal pemasok</div>
+                    <div class="sp-navbar-subtitle" id="sp-user-label">—</div>
+                </div>
+            </div>
+            <div class="sp-navbar-actions">
+                <div class="sp-tier-pill">
+                    <i class="fas fa-crown" style="font-size:0.6rem;"></i>
+                    <span id="sp-tier-badge">FREE</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="spLogout()" title="Keluar">
+                    <i class="fas fa-sign-out-alt mr-1"></i> Keluar
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="sp-content">
+
+            <!-- Subscription Info Card -->
+            <div id="sp-sub-card" class="sp-sub-card">
+                <div style="color:var(--text-muted);font-size:0.875rem;display:flex;align-items:center;gap:0.5rem;">
+                    <i class="fas fa-spinner fa-spin"></i> Memuat info langganan...
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="sp-tabs">
+                <button class="sp-tab-btn btn-primary" data-tab="orders" onclick="spSwitchTab('orders')">
+                    <i class="fas fa-list-alt"></i> Order Tersedia
+                </button>
+                <button class="sp-tab-btn btn-secondary" data-tab="mybids" onclick="spSwitchTab('mybids')">
+                    <i class="fas fa-gavel"></i> Bid Saya
+                </button>
+            </div>
+
+            <!-- Tab Content: Available Orders -->
+            <div id="sp-tab-orders">
+                <div class="card p-6 text-center text-muted">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Memuat order tersedia...
+                </div>
+            </div>
+
+            <!-- Tab Content: My Bids -->
+            <div id="sp-tab-mybids" class="hidden">
+                <div class="card p-6 text-center text-muted">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Memuat bid saya...
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Area -->
+    <div id="toast-area" class="toast-area"></div>
+
+    <script>
+        // Utility: toggle password visibility (needed standalone since supplier.html doesn't load core.js)
+        function togglePasswordField(id, btn) {
+            const inp = document.getElementById(id);
+            if (!inp) return;
+            const isPass = inp.type === 'password';
+            inp.type = isPass ? 'text' : 'password';
+            const icon = btn.querySelector('i');
+            if (icon) { icon.classList.toggle('fa-eye', !isPass); icon.classList.toggle('fa-eye-slash', isPass); }
+        }
+    </script>
+    <script src="js/supplier_portal.js?v=20260322"></script>
+</body>
+</html>

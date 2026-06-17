@@ -1,0 +1,28 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+# Ada juga bin seed_demo / seed_users — tanpa ini `cargo run` minta --bin
+default-run = "backend"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+sqlx = { workspace = true, features = ["migrate"] }
+thiserror = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+dotenvy = { workspace = true }
+anyhow = { workspace = true }
+axum-extra = { version = "0.9.3", features = ["cookie"] }
+askama = "0.12.1"
+askama_axum = "0.4.0"
+shared = { path = "../shared" }
+scheduler = { path = "../scheduler" }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+argon2 = "0.5.3"
+rand = { version = "0.10.0", features = ["std", "std_rng"] }
