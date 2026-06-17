@@ -1,0 +1,43 @@
+# MBG LITE — hanya aplikasi absensi + distribusi (Node + SQLite) + HTTPS.
+# Tanpa Postgres, tanpa backend Rust, tanpa face_api (ringan, muat di VPS 1 GB).
+name: mbg-lite
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./landing:/srv/landing:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      PORT: "3014"
+      NODE_ENV: production
+      MBG_DISABLE_SUBSCRIPTION: ${MBG_DISABLE_SUBSCRIPTION:-1}
+      JWT_SECRET: ${JWT_SECRET}
+      PLATFORM_DB_FILE: /app/platform_db/database.sqlite
+    volumes:
+      - ./data/platform_db:/app/platform_db
+      - ./data/tenant_dbs:/app/tenant_dbs
+      - ./data/uploads:/app/uploads
+    expose:
+      - "3014"
+
+volumes:
+  caddy_data:
+  caddy_config:
