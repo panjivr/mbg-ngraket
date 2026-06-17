@@ -42,9 +42,16 @@ export function getPool(): Pool {
     global.__absensiPool = new Pool({
       connectionString: url,
       ssl: needsSsl(url) ? { rejectUnauthorized: false } : false,
-      max: 5,
-      idleTimeoutMillis: 30_000,
+      // Kecil agar aman di lingkungan serverless (banyak instance) dan tidak
+      // menghabiskan kuota koneksi Postgres (Neon/Supabase free tier).
+      max: 3,
+      idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
+      allowExitOnIdle: true,
+    });
+    // Jangan biarkan error pool yang tak tertangani mematikan proses.
+    global.__absensiPool.on("error", (err) => {
+      console.error("[absensi] pool error:", err.message);
     });
   }
   return global.__absensiPool;
