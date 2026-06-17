@@ -6,6 +6,7 @@ Monorepo sistem manajemen dapur / catering (MBG): UI web, API Node (Express + SQ
 
 | Bagian | Isi |
 |--------|-----|
+| `absensi-dapur/` | **Aplikasi Absensi Dapur** (Next.js 15 + PostgreSQL), siap deploy ke Vercel — clock in/out dengan selfie & geofence GPS. Lihat `absensi-dapur/README.md` |
 | `frontend/` | `server.js` (Express), HTML/CSS/JS aplikasi, SQLite per tenant |
 | `backend/` | Rust / Axum, migrasi SQL di `backend/migrations/` |
 | `landing/` | Halaman statis publik (Azure Static Web Apps) |

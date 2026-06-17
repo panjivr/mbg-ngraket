@@ -1,0 +1,209 @@
+import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
+import { hashPassword } from "./password";
+
+// Kembalikan kolom DATE (OID 1082) sebagai string "YYYY-MM-DD" apa adanya,
+// bukan objek Date (yang akan terserialisasi jadi ISO timestamp dengan TZ).
+types.setTypeParser(types.builtins.DATE, (v) => v);
+
+/**
+ * Single shared connection pool. Cached on `globalThis` so it survives
+ * hot-reload in dev and is reused across serverless invocations on Vercel.
+ */
+declare global {
+  // eslint-disable-next-line no-var
+  var __absensiPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __absensiSchemaReady: Promise<void> | undefined;
+}
+
+function connectionString(): string {
+  const url =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    "";
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL belum diset. Hubungkan Postgres (Vercel Postgres / Neon / Supabase) atau isi .env.local.",
+    );
+  }
+  return url;
+}
+
+function needsSsl(url: string): boolean {
+  if (/sslmode=disable/.test(url)) return false;
+  if (/localhost|127\.0\.0\.1|::1/.test(url)) return false;
+  return true;
+}
+
+export function getPool(): Pool {
+  if (!global.__absensiPool) {
+    const url = connectionString();
+    global.__absensiPool = new Pool({
+      connectionString: url,
+      ssl: needsSsl(url) ? { rejectUnauthorized: false } : false,
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    });
+  }
+  return global.__absensiPool;
+}
+
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  await ensureSchema();
+  const res = await getPool().query<T>(text, params as never[]);
+  return res.rows;
+}
+
+export async function queryRaw<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const res = await getPool().query<T>(text, params as never[]);
+  return res.rows;
+}
+
+export async function withClient<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    return await fn(client);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Idempotently create the schema and seed defaults. Cached per-instance so it
+ * runs only once. A transaction-level advisory lock prevents two concurrent
+ * cold starts from racing each other.
+ */
+export function ensureSchema(): Promise<void> {
+  if (!global.__absensiSchemaReady) {
+    global.__absensiSchemaReady = doEnsureSchema().catch((err) => {
+      // Reset so a later request can retry instead of being stuck on a
+      // permanently-rejected promise.
+      global.__absensiSchemaReady = undefined;
+      throw err;
+    });
+  }
+  return global.__absensiSchemaReady;
+}
+
+async function doEnsureSchema(): Promise<void> {
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    // 7263011 = arbitrary lock key for this app.
+    await client.query("SELECT pg_advisory_xact_lock(7263011)");
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id            SERIAL PRIMARY KEY,
+        nama          TEXT NOT NULL,
+        username      TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role          TEXT NOT NULL DEFAULT 'staff',
+        jabatan       TEXT,
+        nip           TEXT,
+        aktif         BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id              INTEGER PRIMARY KEY DEFAULT 1,
+        nama_dapur      TEXT NOT NULL DEFAULT 'Dapur MBG',
+        alamat          TEXT NOT NULL DEFAULT '',
+        lat             DOUBLE PRECISION NOT NULL DEFAULT -7.8657,
+        lng             DOUBLE PRECISION NOT NULL DEFAULT 111.4625,
+        radius_m        INTEGER NOT NULL DEFAULT 150,
+        geofence_aktif  BOOLEAN NOT NULL DEFAULT TRUE,
+        selfie_wajib    BOOLEAN NOT NULL DEFAULT TRUE,
+        jam_masuk       TEXT NOT NULL DEFAULT '07:00',
+        jam_pulang      TEXT NOT NULL DEFAULT '15:00',
+        tz              TEXT NOT NULL DEFAULT 'Asia/Jakarta',
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT settings_singleton CHECK (id = 1)
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS attendance (
+        id              SERIAL PRIMARY KEY,
+        user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tanggal         DATE NOT NULL,
+        check_in        TIMESTAMPTZ,
+        check_out       TIMESTAMPTZ,
+        status_masuk    TEXT,
+        check_in_lat    DOUBLE PRECISION,
+        check_in_lng    DOUBLE PRECISION,
+        check_in_jarak  DOUBLE PRECISION,
+        check_out_lat   DOUBLE PRECISION,
+        check_out_lng   DOUBLE PRECISION,
+        check_out_jarak DOUBLE PRECISION,
+        selfie_in       TEXT,
+        selfie_out      TEXT,
+        catatan         TEXT,
+        UNIQUE (user_id, tanggal)
+      );
+    `);
+
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_attendance_tanggal ON attendance (tanggal)`,
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_attendance_user ON attendance (user_id)`,
+    );
+
+    // Seed singleton settings row.
+    await client.query(
+      `INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
+    );
+
+    // Seed initial admin + sample kitchen staff only when the table is empty.
+    const { rows } = await client.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM users`,
+    );
+    if (Number(rows[0].c) === 0) {
+      const adminUser = process.env.SEED_ADMIN_USERNAME || "admin";
+      const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin123";
+      const adminNama = process.env.SEED_ADMIN_NAMA || "Administrator Dapur";
+      const adminHash = await hashPassword(adminPass);
+
+      await client.query(
+        `INSERT INTO users (nama, username, password_hash, role, jabatan)
+         VALUES ($1, $2, $3, 'admin', 'Kepala Dapur')`,
+        [adminNama, adminUser, adminHash],
+      );
+
+      const staffPass = await hashPassword("dapur123");
+      const sampleStaff: Array<[string, string, string, string]> = [
+        ["Siti Aminah", "siti", "Juru Masak", "DPR-001"],
+        ["Budi Santoso", "budi", "Asisten Juru Masak", "DPR-002"],
+        ["Rina Wulandari", "rina", "Staf Persiapan Bahan", "DPR-003"],
+        ["Joko Prasetyo", "joko", "Staf Distribusi", "DPR-004"],
+        ["Dewi Lestari", "dewi", "Staf Kebersihan", "DPR-005"],
+      ];
+      for (const [nama, username, jabatan, nip] of sampleStaff) {
+        await client.query(
+          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip)
+           VALUES ($1, $2, $3, 'staff', $4, $5)`,
+          [nama, username, staffPass, jabatan, nip],
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
