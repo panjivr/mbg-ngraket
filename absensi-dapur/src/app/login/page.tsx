@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import BgnLogo from "@/components/BgnLogo";
 
 function LoginForm() {
   const router = useRouter();
@@ -45,9 +46,7 @@ function LoginForm() {
       {/* Panel branding (kiri) ala portal resmi BGN */}
       <div className="relative hidden flex-col justify-between bg-gradient-to-br from-ink-800 to-ink-950 p-8 md:flex">
         <div className="flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-xl bg-emas-500 text-sm font-black tracking-tight text-ink-950 shadow-glow">
-            MBG
-          </span>
+          <BgnLogo size={52} />
           <div className="leading-tight">
             <p className="text-sm font-bold tracking-wide">BADAN GIZI NASIONAL</p>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
@@ -76,9 +75,10 @@ function LoginForm() {
       {/* Form (kanan) */}
       <div className="p-7 sm:p-9">
         <div className="mb-6 flex flex-col items-center text-center md:hidden">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-emas-500 text-base font-black tracking-tight text-ink-950 shadow-glow">
-            MBG
-          </span>
+          <BgnLogo size={64} />
+          <p className="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+            Badan Gizi Nasional
+          </p>
         </div>
         <h1 className="text-center text-2xl font-bold md:text-left">Silakan Login</h1>
         <p className="mt-1 text-center text-sm text-slate-400 md:text-left">

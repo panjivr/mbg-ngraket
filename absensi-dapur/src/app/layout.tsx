@@ -7,6 +7,10 @@ export const metadata: Metadata = {
     "Sistem absensi digital dapur MBG — clock in/out dengan verifikasi selfie & lokasi GPS, rekap dan ekspor untuk admin.",
   applicationName: "Absensi Dapur MBG",
   robots: { index: false, follow: false },
+  icons: {
+    icon: [{ url: "/bgn-logo.webp", type: "image/webp" }],
+    apple: [{ url: "/bgn-logo.webp" }],
+  },
 };
 
 export const viewport: Viewport = {

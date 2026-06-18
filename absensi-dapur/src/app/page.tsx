@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BgnLogo from "@/components/BgnLogo";
 
 const fitur = [
   {
@@ -31,9 +32,7 @@ export default function Home() {
 
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-emas-500 text-sm font-black tracking-tight text-ink-950 shadow-glow">
-            MBG
-          </span>
+          <BgnLogo size={48} />
           <div className="leading-tight">
             <p className="text-sm font-bold tracking-wide">ABSENSI DAPUR MBG</p>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
@@ -47,6 +46,7 @@ export default function Home() {
       </header>
 
       <section className="mt-14 flex flex-1 flex-col items-start justify-center sm:mt-20">
+        <BgnLogo size={88} className="mb-6" />
         <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
           ★ Program Makan Bergizi Gratis · Republik Indonesia
         </span>

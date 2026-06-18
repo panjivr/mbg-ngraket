@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
+import BgnLogo from "@/components/BgnLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +21,7 @@ export default async function AdminLayout({
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-emas-500 text-[11px] font-black tracking-tight text-ink-950">
-              MBG
-            </span>
+            <BgnLogo size={38} />
             <div className="leading-tight">
               <p className="text-sm font-bold">Panel Admin · Absensi Dapur</p>
               <p className="text-xs text-slate-400">{session.nama}</p>
