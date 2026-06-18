@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { fail } from "@/lib/api";
-import { route } from "@/lib/api";
+import { fail, route } from "@/lib/api";
 import { fmtJam, localDate } from "@/lib/time";
 import type { AttendanceWithUser, Settings } from "@/lib/types";
 
@@ -36,22 +35,26 @@ export const GET = route(async (req: NextRequest) => {
 
   const from = DATE_RE.test(sp.get("from") || "") ? sp.get("from")! : today;
   const to = DATE_RE.test(sp.get("to") || "") ? sp.get("to")! : today;
-
   if (from > to) return fail(400, "Rentang tanggal tidak valid.");
 
   const rows = await query<AttendanceWithUser>(
-    `SELECT a.*, u.nama, u.jabatan, u.nip
-       FROM attendance a JOIN users u ON u.id = a.user_id
-      WHERE a.tanggal BETWEEN $1 AND $2
-      ORDER BY a.tanggal ASC, u.nama ASC`,
+    `SELECT a.*, COALESCE(a.shift_tanggal, a.tanggal) AS tanggal,
+            u.nama, u.jabatan, u.nip, d.nama AS divisi_nama
+       FROM attendance a
+       JOIN users u ON u.id = a.user_id
+       LEFT JOIN divisi d ON d.id = a.divisi_id
+      WHERE COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2
+      ORDER BY COALESCE(a.shift_tanggal, a.tanggal) ASC, a.check_in ASC NULLS LAST, u.nama ASC`,
     [from, to],
   );
 
   const header = [
-    "Tanggal",
+    "Tanggal Shift",
     "NIP",
     "Nama",
     "Jabatan",
+    "Divisi",
+    "Jadwal Shift",
     "Jam Masuk",
     "Jam Pulang",
     "Status",
@@ -62,12 +65,16 @@ export const GET = route(async (req: NextRequest) => {
 
   const lines = [header.map(csvCell).join(",")];
   for (const r of rows) {
+    const jadwal =
+      r.shift_masuk && r.shift_pulang ? `${r.shift_masuk}-${r.shift_pulang}` : "";
     lines.push(
       [
         r.tanggal,
         r.nip ?? "",
         r.nama,
         r.jabatan ?? "",
+        r.divisi_nama ?? "",
+        jadwal,
         fmtJam(r.check_in, tz),
         fmtJam(r.check_out, tz),
         r.status_masuk ?? "",
@@ -80,7 +87,6 @@ export const GET = route(async (req: NextRequest) => {
     );
   }
 
-  // BOM agar Excel membaca UTF-8 dengan benar.
   const csv = "﻿" + lines.join("\r\n");
   const filename = `absensi-dapur_${from}_sd_${to}.csv`;
 

@@ -14,31 +14,36 @@ html {
 body {
   @apply bg-ink-950 text-slate-100 antialiased;
   background-image:
-    radial-gradient(1200px 600px at 85% -10%, rgba(245, 196, 81, 0.08), transparent 60%),
-    radial-gradient(900px 500px at -10% 10%, rgba(244, 112, 43, 0.06), transparent 55%);
+    radial-gradient(1200px 600px at 85% -10%, rgba(52, 100, 230, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(56, 189, 248, 0.10), transparent 55%),
+    linear-gradient(180deg, #0a1740 0%, #070f29 100%);
+  background-attachment: fixed;
   min-height: 100dvh;
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-white/5 bg-ink-850/80 shadow-soft backdrop-blur;
+    @apply rounded-2xl border border-white/10 bg-ink-850/70 shadow-soft backdrop-blur;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
            transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-gold {
-    @apply btn bg-gold-500 text-ink-950 hover:bg-gold-400;
+    @apply btn bg-gold-500 text-white hover:bg-gold-400 shadow-[0_8px_20px_-8px_rgba(52,100,230,0.7)];
+  }
+  .btn-primary {
+    @apply btn bg-gold-500 text-white hover:bg-gold-400 shadow-[0_8px_20px_-8px_rgba(52,100,230,0.7)];
   }
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10;
+    @apply btn border border-white/15 bg-white/5 text-slate-100 hover:bg-white/10;
   }
   .btn-danger {
     @apply btn bg-red-500/90 text-white hover:bg-red-500;
   }
   .input {
     @apply w-full rounded-xl border border-white/10 bg-ink-900/80 px-3.5 py-2.5 text-sm text-slate-100
-           placeholder:text-slate-500 outline-none focus:border-gold-500/60 focus:ring-2 focus:ring-gold-500/20;
+           placeholder:text-slate-500 outline-none focus:border-gold-500/70 focus:ring-2 focus:ring-gold-500/25;
   }
   .label {
     @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
@@ -51,5 +56,5 @@ body {
 /* Scrollbar halus untuk tabel */
 .scroll-x {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }

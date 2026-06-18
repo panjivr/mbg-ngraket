@@ -19,8 +19,8 @@ export default async function DapurLayout({
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-gold-500 text-lg text-ink-950">
-              🍲
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-emas-500 text-[11px] font-black tracking-tight text-ink-950">
+              MBG
             </span>
             <div className="leading-tight">
               <p className="text-sm font-bold">Absensi Dapur</p>

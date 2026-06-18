@@ -8,6 +8,9 @@ interface Row {
   check_in: string | null;
   check_out: string | null;
   status_masuk: string | null;
+  divisi_nama: string | null;
+  shift_masuk: string | null;
+  shift_pulang: string | null;
 }
 
 function fmtTime(v: string | null) {
@@ -62,6 +65,14 @@ export default function RiwayatPage() {
                   <p className="text-xs text-slate-400">
                     Masuk {fmtTime(r.check_in)} · Pulang {fmtTime(r.check_out)}
                   </p>
+                  {r.divisi_nama && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {r.divisi_nama}
+                      {r.shift_masuk && r.shift_pulang
+                        ? ` · ${r.shift_masuk}–${r.shift_pulang}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
                 {r.status_masuk && (
                   <span

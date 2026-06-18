@@ -49,7 +49,6 @@ export function getPool(): Pool {
       connectionTimeoutMillis: 10_000,
       allowExitOnIdle: true,
     });
-    // Jangan biarkan error pool yang tak tertangani mematikan proses.
     global.__absensiPool.on("error", (err) => {
       console.error("[absensi] pool error:", err.message);
     });
@@ -85,15 +84,13 @@ export async function withClient<T>(fn: (c: PoolClient) => Promise<T>): Promise<
 }
 
 /**
- * Idempotently create the schema and seed defaults. Cached per-instance so it
- * runs only once. A transaction-level advisory lock prevents two concurrent
- * cold starts from racing each other.
+ * Idempotently create the schema, run lightweight migrations and seed defaults.
+ * Cached per-instance so it runs only once. A transaction-level advisory lock
+ * prevents two concurrent cold starts from racing each other.
  */
 export function ensureSchema(): Promise<void> {
   if (!global.__absensiSchemaReady) {
     global.__absensiSchemaReady = doEnsureSchema().catch((err) => {
-      // Reset so a later request can retry instead of being stuck on a
-      // permanently-rejected promise.
       global.__absensiSchemaReady = undefined;
       throw err;
     });
@@ -105,7 +102,6 @@ async function doEnsureSchema(): Promise<void> {
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
-    // 7263011 = arbitrary lock key for this app.
     await client.query("SELECT pg_advisory_xact_lock(7263011)");
 
     await client.query(`
@@ -140,6 +136,25 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
 
+    // --- Divisi: jam kerja/shift per divisi (mendukung shift lintas hari) ---
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS divisi (
+        id              SERIAL PRIMARY KEY,
+        nama            TEXT NOT NULL UNIQUE,
+        jam_masuk       TEXT NOT NULL DEFAULT '07:00',
+        jam_pulang      TEXT NOT NULL DEFAULT '15:00',
+        toleransi_menit INTEGER NOT NULL DEFAULT 10,
+        warna           TEXT,
+        aktif           BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+
+    // users -> divisi
+    await client.query(
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS divisi_id INTEGER REFERENCES divisi(id) ON DELETE SET NULL`,
+    );
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id              SERIAL PRIMARY KEY,
@@ -161,8 +176,37 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
 
+    // --- Migrasi attendance: dari "per hari" ke "per shift/jam" ---
+    // Kolom shift baru (snapshot jadwal + tanggal kerja shift).
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS shift_tanggal DATE`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS divisi_id INTEGER`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS shift_masuk TEXT`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS shift_pulang TEXT`,
+    );
+    // Backfill tanggal kerja shift untuk baris lama.
+    await client.query(
+      `UPDATE attendance SET shift_tanggal = tanggal WHERE shift_tanggal IS NULL`,
+    );
+    // Lepas batasan unik per-hari & izinkan tanggal kosong (shift berbasis jam).
+    await client.query(
+      `ALTER TABLE attendance DROP CONSTRAINT IF EXISTS attendance_user_id_tanggal_key`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ALTER COLUMN tanggal DROP NOT NULL`,
+    );
+
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_attendance_tanggal ON attendance (tanggal)`,
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_attendance_shift ON attendance (shift_tanggal)`,
     );
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_attendance_user ON attendance (user_id)`,
@@ -172,6 +216,28 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
     );
+
+    // Seed contoh divisi (hanya bila tabel divisi masih kosong). Termasuk
+    // satu shift malam lintas hari sebagai contoh (22:00 -> 08:00).
+    const divCount = await client.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM divisi`,
+    );
+    if (Number(divCount.rows[0].c) === 0) {
+      const sampleDiv: Array<[string, string, string, number]> = [
+        ["Persiapan Bahan", "05:00", "13:00", 10],
+        ["Dapur / Masak", "06:00", "14:00", 10],
+        ["Distribusi", "09:00", "17:00", 10],
+        ["Kebersihan", "13:00", "21:00", 10],
+        ["Keamanan Malam", "22:00", "08:00", 15],
+      ];
+      for (const [nama, jm, jp, tol] of sampleDiv) {
+        await client.query(
+          `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (nama) DO NOTHING`,
+          [nama, jm, jp, tol],
+        );
+      }
+    }
 
     // Seed initial admin + sample kitchen staff only when the table is empty.
     const { rows } = await client.query<{ c: string }>(
@@ -190,18 +256,20 @@ async function doEnsureSchema(): Promise<void> {
       );
 
       const staffPass = await hashPassword("dapur123");
-      const sampleStaff: Array<[string, string, string, string]> = [
-        ["Siti Aminah", "siti", "Juru Masak", "DPR-001"],
-        ["Budi Santoso", "budi", "Asisten Juru Masak", "DPR-002"],
-        ["Rina Wulandari", "rina", "Staf Persiapan Bahan", "DPR-003"],
-        ["Joko Prasetyo", "joko", "Staf Distribusi", "DPR-004"],
-        ["Dewi Lestari", "dewi", "Staf Kebersihan", "DPR-005"],
+      // [nama, username, jabatan, nip, nama_divisi]
+      const sampleStaff: Array<[string, string, string, string, string]> = [
+        ["Siti Aminah", "siti", "Juru Masak", "DPR-001", "Dapur / Masak"],
+        ["Budi Santoso", "budi", "Asisten Juru Masak", "DPR-002", "Dapur / Masak"],
+        ["Rina Wulandari", "rina", "Staf Persiapan Bahan", "DPR-003", "Persiapan Bahan"],
+        ["Joko Prasetyo", "joko", "Staf Distribusi", "DPR-004", "Distribusi"],
+        ["Dewi Lestari", "dewi", "Staf Kebersihan", "DPR-005", "Kebersihan"],
       ];
-      for (const [nama, username, jabatan, nip] of sampleStaff) {
+      for (const [nama, username, jabatan, nip, divNama] of sampleStaff) {
         await client.query(
-          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip)
-           VALUES ($1, $2, $3, 'staff', $4, $5)`,
-          [nama, username, staffPass, jabatan, nip],
+          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, divisi_id)
+           VALUES ($1, $2, $3, 'staff', $4, $5,
+                   (SELECT id FROM divisi WHERE nama = $6))`,
+          [nama, username, staffPass, jabatan, nip, divNama],
         );
       }
     }

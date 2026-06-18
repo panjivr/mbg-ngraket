@@ -10,6 +10,15 @@ interface Employee {
   jabatan: string | null;
   nip: string | null;
   aktif: boolean;
+  divisi_id: number | null;
+  divisi_nama: string | null;
+}
+
+interface DivisiLite {
+  id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
 }
 
 interface FormState {
@@ -21,6 +30,7 @@ interface FormState {
   jabatan: string;
   nip: string;
   aktif: boolean;
+  divisi_id: number | null;
 }
 
 const emptyForm: FormState = {
@@ -32,10 +42,12 @@ const emptyForm: FormState = {
   jabatan: "",
   nip: "",
   aktif: true,
+  divisi_id: null,
 };
 
 export default function PegawaiPage() {
   const [list, setList] = useState<Employee[]>([]);
+  const [divisi, setDivisi] = useState<DivisiLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -44,9 +56,14 @@ export default function PegawaiPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/employees", { cache: "no-store" });
-      const data = await res.json();
-      setList(data.employees || []);
+      const [eRes, dRes] = await Promise.all([
+        fetch("/api/admin/employees", { cache: "no-store" }),
+        fetch("/api/admin/divisi", { cache: "no-store" }),
+      ]);
+      const e = await eRes.json();
+      const d = await dRes.json();
+      setList(e.employees || []);
+      setDivisi(d.divisi || []);
     } finally {
       setLoading(false);
     }
@@ -71,6 +88,7 @@ export default function PegawaiPage() {
       jabatan: e.jabatan || "",
       nip: e.nip || "",
       aktif: e.aktif,
+      divisi_id: e.divisi_id,
     });
   }
 
@@ -90,6 +108,7 @@ export default function PegawaiPage() {
         jabatan: form.jabatan,
         nip: form.nip,
         aktif: form.aktif,
+        divisi_id: form.divisi_id,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -138,13 +157,13 @@ export default function PegawaiPage() {
           <p className="p-6 text-center text-slate-400">Belum ada pegawai.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Nama</th>
                   <th className="px-4 py-2.5">Username</th>
+                  <th className="px-4 py-2.5">Divisi</th>
                   <th className="px-4 py-2.5">Jabatan</th>
-                  <th className="px-4 py-2.5">NIP</th>
                   <th className="px-4 py-2.5">Peran</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5 text-right">Aksi</th>
@@ -155,14 +174,22 @@ export default function PegawaiPage() {
                   <tr key={e.id}>
                     <td className="px-4 py-2.5 font-medium">{e.nama}</td>
                     <td className="px-4 py-2.5 text-slate-400">{e.username}</td>
+                    <td className="px-4 py-2.5">
+                      {e.divisi_nama ? (
+                        <span className="badge bg-gold-500/15 text-gold-400">
+                          {e.divisi_nama}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 text-slate-400">{e.jabatan || "—"}</td>
-                    <td className="px-4 py-2.5 text-slate-400">{e.nip || "—"}</td>
                     <td className="px-4 py-2.5">
                       <span
                         className={
                           "badge " +
                           (e.role === "admin"
-                            ? "bg-gold-500/15 text-gold-400"
+                            ? "bg-emas-500/15 text-emas-400"
                             : "bg-white/5 text-slate-300")
                         }
                       >
@@ -246,14 +273,36 @@ export default function PegawaiPage() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="label">Jabatan</label>
-                <input
-                  className="input"
-                  value={form.jabatan}
-                  placeholder="mis. Juru Masak"
-                  onChange={(e) => setForm({ ...form, jabatan: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Jabatan</label>
+                  <input
+                    className="input"
+                    value={form.jabatan}
+                    placeholder="mis. Juru Masak"
+                    onChange={(e) => setForm({ ...form, jabatan: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Divisi (Shift)</label>
+                  <select
+                    className="input"
+                    value={form.divisi_id ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        divisi_id: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  >
+                    <option value="">— Tanpa divisi —</option>
+                    {divisi.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.nama} ({d.jam_masuk}–{d.jam_pulang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -306,17 +355,10 @@ export default function PegawaiPage() {
               )}
 
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setForm(null)}
-                  className="btn-ghost flex-1"
-                >
+                <button onClick={() => setForm(null)} className="btn-ghost flex-1">
                   Batal
                 </button>
-                <button
-                  onClick={save}
-                  className="btn-gold flex-1"
-                  disabled={saving}
-                >
+                <button onClick={save} className="btn-gold flex-1" disabled={saving}>
                   {saving ? "Menyimpan…" : "Simpan"}
                 </button>
               </div>

@@ -7,6 +7,9 @@ interface RekapRow {
   nama: string;
   jabatan: string | null;
   nip: string | null;
+  divisi_nama: string | null;
+  shift_masuk: string | null;
+  shift_pulang: string | null;
   tanggal: string;
   check_in: string | null;
   check_out: string | null;
@@ -122,7 +125,8 @@ export default function RekapPage() {
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Tanggal</th>
                   <th className="px-4 py-2.5">Nama</th>
-                  <th className="px-4 py-2.5">Jabatan</th>
+                  <th className="px-4 py-2.5">Divisi</th>
+                  <th className="px-4 py-2.5">Jadwal</th>
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Pulang</th>
@@ -134,7 +138,8 @@ export default function RekapPage() {
                   <tr key={r.id}>
                     <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(r.tanggal)}</td>
                     <td className="px-4 py-2.5 font-medium">{r.nama}</td>
-                    <td className="px-4 py-2.5 text-slate-400">{r.jabatan || "—"}</td>
+                    <td className="px-4 py-2.5">{r.divisi_nama || "—"}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-400">{r.shift_masuk && r.shift_pulang ? `${r.shift_masuk}–${r.shift_pulang}` : "—"}</td>
                     <td className="px-4 py-2.5">{fmtTime(r.check_in)}</td>
                     <td className="px-4 py-2.5">
                       {r.status_masuk ? (

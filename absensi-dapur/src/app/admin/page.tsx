@@ -14,6 +14,7 @@ interface RekapRow {
   id: number;
   nama: string;
   jabatan: string | null;
+  divisi_nama: string | null;
   check_in: string | null;
   check_out: string | null;
   status_masuk: string | null;
@@ -71,7 +72,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">Dashboard Hari Ini</h1>
+        <h1 className="text-xl font-bold">Dashboard Shift Hari Ini</h1>
         <p className="text-sm text-slate-400">{tanggalTampil}</p>
       </div>
 
@@ -88,7 +89,7 @@ export default function AdminDashboard() {
 
       <div className="card overflow-hidden">
         <div className="border-b border-white/5 px-4 py-3">
-          <p className="text-sm font-semibold">Kehadiran Hari Ini</p>
+          <p className="text-sm font-semibold">Kehadiran Shift Hari Ini</p>
         </div>
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
@@ -98,11 +99,12 @@ export default function AdminDashboard() {
           </p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Nama</th>
                   <th className="px-4 py-2.5">Jabatan</th>
+                  <th className="px-4 py-2.5">Divisi</th>
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Pulang</th>
@@ -114,6 +116,7 @@ export default function AdminDashboard() {
                   <tr key={r.id}>
                     <td className="px-4 py-2.5 font-medium">{r.nama}</td>
                     <td className="px-4 py-2.5 text-slate-400">{r.jabatan || "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{r.divisi_nama || "—"}</td>
                     <td className="px-4 py-2.5">{fmtTime(r.check_in)}</td>
                     <td className="px-4 py-2.5">
                       {r.status_masuk ? (

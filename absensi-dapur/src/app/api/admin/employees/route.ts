@@ -8,11 +8,20 @@ import type { User } from "@/lib/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function toDivisiId(v: unknown): number | null {
+  if (v === null || v === undefined || v === "" || v === "0") return null;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export const GET = route(async () => {
   await requireAdmin();
   const rows = await query<User>(
-    `SELECT id, nama, username, role, jabatan, nip, aktif, created_at
-       FROM users ORDER BY role DESC, nama ASC`,
+    `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
+            u.created_at, u.divisi_id, d.nama AS divisi_nama
+       FROM users u
+       LEFT JOIN divisi d ON d.id = u.divisi_id
+      ORDER BY u.role DESC, u.nama ASC`,
   );
   return ok({ employees: rows });
 });
@@ -28,6 +37,7 @@ export const POST = route(async (req: NextRequest) => {
   const jabatan = body.jabatan ? String(body.jabatan).trim() : null;
   const nip = body.nip ? String(body.nip).trim() : null;
   const aktif = body.aktif === false ? false : true;
+  const divisi_id = toDivisiId(body.divisi_id);
 
   if (!nama || !username || !password) {
     return fail(400, "Nama, username, dan password wajib diisi.");
@@ -47,10 +57,10 @@ export const POST = route(async (req: NextRequest) => {
 
   const hash = await hashPassword(password);
   const rows = await query<User>(
-    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at`,
-    [nama, username, hash, role, jabatan, nip, aktif],
+    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id`,
+    [nama, username, hash, role, jabatan, nip, aktif, divisi_id],
   );
   return ok({ employee: rows[0] }, { status: 201 });
 });

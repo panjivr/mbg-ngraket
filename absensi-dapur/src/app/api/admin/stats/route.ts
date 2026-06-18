@@ -24,9 +24,12 @@ export const GET = route(async () => {
   const rows = await query<StatRow>(
     `SELECT
        (SELECT COUNT(*) FROM users WHERE aktif = TRUE)::text AS total_staff,
-       (SELECT COUNT(*) FROM attendance WHERE tanggal = $1 AND check_in IS NOT NULL)::text AS hadir,
-       (SELECT COUNT(*) FROM attendance WHERE tanggal = $1 AND status_masuk = 'Terlambat')::text AS terlambat,
-       (SELECT COUNT(*) FROM attendance WHERE tanggal = $1 AND check_out IS NOT NULL)::text AS pulang`,
+       (SELECT COUNT(DISTINCT user_id) FROM attendance
+          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND check_in IS NOT NULL)::text AS hadir,
+       (SELECT COUNT(*) FROM attendance
+          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND status_masuk = 'Terlambat')::text AS terlambat,
+       (SELECT COUNT(*) FROM attendance
+          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND check_out IS NOT NULL)::text AS pulang`,
     [tanggal],
   );
 

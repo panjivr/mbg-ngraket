@@ -18,25 +18,34 @@ export const GET = route(async (req: NextRequest) => {
   const from = DATE_RE.test(sp.get("from") || "") ? sp.get("from")! : today;
   const to = DATE_RE.test(sp.get("to") || "") ? sp.get("to")! : today;
   const userId = parseInt(sp.get("user_id") || "", 10);
+  const divisiId = parseInt(sp.get("divisi_id") || "", 10);
 
-  const conds = ["a.tanggal BETWEEN $1 AND $2"];
+  const conds = ["COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2"];
   const params: unknown[] = [from, to];
   if (Number.isFinite(userId)) {
     params.push(userId);
     conds.push(`a.user_id = $${params.length}`);
   }
+  if (Number.isFinite(divisiId)) {
+    params.push(divisiId);
+    conds.push(`a.divisi_id = $${params.length}`);
+  }
 
   const rows = await query<
     Omit<AttendanceWithUser, "selfie_in" | "selfie_out">
   >(
-    `SELECT a.id, a.user_id, a.tanggal, a.check_in, a.check_out, a.status_masuk,
+    `SELECT a.id, a.user_id,
+            COALESCE(a.shift_tanggal, a.tanggal) AS tanggal,
+            a.shift_tanggal, a.divisi_id, a.shift_masuk, a.shift_pulang,
+            a.check_in, a.check_out, a.status_masuk,
             a.check_in_lat, a.check_in_lng, a.check_in_jarak,
             a.check_out_lat, a.check_out_lng, a.check_out_jarak, a.catatan,
-            u.nama, u.jabatan, u.nip
+            u.nama, u.jabatan, u.nip, d.nama AS divisi_nama
        FROM attendance a
        JOIN users u ON u.id = a.user_id
+       LEFT JOIN divisi d ON d.id = a.divisi_id
       WHERE ${conds.join(" AND ")}
-      ORDER BY a.tanggal DESC, u.nama ASC`,
+      ORDER BY COALESCE(a.shift_tanggal, a.tanggal) DESC, a.check_in DESC NULLS LAST, u.nama ASC`,
     params,
   );
 

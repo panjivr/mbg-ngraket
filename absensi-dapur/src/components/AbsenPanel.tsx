@@ -16,26 +16,32 @@ interface SettingsLite {
   tz: string;
 }
 
-interface TodayRow {
+interface ShiftInfo {
+  divisi_nama: string | null;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  lintas_hari: boolean;
+}
+
+interface AbsRow {
   id: number;
   check_in: string | null;
   check_out: string | null;
   status_masuk: string | null;
+  shift_masuk: string | null;
+  shift_pulang: string | null;
 }
 
-type Phase = "masuk" | "pulang" | "selesai";
+type Phase = "masuk" | "pulang";
 type Geo = { lat: number; lng: number; accuracy: number };
-
-function phaseOf(today: TodayRow | null): Phase {
-  if (!today || !today.check_in) return "masuk";
-  if (today.check_in && !today.check_out) return "pulang";
-  return "selesai";
-}
 
 export default function AbsenPanel() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<SettingsLite | null>(null);
-  const [today, setToday] = useState<TodayRow | null>(null);
+  const [shift, setShift] = useState<ShiftInfo | null>(null);
+  const [current, setCurrent] = useState<AbsRow | null>(null);
+  const [last, setLast] = useState<AbsRow | null>(null);
   const [tanggal, setTanggal] = useState("");
 
   const [now, setNow] = useState<Date>(new Date());
@@ -54,7 +60,6 @@ export default function AbsenPanel() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Live clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -65,7 +70,9 @@ export default function AbsenPanel() {
     if (!res.ok) return;
     const data = await res.json();
     setSettings(data.settings);
-    setToday(data.today);
+    setShift(data.shift);
+    setCurrent(data.current);
+    setLast(data.last);
     setTanggal(data.tanggal);
   }, []);
 
@@ -155,7 +162,7 @@ export default function AbsenPanel() {
     startCamera();
   }
 
-  const phase = phaseOf(today);
+  const phase: Phase = current ? "pulang" : "masuk";
   const jarak =
     geo && settings ? haversineMeters(settings.lat, settings.lng, geo.lat, geo.lng) : null;
   const inRadius =
@@ -163,7 +170,6 @@ export default function AbsenPanel() {
   const needSelfie = !!settings?.selfie_wajib;
 
   const requirementsOk =
-    phase !== "selesai" &&
     (!settings?.geofence_aktif || (!!geo && inRadius)) &&
     (!needSelfie || !!selfie);
 
@@ -221,8 +227,8 @@ export default function AbsenPanel() {
     return <div className="card p-6 text-center text-slate-400">Memuat…</div>;
   }
 
-  const actionLabel =
-    phase === "masuk" ? "Absen Masuk" : phase === "pulang" ? "Absen Pulang" : "Selesai";
+  const actionLabel = phase === "masuk" ? "Absen Masuk" : "Absen Pulang";
+  const summary = current ?? last;
 
   return (
     <div className="space-y-4">
@@ -236,6 +242,34 @@ export default function AbsenPanel() {
         </p>
         <p className="mt-2 text-sm text-slate-400">{tanggalTampil}</p>
       </div>
+
+      {/* Info shift / divisi */}
+      {shift && (
+        <div className="card flex items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-400">Shift Anda</p>
+            <p className="mt-0.5 text-sm font-semibold">
+              {shift.divisi_nama || "Umum (jam global dapur)"}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-sm font-semibold text-gold-400">
+              {shift.jam_masuk}–{shift.jam_pulang}
+            </p>
+            {shift.lintas_hari && (
+              <span className="badge bg-ember-500/15 text-ember-400">lintas hari</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sedang bekerja */}
+      {current && (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-200">
+          ● Sedang dalam shift — masuk {fmtTime(current.check_in, settings?.tz)}. Jangan
+          lupa absen pulang setelah selesai.
+        </p>
+      )}
 
       {/* Status lokasi */}
       <div className="card p-4">
@@ -273,22 +307,21 @@ export default function AbsenPanel() {
         )}
       </div>
 
-      {/* Kamera / selfie */}
-      {needSelfie && phase !== "selesai" && (
+      {/* Kamera / selfie wajah */}
+      {needSelfie && (
         <div className="card p-4">
-          <p className="mb-3 text-sm font-semibold">📸 Foto Selfie</p>
+          <p className="mb-3 text-sm font-semibold">📸 Foto Wajah</p>
           <div className="overflow-hidden rounded-xl bg-ink-900">
             {selfie ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={selfie} alt="Selfie" className="mx-auto max-h-72" />
+              <img src={selfie} alt="Foto wajah" className="mx-auto max-h-72" />
             ) : (
               <video
                 ref={videoRef}
                 playsInline
                 muted
                 className={
-                  "mx-auto max-h-72 w-full object-cover " +
-                  (cameraOn ? "" : "hidden")
+                  "mx-auto max-h-72 w-full object-cover " + (cameraOn ? "" : "hidden")
                 }
               />
             )}
@@ -334,61 +367,54 @@ export default function AbsenPanel() {
       )}
 
       {/* Tombol aksi */}
-      {phase === "selesai" ? (
-        <div className="card p-5 text-center">
-          <p className="text-lg font-bold text-emerald-300">✓ Absensi hari ini lengkap</p>
-          <p className="mt-1 text-sm text-slate-400">
-            Sampai jumpa besok. Terima kasih atas kerja kerasnya!
-          </p>
-        </div>
-      ) : (
-        <button
-          onClick={submit}
-          disabled={!requirementsOk || submitting}
-          className={
-            "w-full rounded-2xl py-5 text-lg font-bold transition active:scale-[0.99] " +
-            (phase === "masuk"
-              ? "bg-emerald-500 text-ink-950 hover:bg-emerald-400"
-              : "bg-ember-500 text-white hover:bg-ember-400") +
-            " disabled:cursor-not-allowed disabled:opacity-50"
-          }
-        >
-          {submitting ? "Menyimpan…" : actionLabel}
-        </button>
-      )}
+      <button
+        onClick={submit}
+        disabled={!requirementsOk || submitting}
+        className={
+          "w-full rounded-2xl py-5 text-lg font-bold transition active:scale-[0.99] " +
+          (phase === "masuk"
+            ? "bg-emerald-500 text-ink-950 hover:bg-emerald-400"
+            : "bg-gold-500 text-white hover:bg-gold-400") +
+          " disabled:cursor-not-allowed disabled:opacity-50"
+        }
+      >
+        {submitting ? "Menyimpan…" : actionLabel}
+      </button>
 
-      {!requirementsOk && phase !== "selesai" && (
+      {!requirementsOk && (
         <p className="text-center text-xs text-slate-500">
           {settings?.geofence_aktif && (!geo || !inRadius)
             ? "Pastikan lokasi terdeteksi & berada di area dapur. "
             : ""}
-          {needSelfie && !selfie ? "Ambil foto selfie dulu sebelum absen." : ""}
+          {needSelfie && !selfie ? "Ambil foto wajah dulu sebelum absen." : ""}
         </p>
       )}
 
-      {/* Ringkasan hari ini */}
+      {/* Ringkasan shift */}
       <div className="card p-4">
-        <p className="mb-2 text-sm font-semibold">Ringkasan Hari Ini</p>
+        <p className="mb-2 text-sm font-semibold">
+          {current ? "Shift Berjalan" : "Shift Terakhir"}
+        </p>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-lg bg-ink-900/60 p-3">
             <p className="text-xs text-slate-400">Jam Masuk</p>
-            <p className="mt-0.5 font-semibold">{fmtTime(today?.check_in, settings?.tz)}</p>
-            {today?.status_masuk && (
+            <p className="mt-0.5 font-semibold">{fmtTime(summary?.check_in, settings?.tz)}</p>
+            {summary?.status_masuk && (
               <span
                 className={
                   "badge mt-1 " +
-                  (today.status_masuk === "Terlambat"
+                  (summary.status_masuk === "Terlambat"
                     ? "bg-red-500/15 text-red-300"
                     : "bg-emerald-500/15 text-emerald-300")
                 }
               >
-                {today.status_masuk}
+                {summary.status_masuk}
               </span>
             )}
           </div>
           <div className="rounded-lg bg-ink-900/60 p-3">
             <p className="text-xs text-slate-400">Jam Pulang</p>
-            <p className="mt-0.5 font-semibold">{fmtTime(today?.check_out, settings?.tz)}</p>
+            <p className="mt-0.5 font-semibold">{fmtTime(summary?.check_out, settings?.tz)}</p>
           </div>
         </div>
       </div>

@@ -1,5 +1,18 @@
 export type Role = "admin" | "staff";
 
+export interface Divisi {
+  id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  warna: string | null;
+  aktif: boolean;
+  created_at: string;
+  /** Turunan: shift melewati tengah malam (jam_pulang <= jam_masuk). */
+  lintas_hari?: boolean;
+}
+
 export interface User {
   id: number;
   nama: string;
@@ -9,6 +22,8 @@ export interface User {
   nip: string | null;
   aktif: boolean;
   created_at: string;
+  divisi_id: number | null;
+  divisi_nama?: string | null;
 }
 
 export interface Settings {
@@ -29,7 +44,11 @@ export interface Settings {
 export interface Attendance {
   id: number;
   user_id: number;
-  tanggal: string;
+  tanggal: string | null;
+  shift_tanggal: string | null;
+  divisi_id: number | null;
+  shift_masuk: string | null;
+  shift_pulang: string | null;
   check_in: string | null;
   check_out: string | null;
   status_masuk: string | null;
@@ -48,4 +67,5 @@ export interface AttendanceWithUser extends Attendance {
   nama: string;
   jabatan: string | null;
   nip: string | null;
+  divisi_nama?: string | null;
 }
