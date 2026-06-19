@@ -54,6 +54,15 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
         ? String(body.tanggal_lahir)
         : null
       : existing.tanggal_lahir ?? null;
+  const jenis_kelamin =
+    body.jenis_kelamin !== undefined
+      ? (() => {
+          const s = String(body.jenis_kelamin).trim().toLowerCase();
+          if (s === "l" || s.startsWith("laki") || s === "pria") return "L";
+          if (s === "p" || s.startsWith("perempuan") || s === "wanita") return "P";
+          return null;
+        })()
+      : existing.jenis_kelamin ?? null;
 
   let username = existing.username;
   if (body.username !== undefined) {
@@ -82,6 +91,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
+    jenis_kelamin,
   ];
   if (body.password) {
     if (String(body.password).length < 6) {
@@ -95,10 +105,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const rows = await query<User>(
     `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
-            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9${passwordClause}
+            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10${passwordClause}
        WHERE id = $${paramsArr.length}
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-               tempat_lahir, tanggal_lahir`,
+               tempat_lahir, tanggal_lahir, jenis_kelamin`,
     paramsArr,
   );
   void admin;

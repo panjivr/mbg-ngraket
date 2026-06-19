@@ -7,6 +7,7 @@ import KartuShare from "@/components/KartuShare";
 import { fmtDurasi } from "@/lib/time";
 import { formatTanggalIndo } from "@/lib/weton";
 import RamalanLengkap from "@/components/RamalanLengkap";
+import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 
 interface Akun {
@@ -158,7 +159,7 @@ export default function LaporanPegawaiPage() {
           <Row k="Bio" v={kartu.bio || "—"} />
         </div>
 
-        {/* Ramalan kepribadian lengkap */}
+        {/* Ramalan kepribadian lengkap (weton) */}
         {kartu.tanggal_lahir ? (
           <RamalanLengkap tgl={kartu.tanggal_lahir} nama={kartu.nama} />
         ) : (
@@ -166,6 +167,15 @@ export default function LaporanPegawaiPage() {
             🔮 Tanggal lahir belum diisi. Lengkapi di menu Pegawai → Edit untuk melihat
             ramalan kepribadian.
           </div>
+        )}
+
+        {/* Shio & Fengshui (ilmu Tionghoa) — setelah weton */}
+        {kartu.tanggal_lahir && (
+          <ShioFengshuiLengkap
+            nama={kartu.nama}
+            tgl={kartu.tanggal_lahir}
+            jenisKelamin={kartu.jenis_kelamin}
+          />
         )}
 
         {/* Jadwal & tugas */}

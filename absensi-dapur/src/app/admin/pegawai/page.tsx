@@ -17,6 +17,7 @@ interface Employee {
   divisi_nama: string | null;
   tempat_lahir: string | null;
   tanggal_lahir: string | null;
+  jenis_kelamin: string | null;
 }
 
 interface DivisiLite {
@@ -38,6 +39,7 @@ interface FormState {
   divisi_id: number | null;
   tempat_lahir: string;
   tanggal_lahir: string;
+  jenis_kelamin: string;
 }
 
 const emptyForm: FormState = {
@@ -52,6 +54,7 @@ const emptyForm: FormState = {
   divisi_id: null,
   tempat_lahir: "",
   tanggal_lahir: "",
+  jenis_kelamin: "",
 };
 
 export default function PegawaiPage() {
@@ -157,6 +160,7 @@ export default function PegawaiPage() {
       divisi_id: e.divisi_id,
       tempat_lahir: e.tempat_lahir || "",
       tanggal_lahir: e.tanggal_lahir || "",
+      jenis_kelamin: e.jenis_kelamin || "",
     });
   }
 
@@ -179,6 +183,7 @@ export default function PegawaiPage() {
         divisi_id: form.divisi_id,
         tempat_lahir: form.tempat_lahir,
         tanggal_lahir: form.tanggal_lahir || null,
+        jenis_kelamin: form.jenis_kelamin || null,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -385,6 +390,21 @@ export default function PegawaiPage() {
                     onChange={(e) => setForm({ ...form, tanggal_lahir: e.target.value })}
                   />
                 </div>
+              </div>
+              <div>
+                <label className="label">
+                  Jenis Kelamin{" "}
+                  <span className="text-slate-500">(untuk Shio &amp; Fengshui / Angka Kua)</span>
+                </label>
+                <select
+                  className="input"
+                  value={form.jenis_kelamin}
+                  onChange={(e) => setForm({ ...form, jenis_kelamin: e.target.value })}
+                >
+                  <option value="">— Belum diisi —</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

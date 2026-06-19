@@ -24,12 +24,21 @@ function toTempat(v: unknown): string | null {
   const s = String(v).trim();
   return s ? s : null;
 }
+/** Normalisasi jenis kelamin ke 'L' / 'P' (atau null). Menerima banyak variasi. */
+function toKelamin(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim().toLowerCase();
+  if (!s) return null;
+  if (s === "l" || s.startsWith("laki") || s === "pria" || s === "male" || s === "m") return "L";
+  if (s === "p" || s.startsWith("perempuan") || s === "wanita" || s === "female" || s === "f") return "P";
+  return null;
+}
 
 export const GET = route(async () => {
   await requireAdmin();
   const rows = await query<User>(
     `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
-            u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir,
+            u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin,
             d.nama AS divisi_nama
        FROM users u
        LEFT JOIN divisi d ON d.id = u.divisi_id
@@ -52,6 +61,7 @@ export const POST = route(async (req: NextRequest) => {
   const divisi_id = toDivisiId(body.divisi_id);
   const tempat_lahir = toTempat(body.tempat_lahir);
   const tanggal_lahir = toTanggal(body.tanggal_lahir);
+  const jenis_kelamin = toKelamin(body.jenis_kelamin);
 
   if (!nama || !username || !password) {
     return fail(400, "Nama, username, dan password wajib diisi.");
@@ -71,10 +81,10 @@ export const POST = route(async (req: NextRequest) => {
 
   const hash = await hashPassword(password);
   const rows = await query<User>(
-    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir`,
-    [nama, username, hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir],
+    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin`,
+    [nama, username, hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin],
   );
   return ok({ employee: rows[0] }, { status: 201 });
 });

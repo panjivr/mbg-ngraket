@@ -170,6 +170,9 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tempat_lahir TEXT`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tanggal_lahir DATE`);
 
+    // users -> jenis kelamin ('L'/'P') untuk analisa Shio & Fengshui (Angka Kua)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS jenis_kelamin TEXT`);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id              SERIAL PRIMARY KEY,

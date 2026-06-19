@@ -4,32 +4,55 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import BgnLogo from "@/components/BgnLogo";
 import RamalanLengkap from "@/components/RamalanLengkap";
+import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
 import { hitungWeton, hitungJodoh } from "@/lib/weton";
 
 function KalkulatorWeton() {
+  const [nama, setNama] = useState("");
   const [tgl, setTgl] = useState("");
+  const [kelamin, setKelamin] = useState("");
   return (
     <div className="space-y-4">
       <div className="card p-5">
-        <h2 className="text-lg font-bold">🔮 Ramalan Kepribadian (Weton)</h2>
+        <h2 className="text-lg font-bold">🔮 Ramalan Kepribadian (Weton + Shio &amp; Fengshui)</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Masukkan tanggal lahir untuk membaca ramalan kepribadian lengkap: weton, neptu,
-          wuku, pancasuda, pranata mangsa, bintang, sifat menonjol, asmara, rejeki, hingga
-          bio-rhythm hari ini.
+          Masukkan data untuk membaca ramalan lengkap: weton Jawa (neptu, wuku, pancasuda,
+          pranata mangsa, bintang, sifat, asmara, rejeki, bio-rhythm) dilanjutkan ilmu
+          Tionghoa (shio, elemen, jodoh shio, Angka Kua Fengshui, &amp; numerologi).
         </p>
-        <div className="mt-4">
-          <label className="label">Tanggal Lahir</label>
-          <input
-            type="date"
-            className="input"
-            value={tgl}
-            max="2099-12-31"
-            onChange={(e) => setTgl(e.target.value)}
-          />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="label">Nama Lengkap (untuk numerologi)</label>
+            <input
+              className="input"
+              value={nama}
+              placeholder="mis. Panji Vatorrohman"
+              onChange={(e) => setNama(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">Tanggal Lahir</label>
+            <input
+              type="date"
+              className="input"
+              value={tgl}
+              max="2099-12-31"
+              onChange={(e) => setTgl(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">Jenis Kelamin (untuk Kua)</label>
+            <select className="input" value={kelamin} onChange={(e) => setKelamin(e.target.value)}>
+              <option value="">— Pilih —</option>
+              <option value="L">Laki-laki</option>
+              <option value="P">Perempuan</option>
+            </select>
+          </div>
         </div>
         {!tgl && <p className="mt-4 text-sm text-slate-500">Pilih tanggal lahir di atas.</p>}
       </div>
-      {tgl && <RamalanLengkap tgl={tgl} />}
+      {tgl && <RamalanLengkap tgl={tgl} nama={nama || undefined} />}
+      {tgl && <ShioFengshuiLengkap nama={nama} tgl={tgl} jenisKelamin={kelamin} />}
     </div>
   );
 }

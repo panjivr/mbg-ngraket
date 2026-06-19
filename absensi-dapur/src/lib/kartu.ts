@@ -15,6 +15,7 @@ interface UserRow {
   bio: string | null;
   tempat_lahir: string | null;
   tanggal_lahir: string | null;
+  jenis_kelamin: string | null;
   created_at: string;
 }
 
@@ -42,7 +43,7 @@ export async function getKartuPegawai(userId: number): Promise<KartuPegawai | nu
   const u = (
     await query<UserRow>(
       `SELECT u.id, u.nama, u.jabatan, u.nip, u.foto_profil, u.bio,
-              u.tempat_lahir, u.tanggal_lahir, u.created_at,
+              u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.created_at,
               d.nama AS divisi_nama, d.jobdesk, d.jam_masuk, d.jam_pulang
          FROM users u
          LEFT JOIN divisi d ON d.id = u.divisi_id
@@ -83,6 +84,7 @@ export async function getKartuPegawai(userId: number): Promise<KartuPegawai | nu
     bio: u.bio,
     tempat_lahir: u.tempat_lahir,
     tanggal_lahir: u.tanggal_lahir,
+    jenis_kelamin: u.jenis_kelamin,
     created_at: u.created_at,
     total_menit: totalMenit,
     jumlah_shift: jumlahShift,

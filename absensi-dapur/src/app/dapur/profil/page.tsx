@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import KartuShare from "@/components/KartuShare";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 import RamalanLengkap from "@/components/RamalanLengkap";
+import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
 
 const MAX_BIO = 200;
 
@@ -125,6 +126,15 @@ export default function ProfilPage() {
             ramalan kepribadian lengkapmu.
           </div>
         ))}
+
+      {/* Shio & Fengshui (ilmu Tionghoa) — tampil setelah weton */}
+      {kartu?.tanggal_lahir && (
+        <ShioFengshuiLengkap
+          nama={kartu.nama}
+          tgl={kartu.tanggal_lahir}
+          jenisKelamin={kartu.jenis_kelamin}
+        />
+      )}
 
       <div className="card space-y-4 p-4">
         <p className="text-sm font-semibold">Ubah Profil</p>

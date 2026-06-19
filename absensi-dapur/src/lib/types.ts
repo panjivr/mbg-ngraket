@@ -30,6 +30,7 @@ export interface User {
   bio?: string | null;
   tempat_lahir?: string | null;
   tanggal_lahir?: string | null;
+  jenis_kelamin?: string | null;
 }
 
 /** Data kartu pegawai (gaya kartu koleksi) untuk dibagikan. */
@@ -46,6 +47,7 @@ export interface KartuPegawai {
   bio: string | null;
   tempat_lahir: string | null;
   tanggal_lahir: string | null;
+  jenis_kelamin: string | null;
   created_at: string;
   total_menit: number;
   jumlah_shift: number;
