@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 interface ShiftRow {
   divisi_nama: string | null;
+  jobdesk: string | null;
   jam_masuk: string | null;
   jam_pulang: string | null;
   toleransi_menit: number | null;
@@ -37,7 +38,7 @@ export const GET = route(async () => {
 
   const shiftRow = (
     await query<ShiftRow>(
-      `SELECT d.nama AS divisi_nama, d.jam_masuk, d.jam_pulang, d.toleransi_menit
+      `SELECT d.nama AS divisi_nama, d.jobdesk, d.jam_masuk, d.jam_pulang, d.toleransi_menit
          FROM users u
          LEFT JOIN divisi d ON d.id = u.divisi_id AND d.aktif = TRUE
         WHERE u.id = $1`,
@@ -80,6 +81,7 @@ export const GET = route(async () => {
     tanggal,
     shift: {
       divisi_nama: shiftRow?.divisi_nama ?? null,
+      jobdesk: shiftRow?.jobdesk ?? null,
       jam_masuk,
       jam_pulang,
       toleransi_menit: shiftRow?.toleransi_menit ?? 0,

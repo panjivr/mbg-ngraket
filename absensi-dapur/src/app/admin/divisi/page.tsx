@@ -8,6 +8,7 @@ interface Divisi {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  jobdesk: string | null;
   aktif: boolean;
   lintas_hari?: boolean;
   jumlah_staf?: number;
@@ -19,6 +20,7 @@ interface FormState {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  jobdesk: string;
   aktif: boolean;
 }
 
@@ -28,6 +30,7 @@ const emptyForm: FormState = {
   jam_masuk: "07:00",
   jam_pulang: "15:00",
   toleransi_menit: 10,
+  jobdesk: "",
   aktif: true,
 };
 
@@ -64,6 +67,7 @@ export default function DivisiPage() {
       jam_masuk: d.jam_masuk,
       jam_pulang: d.jam_pulang,
       toleransi_menit: d.toleransi_menit,
+      jobdesk: d.jobdesk ?? "",
       aktif: d.aktif,
     });
   }
@@ -83,6 +87,7 @@ export default function DivisiPage() {
           jam_masuk: form.jam_masuk,
           jam_pulang: form.jam_pulang,
           toleransi_menit: form.toleransi_menit,
+          jobdesk: form.jobdesk,
           aktif: form.aktif,
         }),
       });
@@ -142,6 +147,7 @@ export default function DivisiPage() {
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Divisi</th>
                   <th className="px-4 py-2.5">Jam Kerja</th>
+                  <th className="px-4 py-2.5">Jobdesk</th>
                   <th className="px-4 py-2.5">Toleransi</th>
                   <th className="px-4 py-2.5">Staf</th>
                   <th className="px-4 py-2.5">Status</th>
@@ -160,6 +166,15 @@ export default function DivisiPage() {
                         <span className="badge ml-2 bg-ember-500/15 text-ember-400">
                           lintas hari
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-400">
+                      {d.jobdesk ? (
+                        <span className="block max-w-[260px] truncate" title={d.jobdesk}>
+                          {d.jobdesk}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">— belum diisi —</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-slate-400">
@@ -280,6 +295,19 @@ export default function DivisiPage() {
                     <option value="0">Nonaktif</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="label">Jobdesk / Uraian Tugas</label>
+                <textarea
+                  className="input min-h-[96px] resize-y"
+                  value={form.jobdesk}
+                  placeholder="Rincian tugas divisi ini, mis. mencuci & memotong bahan, menimbang porsi…"
+                  onChange={(e) => setForm({ ...form, jobdesk: e.target.value })}
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Ditampilkan ke staf di halaman absen sebagai panduan tugas.
+                </p>
               </div>
 
               {error && (

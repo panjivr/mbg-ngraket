@@ -155,6 +155,11 @@ async function doEnsureSchema(): Promise<void> {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS divisi_id INTEGER REFERENCES divisi(id) ON DELETE SET NULL`,
     );
 
+    // divisi -> jobdesk (uraian tugas yang diisi admin)
+    await client.query(
+      `ALTER TABLE divisi ADD COLUMN IF NOT EXISTS jobdesk TEXT`,
+    );
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id              SERIAL PRIMARY KEY,
@@ -223,18 +228,49 @@ async function doEnsureSchema(): Promise<void> {
       `SELECT COUNT(*)::text AS c FROM divisi`,
     );
     if (Number(divCount.rows[0].c) === 0) {
-      const sampleDiv: Array<[string, string, string, number]> = [
-        ["Persiapan Bahan", "05:00", "13:00", 10],
-        ["Dapur / Masak", "06:00", "14:00", 10],
-        ["Distribusi", "09:00", "17:00", 10],
-        ["Kebersihan", "13:00", "21:00", 10],
-        ["Keamanan Malam", "22:00", "08:00", 15],
+      // [nama, jam_masuk, jam_pulang, toleransi, jobdesk]
+      const sampleDiv: Array<[string, string, string, number, string]> = [
+        [
+          "Persiapan Bahan",
+          "05:00",
+          "13:00",
+          10,
+          "Menerima & memeriksa bahan baku; mencuci, mengupas, dan memotong bahan; menimbang porsi sesuai menu; menjaga kebersihan area persiapan.",
+        ],
+        [
+          "Dapur / Masak",
+          "06:00",
+          "14:00",
+          10,
+          "Memasak menu sesuai standar gizi & resep; mengontrol rasa dan kematangan; menjaga higiene saat memasak; merapikan peralatan masak.",
+        ],
+        [
+          "Distribusi",
+          "09:00",
+          "17:00",
+          10,
+          "Mengemas makanan per porsi; mengecek jumlah paket; mengantar ke titik distribusi; mencatat serah-terima paket makanan.",
+        ],
+        [
+          "Kebersihan",
+          "13:00",
+          "21:00",
+          10,
+          "Mencuci peralatan masak & makan; membersihkan lantai dan area dapur; mengelola sampah; sanitasi akhir sebelum tutup.",
+        ],
+        [
+          "Keamanan Malam",
+          "22:00",
+          "08:00",
+          15,
+          "Menjaga keamanan area dapur pada malam hari; memeriksa pintu, gas, dan listrik; mencatat kejadian; serah-terima dengan shift pagi.",
+        ],
       ];
-      for (const [nama, jm, jp, tol] of sampleDiv) {
+      for (const [nama, jm, jp, tol, jobdesk] of sampleDiv) {
         await client.query(
-          `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit)
-           VALUES ($1, $2, $3, $4) ON CONFLICT (nama) DO NOTHING`,
-          [nama, jm, jp, tol],
+          `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, jobdesk)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (nama) DO NOTHING`,
+          [nama, jm, jp, tol, jobdesk],
         );
       }
     }

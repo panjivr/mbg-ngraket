@@ -31,6 +31,7 @@ export const POST = route(async (req: NextRequest) => {
   const jam_pulang = String(b.jam_pulang ?? "").trim();
   const toleransi_menit = Math.round(Number(b.toleransi_menit ?? 10));
   const aktif = b.aktif === false ? false : true;
+  const jobdesk = b.jobdesk != null ? String(b.jobdesk).trim() || null : null;
 
   if (!nama) return fail(400, "Nama divisi wajib diisi.");
   if (!TIME_RE.test(jam_masuk) || !TIME_RE.test(jam_pulang)) {
@@ -47,9 +48,9 @@ export const POST = route(async (req: NextRequest) => {
   if (dup.length) return fail(409, "Nama divisi sudah dipakai.");
 
   const rows = await query<Divisi>(
-    `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, aktif)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif],
+    `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk],
   );
   return ok({ divisi: withDerived(rows[0]) }, { status: 201 });
 });

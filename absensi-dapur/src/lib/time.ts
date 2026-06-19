@@ -97,6 +97,36 @@ export function statusMasuk(
   return nowMin > batas ? "Terlambat" : "Tepat Waktu";
 }
 
+/** Selisih menit kerja antara check-in & check-out (0 bila belum/ tak valid). */
+export function durasiMenit(
+  checkIn: string | Date | null | undefined,
+  checkOut: string | Date | null | undefined,
+): number {
+  if (!checkIn || !checkOut) return 0;
+  const a = typeof checkIn === "string" ? new Date(checkIn) : checkIn;
+  const b = typeof checkOut === "string" ? new Date(checkOut) : checkOut;
+  const ms = b.getTime() - a.getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return Math.floor(ms / 60000);
+}
+
+/** Format durasi menit -> "Xj Ym" (mis. 510 -> "8j 30m"). */
+export function fmtDurasi(menit: number): string {
+  if (!menit || menit <= 0) return "—";
+  const h = Math.floor(menit / 60);
+  const m = menit % 60;
+  return h > 0 ? `${h}j ${m}m` : `${m}m`;
+}
+
+/** Durasi kerja dari sepasang timestamp: { menit, label }. */
+export function durasiKerja(
+  checkIn: string | Date | null | undefined,
+  checkOut: string | Date | null | undefined,
+): { menit: number; label: string } {
+  const menit = durasiMenit(checkIn, checkOut);
+  return { menit, label: fmtDurasi(menit) };
+}
+
 /** Format tampilan jam lokal "HH:mm" dari timestamp ISO/Date, atau "-". */
 export function fmtJam(value: string | Date | null | undefined, tz = DEFAULT_TZ): string {
   if (!value) return "-";

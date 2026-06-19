@@ -28,6 +28,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
       ? Math.round(Number(b.toleransi_menit))
       : cur.toleransi_menit;
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : cur.aktif;
+  const jobdesk =
+    b.jobdesk !== undefined
+      ? String(b.jobdesk ?? "").trim() || null
+      : cur.jobdesk;
 
   if (!nama) return fail(400, "Nama divisi wajib diisi.");
   if (!TIME_RE.test(jam_masuk) || !TIME_RE.test(jam_pulang)) {
@@ -44,9 +48,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   if (dup.length) return fail(409, "Nama divisi sudah dipakai.");
 
   const rows = await query<Divisi>(
-    `UPDATE divisi SET nama=$1, jam_masuk=$2, jam_pulang=$3, toleransi_menit=$4, aktif=$5
-       WHERE id = $6 RETURNING *`,
-    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, id],
+    `UPDATE divisi SET nama=$1, jam_masuk=$2, jam_pulang=$3, toleransi_menit=$4,
+            aktif=$5, jobdesk=$6
+       WHERE id = $7 RETURNING *`,
+    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, id],
   );
   return ok({ divisi: { ...rows[0], lintas_hari: isOvernight(jam_masuk, jam_pulang) } });
 });

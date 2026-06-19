@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { durasiMenit, fmtDurasi } from "@/lib/time";
+import FotoAbsen from "@/components/FotoAbsen";
 
 interface Stats {
   total_staff: number;
@@ -425,7 +427,9 @@ export default function AdminDashboard() {
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Pulang</th>
+                  <th className="px-4 py-2.5">Durasi</th>
                   <th className="px-4 py-2.5">Jarak</th>
+                  <th className="px-4 py-2.5 text-right">Foto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -477,8 +481,16 @@ export default function AdminDashboard() {
                           fmtTime(r.check_out)
                         )}
                       </td>
+                      <td className="px-4 py-2.5 font-medium text-gold-400">
+                        {fmtDurasi(durasiMenit(r.check_in, r.check_out))}
+                      </td>
                       <td className="px-4 py-2.5 text-slate-400">
                         {r.check_in_jarak != null ? `${r.check_in_jarak} m` : "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex justify-end">
+                          <FotoAbsen id={r.id} nama={r.nama} />
+                        </div>
                       </td>
                     </tr>
                   );

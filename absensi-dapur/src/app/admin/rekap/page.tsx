@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { durasiMenit, fmtDurasi } from "@/lib/time";
+import FotoAbsen from "@/components/FotoAbsen";
 
 interface RekapRow {
   id: number;
@@ -53,6 +55,7 @@ export default function RekapPage() {
   const [to, setTo] = useState(today);
   const [rows, setRows] = useState<RekapRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,6 +74,82 @@ export default function RekapPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const ringkasan = useMemo(() => {
+    let totalMenit = 0;
+    let terlambat = 0;
+    let selesai = 0;
+    for (const r of rows) {
+      totalMenit += durasiMenit(r.check_in, r.check_out);
+      if (r.status_masuk === "Terlambat") terlambat += 1;
+      if (r.check_out) selesai += 1;
+    }
+    return { totalMenit, terlambat, selesai };
+  }, [rows]);
+
+  async function unduhPdf() {
+    if (!rows.length) return;
+    setPdfBusy(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      doc.setFontSize(14);
+      doc.setTextColor(14, 31, 85);
+      doc.text("Rekap Absensi Dapur — Badan Gizi Nasional", 14, 15);
+      doc.setFontSize(10);
+      doc.setTextColor(90);
+      doc.text(`Periode: ${fmtDate(from)} s/d ${fmtDate(to)}`, 14, 21);
+      doc.text(
+        `Dicetak: ${new Intl.DateTimeFormat("id-ID", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date())}`,
+        14,
+        26,
+      );
+
+      const body = rows.map((r) => [
+        fmtDate(r.tanggal),
+        r.nama,
+        r.divisi_nama || "-",
+        r.shift_masuk && r.shift_pulang ? `${r.shift_masuk}-${r.shift_pulang}` : "-",
+        fmtTime(r.check_in),
+        r.status_masuk || "-",
+        fmtTime(r.check_out),
+        fmtDurasi(durasiMenit(r.check_in, r.check_out)),
+      ]);
+
+      autoTable(doc, {
+        startY: 31,
+        head: [
+          ["Tanggal", "Nama", "Divisi", "Jadwal", "Masuk", "Status", "Pulang", "Durasi"],
+        ],
+        body,
+        styles: { fontSize: 8, cellPadding: 1.8 },
+        headStyles: { fillColor: [14, 31, 85], textColor: 255 },
+        alternateRowStyles: { fillColor: [243, 246, 252] },
+      });
+
+      const finalY =
+        (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ??
+        31;
+      doc.setFontSize(10);
+      doc.setTextColor(20);
+      doc.text(
+        `Total: ${rows.length} catatan · Total jam kerja: ${fmtDurasi(
+          ringkasan.totalMenit,
+        )} · Terlambat: ${ringkasan.terlambat}`,
+        14,
+        finalY + 8,
+      );
+
+      doc.save(`absensi-dapur_${from}_sd_${to}.pdf`);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -100,12 +179,36 @@ export default function RekapPage() {
         <button onClick={load} className="btn-ghost" disabled={loading}>
           {loading ? "Memuat…" : "Tampilkan"}
         </button>
-        <a
-          href={`/api/admin/export?from=${from}&to=${to}`}
-          className="btn-gold ml-auto"
-        >
-          ⬇ Unduh CSV
-        </a>
+        <div className="ml-auto flex gap-2">
+          <a href={`/api/admin/export?from=${from}&to=${to}`} className="btn-ghost">
+            ⬇ CSV
+          </a>
+          <button onClick={unduhPdf} className="btn-gold" disabled={pdfBusy || !rows.length}>
+            {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
+          </button>
+        </div>
+      </div>
+
+      {/* Ringkasan jam kerja */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="card p-4">
+          <p className="text-xs text-slate-400">Total Catatan</p>
+          <p className="mt-1 text-2xl font-bold">{rows.length}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-400">Total Jam Kerja</p>
+          <p className="mt-1 text-2xl font-bold text-gold-400">
+            {fmtDurasi(ringkasan.totalMenit)}
+          </p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-400">Shift Selesai</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-300">{ringkasan.selesai}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-slate-400">Terlambat</p>
+          <p className="mt-1 text-2xl font-bold text-amber-300">{ringkasan.terlambat}</p>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -120,7 +223,7 @@ export default function RekapPage() {
           </p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Tanggal</th>
@@ -130,7 +233,8 @@ export default function RekapPage() {
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Pulang</th>
-                  <th className="px-4 py-2.5">Jarak</th>
+                  <th className="px-4 py-2.5">Durasi</th>
+                  <th className="px-4 py-2.5 text-right">Foto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -139,7 +243,11 @@ export default function RekapPage() {
                     <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(r.tanggal)}</td>
                     <td className="px-4 py-2.5 font-medium">{r.nama}</td>
                     <td className="px-4 py-2.5">{r.divisi_nama || "—"}</td>
-                    <td className="px-4 py-2.5 font-mono text-slate-400">{r.shift_masuk && r.shift_pulang ? `${r.shift_masuk}–${r.shift_pulang}` : "—"}</td>
+                    <td className="px-4 py-2.5 font-mono text-slate-400">
+                      {r.shift_masuk && r.shift_pulang
+                        ? `${r.shift_masuk}–${r.shift_pulang}`
+                        : "—"}
+                    </td>
                     <td className="px-4 py-2.5">{fmtTime(r.check_in)}</td>
                     <td className="px-4 py-2.5">
                       {r.status_masuk ? (
@@ -158,8 +266,13 @@ export default function RekapPage() {
                       )}
                     </td>
                     <td className="px-4 py-2.5">{fmtTime(r.check_out)}</td>
-                    <td className="px-4 py-2.5 text-slate-400">
-                      {r.check_in_jarak != null ? `${r.check_in_jarak} m` : "—"}
+                    <td className="px-4 py-2.5 font-medium text-gold-400">
+                      {fmtDurasi(durasiMenit(r.check_in, r.check_out))}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-end">
+                        <FotoAbsen id={r.id} nama={r.nama} />
+                      </div>
                     </td>
                   </tr>
                 ))}

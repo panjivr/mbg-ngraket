@@ -18,6 +18,7 @@ interface SettingsLite {
 
 interface ShiftInfo {
   divisi_nama: string | null;
+  jobdesk: string | null;
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
@@ -245,21 +246,33 @@ export default function AbsenPanel() {
 
       {/* Info shift / divisi */}
       {shift && (
-        <div className="card flex items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">Shift Anda</p>
-            <p className="mt-0.5 text-sm font-semibold">
-              {shift.divisi_nama || "Umum (jam global dapur)"}
-            </p>
+        <div className="card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-400">Shift Anda</p>
+              <p className="mt-0.5 text-sm font-semibold">
+                {shift.divisi_nama || "Umum (jam global dapur)"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-sm font-semibold text-gold-400">
+                {shift.jam_masuk}–{shift.jam_pulang}
+              </p>
+              {shift.lintas_hari && (
+                <span className="badge bg-ember-500/15 text-ember-400">lintas hari</span>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="font-mono text-sm font-semibold text-gold-400">
-              {shift.jam_masuk}–{shift.jam_pulang}
-            </p>
-            {shift.lintas_hari && (
-              <span className="badge bg-ember-500/15 text-ember-400">lintas hari</span>
-            )}
-          </div>
+          {shift.jobdesk && (
+            <div className="mt-3 rounded-lg border border-white/5 bg-ink-900/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                📋 Uraian Tugas (Jobdesk)
+              </p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-200">
+                {shift.jobdesk}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

@@ -7,10 +7,12 @@ export interface Divisi {
   jam_pulang: string;
   toleransi_menit: number;
   warna: string | null;
+  jobdesk: string | null;
   aktif: boolean;
   created_at: string;
   /** Turunan: shift melewati tengah malam (jam_pulang <= jam_masuk). */
   lintas_hari?: boolean;
+  jumlah_staf?: number;
 }
 
 export interface User {
