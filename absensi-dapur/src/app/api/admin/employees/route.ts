@@ -14,11 +14,23 @@ function toDivisiId(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function toTanggal(v: unknown): string | null {
+  if (typeof v === "string" && DATE_RE.test(v)) return v;
+  return null;
+}
+function toTempat(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
 export const GET = route(async () => {
   await requireAdmin();
   const rows = await query<User>(
     `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
-            u.created_at, u.divisi_id, d.nama AS divisi_nama
+            u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir,
+            d.nama AS divisi_nama
        FROM users u
        LEFT JOIN divisi d ON d.id = u.divisi_id
       ORDER BY u.role DESC, u.nama ASC`,
@@ -38,6 +50,8 @@ export const POST = route(async (req: NextRequest) => {
   const nip = body.nip ? String(body.nip).trim() : null;
   const aktif = body.aktif === false ? false : true;
   const divisi_id = toDivisiId(body.divisi_id);
+  const tempat_lahir = toTempat(body.tempat_lahir);
+  const tanggal_lahir = toTanggal(body.tanggal_lahir);
 
   if (!nama || !username || !password) {
     return fail(400, "Nama, username, dan password wajib diisi.");
@@ -57,10 +71,10 @@ export const POST = route(async (req: NextRequest) => {
 
   const hash = await hashPassword(password);
   const rows = await query<User>(
-    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id`,
-    [nama, username, hash, role, jabatan, nip, aktif, divisi_id],
+    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir`,
+    [nama, username, hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir],
   );
   return ok({ employee: rows[0] }, { status: 201 });
 });

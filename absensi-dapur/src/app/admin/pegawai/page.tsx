@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import KartuShare from "@/components/KartuShare";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 
@@ -14,6 +15,8 @@ interface Employee {
   aktif: boolean;
   divisi_id: number | null;
   divisi_nama: string | null;
+  tempat_lahir: string | null;
+  tanggal_lahir: string | null;
 }
 
 interface DivisiLite {
@@ -33,6 +36,8 @@ interface FormState {
   nip: string;
   aktif: boolean;
   divisi_id: number | null;
+  tempat_lahir: string;
+  tanggal_lahir: string;
 }
 
 const emptyForm: FormState = {
@@ -45,6 +50,8 @@ const emptyForm: FormState = {
   nip: "",
   aktif: true,
   divisi_id: null,
+  tempat_lahir: "",
+  tanggal_lahir: "",
 };
 
 export default function PegawaiPage() {
@@ -109,6 +116,8 @@ export default function PegawaiPage() {
       nip: e.nip || "",
       aktif: e.aktif,
       divisi_id: e.divisi_id,
+      tempat_lahir: e.tempat_lahir || "",
+      tanggal_lahir: e.tanggal_lahir || "",
     });
   }
 
@@ -129,6 +138,8 @@ export default function PegawaiPage() {
         nip: form.nip,
         aktif: form.aktif,
         divisi_id: form.divisi_id,
+        tempat_lahir: form.tempat_lahir,
+        tanggal_lahir: form.tanggal_lahir || null,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -230,6 +241,12 @@ export default function PegawaiPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/admin/pegawai/${e.id}`}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                        >
+                          📄 Laporan
+                        </Link>
                         <button
                           onClick={() => openKartu(e)}
                           className="btn-ghost px-2.5 py-1 text-xs"
@@ -296,6 +313,27 @@ export default function PegawaiPage() {
                     className="input"
                     value={form.nip}
                     onChange={(e) => setForm({ ...form, nip: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Tempat Lahir</label>
+                  <input
+                    className="input"
+                    value={form.tempat_lahir}
+                    placeholder="mis. Ponorogo"
+                    onChange={(e) => setForm({ ...form, tempat_lahir: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Tanggal Lahir</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={form.tanggal_lahir}
+                    max="2099-12-31"
+                    onChange={(e) => setForm({ ...form, tanggal_lahir: e.target.value })}
                   />
                 </div>
               </div>

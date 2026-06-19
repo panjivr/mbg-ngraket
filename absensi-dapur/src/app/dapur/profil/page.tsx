@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import KartuShare from "@/components/KartuShare";
 import type { KartuPegawai as Kartu } from "@/lib/types";
+import { hitungWeton, formatTanggalIndo } from "@/lib/weton";
 
 const MAX_BIO = 200;
 
@@ -113,6 +114,35 @@ export default function ProfilPage() {
       </div>
 
       {preview && <KartuShare data={preview} />}
+
+      {/* Weton (dari tanggal lahir yang diisi admin) */}
+      {kartu &&
+        (() => {
+          const w = hitungWeton(kartu.tanggal_lahir);
+          if (!w) {
+            return (
+              <div className="card p-4 text-sm text-slate-400">
+                🔮 Weton belum tersedia. Minta admin mengisi tanggal lahirmu untuk melihat
+                weton & auramu.
+              </div>
+            );
+          }
+          return (
+            <div className="card p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">🔮 Weton Saya</p>
+                <span className="text-xs text-slate-400">
+                  {formatTanggalIndo(w.tanggal)}
+                </span>
+              </div>
+              <p className="mt-1 text-xl font-extrabold text-emas-300">{w.weton}</p>
+              <p className="text-xs text-slate-400">
+                Neptu {w.neptu} · Aura {w.aura_warna} · Arah {w.aura_arah}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-200">{w.watak}</p>
+            </div>
+          );
+        })()}
 
       <div className="card space-y-4 p-4">
         <p className="text-sm font-semibold">Ubah Profil</p>

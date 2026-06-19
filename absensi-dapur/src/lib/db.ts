@@ -166,6 +166,10 @@ async function doEnsureSchema(): Promise<void> {
     );
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
 
+    // users -> tempat & tanggal lahir (untuk weton / laporan)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tempat_lahir TEXT`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tanggal_lahir DATE`);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id              SERIAL PRIMARY KEY,
@@ -298,20 +302,22 @@ async function doEnsureSchema(): Promise<void> {
       );
 
       const staffPass = await hashPassword("dapur123");
-      // [nama, username, jabatan, nip, nama_divisi]
-      const sampleStaff: Array<[string, string, string, string, string]> = [
-        ["Siti Aminah", "siti", "Juru Masak", "DPR-001", "Dapur / Masak"],
-        ["Budi Santoso", "budi", "Asisten Juru Masak", "DPR-002", "Dapur / Masak"],
-        ["Rina Wulandari", "rina", "Staf Persiapan Bahan", "DPR-003", "Persiapan Bahan"],
-        ["Joko Prasetyo", "joko", "Staf Distribusi", "DPR-004", "Distribusi"],
-        ["Dewi Lestari", "dewi", "Staf Kebersihan", "DPR-005", "Kebersihan"],
+      // [nama, username, jabatan, nip, nama_divisi, tempat_lahir, tanggal_lahir]
+      const sampleStaff: Array<
+        [string, string, string, string, string, string, string]
+      > = [
+        ["Siti Aminah", "siti", "Juru Masak", "DPR-001", "Dapur / Masak", "Ponorogo", "1980-09-08"],
+        ["Budi Santoso", "budi", "Asisten Juru Masak", "DPR-002", "Dapur / Masak", "Ponorogo", "1990-05-11"],
+        ["Rina Wulandari", "rina", "Staf Persiapan Bahan", "DPR-003", "Persiapan Bahan", "Ponorogo", "1995-12-02"],
+        ["Joko Prasetyo", "joko", "Staf Distribusi", "DPR-004", "Distribusi", "Ponorogo", "1988-07-19"],
+        ["Dewi Lestari", "dewi", "Staf Kebersihan", "DPR-005", "Kebersihan", "Ponorogo", "1992-03-25"],
       ];
-      for (const [nama, username, jabatan, nip, divNama] of sampleStaff) {
+      for (const [nama, username, jabatan, nip, divNama, tl, tgl] of sampleStaff) {
         await client.query(
-          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, divisi_id)
+          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, divisi_id, tempat_lahir, tanggal_lahir)
            VALUES ($1, $2, $3, 'staff', $4, $5,
-                   (SELECT id FROM divisi WHERE nama = $6))`,
-          [nama, username, staffPass, jabatan, nip, divNama],
+                   (SELECT id FROM divisi WHERE nama = $6), $7, $8)`,
+          [nama, username, staffPass, jabatan, nip, divNama, tl, tgl],
         );
       }
     }

@@ -44,6 +44,16 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
           return Number.isFinite(n) && n > 0 ? n : null;
         })()
       : existing.divisi_id;
+  const tempat_lahir =
+    body.tempat_lahir !== undefined
+      ? (body.tempat_lahir ? String(body.tempat_lahir).trim() : null) || null
+      : existing.tempat_lahir ?? null;
+  const tanggal_lahir =
+    body.tanggal_lahir !== undefined
+      ? /^\d{4}-\d{2}-\d{2}$/.test(String(body.tanggal_lahir))
+        ? String(body.tanggal_lahir)
+        : null
+      : existing.tanggal_lahir ?? null;
 
   let username = existing.username;
   if (body.username !== undefined) {
@@ -70,7 +80,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   }
 
   let passwordClause = "";
-  const paramsArr: unknown[] = [nama, username, role, jabatan, nip, aktif, divisi_id];
+  const paramsArr: unknown[] = [
+    nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
+  ];
   if (body.password) {
     if (String(body.password).length < 6) {
       return fail(400, "Password minimal 6 karakter.");
@@ -82,9 +94,11 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   paramsArr.push(id);
 
   const rows = await query<User>(
-    `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6, divisi_id=$7${passwordClause}
+    `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
+            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9${passwordClause}
        WHERE id = $${paramsArr.length}
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id`,
+     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
+               tempat_lahir, tanggal_lahir`,
     paramsArr,
   );
   void admin;

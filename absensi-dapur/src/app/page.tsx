@@ -237,7 +237,39 @@ export default function Home() {
         </p>
       </section>
 
-      <footer className="mt-16 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
+      {/* Fitur budaya: Hitung Aura Weton */}
+      <section className="mt-12">
+        <div className="card relative overflow-hidden p-6 text-center sm:p-8">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "radial-gradient(500px 200px at 50% -20%, rgba(224,169,46,0.5), transparent 70%)",
+            }}
+          />
+          <div className="relative">
+            <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
+              ✦ Warisan Budaya Jawa
+            </span>
+            <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
+              Hitung{" "}
+              <span className="bg-gradient-to-r from-emas-300 to-gold-400 bg-clip-text text-transparent">
+                Aura Weton
+              </span>{" "}
+              &amp; Jodoh
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-sm text-slate-300">
+              Cari tahu weton, neptu, aura, dan ramalan kecocokan jodoh dari tanggal lahir —
+              berdasarkan kaidah primbon Jawa.
+            </p>
+            <Link href="/aura" className="btn-gold mt-5 px-6 py-3 text-base">
+              🔮 Buka Hitung Aura Weton
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
         © {new Date().getFullYear()} Absensi Dapur · Program Makan Bergizi Gratis
         — Badan Gizi Nasional. Sistem internal operasional dapur.
       </footer>
