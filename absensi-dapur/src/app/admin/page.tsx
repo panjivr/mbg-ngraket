@@ -1,8 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { durasiMenit, fmtDurasi } from "@/lib/time";
+import { addDays, durasiMenit, fmtDurasi } from "@/lib/time";
 import FotoAbsen from "@/components/FotoAbsen";
+
+function jakartaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function jakartaHour(v: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date(v)),
+  );
+}
 
 interface Stats {
   total_staff: number;
@@ -23,6 +42,12 @@ interface RekapRow {
   check_in_jarak: number | null;
   shift_masuk: string | null;
   shift_pulang: string | null;
+}
+
+interface TrendRow {
+  user_id: number;
+  tanggal: string;
+  check_in: string | null;
 }
 
 function fmtTime(v: string | null) {
@@ -90,6 +115,38 @@ function Icon({ name }: { name: string }) {
         <path d="M8 12h8" />
       </>
     ),
+    trend: (
+      <>
+        <path d="M3 3v18h18" />
+        <path d="M19 9l-5 5-4-4-3 3" />
+      </>
+    ),
+    timer: (
+      <>
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2.5 2.5M9 2h6" />
+      </>
+    ),
+    gauge: (
+      <>
+        <path d="M12 13l4-4" />
+        <path d="M3.5 18a9 9 0 1 1 17 0" />
+      </>
+    ),
+    pie: (
+      <>
+        <path d="M21 12a9 9 0 1 1-9-9v9z" />
+        <path d="M21 12a9 9 0 0 0-9-9" />
+      </>
+    ),
+    grid: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </>
+    ),
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
@@ -114,6 +171,7 @@ const cards: CardDef[] = [
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [rows, setRows] = useState<RekapRow[]>([]);
+  const [weekRows, setWeekRows] = useState<TrendRow[]>([]);
   const [tanggal, setTanggal] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,14 +179,20 @@ export default function AdminDashboard() {
 
   const load = useCallback(async () => {
     setRefreshing(true);
+    const today = jakartaToday();
+    const weekFrom = addDays(today, -6);
     try {
-      const [s, a] = await Promise.all([
+      const [s, a, w] = await Promise.all([
         fetch("/api/admin/stats", { cache: "no-store" }).then((r) => r.json()),
         fetch("/api/admin/attendance", { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/admin/attendance?from=${weekFrom}&to=${today}`, {
+          cache: "no-store",
+        }).then((r) => r.json()),
       ]);
       setStats(s.stats);
       setTanggal(s.tanggal);
       setRows(a.rekap || []);
+      setWeekRows(w.rekap || []);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -197,6 +261,52 @@ export default function AdminDashboard() {
     return { total, hadir, late, onTime, belum, onTimePct, latePct, hadirPct, bekerja, divisi };
   }, [stats, rows]);
 
+  // Tren kehadiran 7 hari terakhir (jumlah pegawai hadir per hari).
+  const trend = useMemo(() => {
+    const today = jakartaToday();
+    const days: string[] = [];
+    for (let i = 6; i >= 0; i--) days.push(addDays(today, -i));
+    const map = new Map<string, Set<number>>();
+    for (const r of weekRows) {
+      if (!r.check_in || !r.tanggal) continue;
+      const set = map.get(r.tanggal) ?? new Set<number>();
+      set.add(r.user_id);
+      map.set(r.tanggal, set);
+    }
+    return days.map((d) => ({ date: d, count: map.get(d)?.size ?? 0 }));
+  }, [weekRows]);
+  const trendMax = Math.max(1, ...trend.map((t) => t.count));
+
+  // Distribusi jam absen masuk hari ini (per jam).
+  const checkin = useMemo(() => {
+    const buckets = new Map<number, number>();
+    for (const r of rows) {
+      if (!r.check_in) continue;
+      const h = jakartaHour(r.check_in);
+      if (!Number.isFinite(h)) continue;
+      buckets.set(h, (buckets.get(h) ?? 0) + 1);
+    }
+    const hours = [...buckets.keys()].sort((a, b) => a - b);
+    if (!hours.length) return { items: [] as Array<{ h: number; count: number }>, max: 0 };
+    const items: Array<{ h: number; count: number }> = [];
+    for (let h = hours[0]; h <= hours[hours.length - 1]; h++) {
+      items.push({ h, count: buckets.get(h) ?? 0 });
+    }
+    return { items, max: Math.max(1, ...items.map((i) => i.count)) };
+  }, [rows]);
+
+  const totalMenit = useMemo(
+    () => rows.reduce((s, r) => s + durasiMenit(r.check_in, r.check_out), 0),
+    [rows],
+  );
+  const avgMenit = derived.hadir ? Math.round(totalMenit / derived.hadir) : 0;
+  const onTimeRate = pct(derived.onTime, derived.hadir);
+
+  const dow = (d: string) =>
+    new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "Asia/Jakarta" }).format(
+      new Date(d + "T00:00:00"),
+    );
+
   const donut = `conic-gradient(#34d399 0 ${derived.onTimePct}%, #fbbf24 ${derived.onTimePct}% ${
     derived.onTimePct + derived.latePct
   }%, rgba(148,163,184,0.25) ${derived.onTimePct + derived.latePct}% 100%)`;
@@ -261,11 +371,57 @@ export default function AdminDashboard() {
         })}
       </div>
 
+      {/* Sorotan jam kerja & ketepatan */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="card flex items-center gap-3 p-4">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-gold-500/15 text-gold-300">
+            <Icon name="timer" />
+          </span>
+          <div>
+            <p className="text-xs text-slate-400">Total Jam Kerja Hari Ini</p>
+            <p className="text-xl font-bold text-gold-300">
+              {loading ? "–" : fmtDurasi(totalMenit)}
+            </p>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3 p-4">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-500/15 text-sky-300">
+            <Icon name="users" />
+          </span>
+          <div>
+            <p className="text-xs text-slate-400">Rata-rata / Pegawai</p>
+            <p className="text-xl font-bold text-sky-300">
+              {loading ? "–" : fmtDurasi(avgMenit)}
+            </p>
+          </div>
+        </div>
+        <div className="card flex items-center gap-3 p-4">
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500/15 text-emerald-300">
+            <Icon name="gauge" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-slate-400">Ketepatan Waktu</p>
+            <p className="text-xl font-bold text-emerald-300">{onTimeRate}%</p>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-emerald-400"
+                style={{ width: `${onTimeRate}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Analitik: tingkat kehadiran + ketepatan waktu + sedang bertugas */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Donut tingkat kehadiran */}
         <div className="card p-5">
-          <p className="text-sm font-semibold">Tingkat Kehadiran</p>
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300">
+              <Icon name="pie" />
+            </span>
+            <p className="text-sm font-semibold">Tingkat Kehadiran</p>
+          </div>
           <div className="mt-4 flex items-center gap-5">
             <div
               className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full"
@@ -297,7 +453,12 @@ export default function AdminDashboard() {
 
         {/* Ketepatan waktu */}
         <div className="card p-5">
-          <p className="text-sm font-semibold">Ketepatan Waktu</p>
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-amber-500/15 text-amber-300">
+              <Icon name="gauge" />
+            </span>
+            <p className="text-sm font-semibold">Ketepatan Waktu</p>
+          </div>
           <p className="mt-1 text-xs text-slate-400">Dari {derived.hadir} pegawai yang hadir</p>
           <div className="mt-5 space-y-4">
             <div>
@@ -364,9 +525,83 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Grafik tren & distribusi jam masuk */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card p-5">
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300">
+              <Icon name="trend" />
+            </span>
+            <p className="text-sm font-semibold">Tren Kehadiran 7 Hari</p>
+          </div>
+          <div className="mt-5 flex items-end justify-between gap-2" style={{ height: 140 }}>
+            {trend.map((t) => (
+              <div
+                key={t.date}
+                className="flex flex-1 flex-col items-center justify-end gap-2"
+              >
+                <span className="text-[11px] text-slate-400">{t.count}</span>
+                <div
+                  className="w-full max-w-[36px] rounded-t-md bg-gradient-to-t from-emerald-500/40 to-emerald-400"
+                  style={{ height: `${Math.max(4, (t.count / trendMax) * 100)}%` }}
+                  title={`${t.count} hadir`}
+                />
+                <span className="text-[10px] text-slate-500">{dow(t.date)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gold-500/15 text-gold-300">
+              <Icon name="clock" />
+            </span>
+            <p className="text-sm font-semibold">Distribusi Jam Masuk · hari ini</p>
+          </div>
+          {checkin.items.length === 0 ? (
+            <p className="mt-8 text-center text-sm text-slate-500">
+              Belum ada absen masuk hari ini.
+            </p>
+          ) : (
+            <div
+              className="mt-5 flex items-end justify-between gap-1.5"
+              style={{ height: 140 }}
+            >
+              {checkin.items.map((it) => (
+                <div
+                  key={it.h}
+                  className="flex flex-1 flex-col items-center justify-end gap-2"
+                >
+                  <span className="text-[10px] text-slate-400">
+                    {it.count > 0 ? it.count : ""}
+                  </span>
+                  <div
+                    className="w-full rounded-t-md bg-gradient-to-t from-gold-500/40 to-gold-400"
+                    style={{
+                      height: `${Math.max(it.count ? 6 : 2, (it.count / checkin.max) * 100)}%`,
+                      opacity: it.count ? 1 : 0.3,
+                    }}
+                    title={`${it.count} masuk jam ${String(it.h).padStart(2, "0")}:00`}
+                  />
+                  <span className="text-[10px] text-slate-500">
+                    {String(it.h).padStart(2, "0")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Kehadiran per divisi */}
       <div className="card p-5">
-        <p className="text-sm font-semibold">Kehadiran per Divisi</p>
+        <div className="flex items-center gap-2">
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-sky-500/15 text-sky-300">
+            <Icon name="grid" />
+          </span>
+          <p className="text-sm font-semibold">Kehadiran per Divisi</p>
+        </div>
         {loading ? (
           <p className="mt-4 text-sm text-slate-400">Memuat…</p>
         ) : derived.divisi.length === 0 ? (

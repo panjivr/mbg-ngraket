@@ -37,6 +37,9 @@ interface AbsRow {
 type Phase = "masuk" | "pulang";
 type Geo = { lat: number; lng: number; accuracy: number };
 
+/** Jendela waktu pembatalan absen terakhir (selaras dengan server). */
+const CANCEL_WINDOW_MS = 180 * 60_000;
+
 export default function AbsenPanel() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<SettingsLite | null>(null);
@@ -53,6 +56,7 @@ export default function AbsenPanel() {
   const [cameraOn, setCameraOn] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
   );
@@ -204,6 +208,47 @@ export default function AbsenPanel() {
     }
   }
 
+  // --- Pembatalan absen terakhir (jaga-jaga salah pencet) ---
+  const within = (ts: string | null | undefined) => {
+    if (!ts) return false;
+    const diff = now.getTime() - new Date(ts).getTime();
+    return diff >= 0 && diff <= CANCEL_WINDOW_MS;
+  };
+  const canCancelCheckIn = !!current && within(current.check_in);
+  const canCancelCheckOut = !current && !!last?.check_out && within(last.check_out);
+
+  async function cancelLast(kind: "masuk" | "pulang") {
+    if (canceling) return;
+    const konfirmasi =
+      kind === "pulang"
+        ? "Batalkan absen pulang? Status Anda kembali menjadi 'sedang bekerja' dan harus absen pulang lagi nanti."
+        : "Batalkan absen masuk? Catatan masuk yang barusan akan dihapus.";
+    if (!window.confirm(konfirmasi)) return;
+    setCanceling(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/attendance/cancel", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage({ kind: "err", text: data.error || "Gagal membatalkan absen." });
+        return;
+      }
+      setMessage({
+        kind: "ok",
+        text:
+          data.action === "cancel_check_out"
+            ? "Absen pulang dibatalkan. Anda kembali berstatus sedang bekerja."
+            : "Absen masuk dibatalkan.",
+      });
+      setSelfie(null);
+      await loadToday();
+    } catch {
+      setMessage({ kind: "err", text: "Tidak dapat terhubung ke server." });
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   const jamSekarang = settings
     ? new Intl.DateTimeFormat("id-ID", {
         timeZone: settings.tz,
@@ -278,10 +323,41 @@ export default function AbsenPanel() {
 
       {/* Sedang bekerja */}
       {current && (
-        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-200">
-          ● Sedang dalam shift — masuk {fmtTime(current.check_in, settings?.tz)}. Jangan
-          lupa absen pulang setelah selesai.
-        </p>
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          <p>
+            ● Sedang dalam shift — masuk {fmtTime(current.check_in, settings?.tz)}. Jangan
+            lupa absen pulang setelah selesai.
+          </p>
+          {canCancelCheckIn && (
+            <button
+              onClick={() => cancelLast("masuk")}
+              disabled={canceling}
+              className="mt-2 text-xs font-semibold text-emerald-100 underline underline-offset-2 hover:text-white disabled:opacity-50"
+            >
+              {canceling ? "Membatalkan…" : "Salah pencet? Batalkan absen masuk"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Jaga-jaga salah pencet absen pulang (mis. masih di dapur) */}
+      {canCancelCheckOut && (
+        <div className="card border-amber-500/40 bg-amber-500/10 p-4">
+          <p className="text-sm font-semibold text-amber-200">
+            ⚠️ Baru saja absen pulang?
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+            Jika tidak sengaja menekan tombol pulang padahal masih bekerja di dapur,
+            batalkan agar status Anda kembali “sedang bekerja”.
+          </p>
+          <button
+            onClick={() => cancelLast("pulang")}
+            disabled={canceling}
+            className="mt-3 w-full rounded-xl border border-amber-400/50 bg-amber-400/10 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-400/20 active:scale-[0.99] disabled:opacity-50"
+          >
+            {canceling ? "Membatalkan…" : "↺ Batalkan Absen Pulang"}
+          </button>
+        </div>
       )}
 
       {/* Status lokasi */}

@@ -19,8 +19,41 @@ const fitur = [
   },
   {
     judul: "Rekap & Ekspor",
-    teks: "Admin memantau kehadiran real-time, status tepat waktu/terlambat, dan mengunduh rekap ke Excel/CSV.",
+    teks: "Admin memantau kehadiran real-time, status tepat waktu/terlambat, dan mengunduh rekap ke Excel/CSV/PDF.",
     icon: "📊",
+  },
+];
+
+const PORTAL_BGN = "https://www.bgn.go.id";
+
+const berita = [
+  {
+    tag: "Program",
+    icon: "🍱",
+    judul: "Makan Bergizi Gratis untuk Generasi Emas",
+    teks: "Program prioritas nasional yang menyediakan makanan bergizi bagi anak sekolah, santri, balita, serta ibu hamil dan menyusui di seluruh Indonesia.",
+    warna: "border-emas-500/30 bg-emas-500/10 text-emas-300",
+  },
+  {
+    tag: "Gizi",
+    icon: "🥗",
+    judul: "Standar Gizi Seimbang di Setiap Porsi",
+    teks: "Menu disusun memenuhi angka kecukupan gizi — karbohidrat, protein hewani & nabati, sayur, dan buah — dalam porsi yang terukur.",
+    warna: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  },
+  {
+    tag: "Dapur SPPG",
+    icon: "👩‍🍳",
+    judul: "Satuan Pelayanan Pemenuhan Gizi sebagai Ujung Tombak",
+    teks: "Dapur SPPG menyiapkan dan mendistribusikan makanan setiap hari dengan mengutamakan kebersihan, mutu, dan ketepatan waktu.",
+    warna: "border-gold-500/30 bg-gold-500/10 text-gold-300",
+  },
+  {
+    tag: "Transparansi",
+    icon: "🛡️",
+    judul: "Higiene & Akuntabilitas Jadi Prioritas",
+    teks: "Proses pengolahan diawasi ketat; kehadiran dan kinerja tim dapur tercatat digital untuk mendukung akuntabilitas program.",
+    warna: "border-ember-500/30 bg-ember-500/10 text-ember-400",
   },
 ];
 
@@ -97,6 +130,69 @@ export default function Home() {
             <p className="mt-1 text-sm leading-relaxed text-slate-300">{f.teks}</p>
           </div>
         ))}
+      </section>
+
+      {/* Berita & informasi BGN */}
+      <section id="berita" className="mt-16">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
+              📰 Berita & Informasi
+            </span>
+            <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Seputar Badan Gizi Nasional
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Sorotan Program Makan Bergizi Gratis (MBG).
+            </p>
+          </div>
+          <a
+            href={PORTAL_BGN}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost px-5"
+          >
+            Kunjungi Portal Resmi BGN →
+          </a>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {berita.map((b) => (
+            <a
+              key={b.judul}
+              href={PORTAL_BGN}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card group flex gap-4 p-5 transition hover:border-gold-500/40"
+            >
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/5 text-2xl">
+                {b.icon}
+              </div>
+              <div className="min-w-0">
+                <span className={"badge border " + b.warna}>{b.tag}</span>
+                <h3 className="mt-2 text-base font-bold leading-snug group-hover:text-gold-300">
+                  {b.judul}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-300">{b.teks}</p>
+                <p className="mt-2 text-xs font-semibold text-gold-400">
+                  Selengkapnya di bgn.go.id →
+                </p>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        <p className="mt-4 text-center text-xs text-slate-500">
+          Sumber resmi: Badan Gizi Nasional —{" "}
+          <a
+            href={PORTAL_BGN}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-slate-300"
+          >
+            bgn.go.id
+          </a>
+        </p>
       </section>
 
       <footer className="mt-16 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
