@@ -55,6 +55,48 @@ const berita = [
     teks: "Proses pengolahan diawasi ketat; kehadiran dan kinerja tim dapur tercatat digital untuk mendukung akuntabilitas program.",
     warna: "border-ember-500/30 bg-ember-500/10 text-ember-400",
   },
+  {
+    tag: "Penerima Manfaat",
+    icon: "🎒",
+    judul: "Menyasar Anak Sekolah hingga Ibu Hamil",
+    teks: "Sasaran penerima mencakup peserta didik PAUD sampai SMA, santri, balita, serta ibu hamil dan menyusui.",
+    warna: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+  },
+  {
+    tag: "Ekonomi Lokal",
+    icon: "🌾",
+    judul: "Memberdayakan Petani & UMKM Sekitar",
+    teks: "Bahan baku diutamakan dari petani, peternak, dan UMKM setempat sehingga program turut menggerakkan ekonomi daerah.",
+    warna: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  },
+  {
+    tag: "Kesehatan",
+    icon: "📉",
+    judul: "Mendukung Pencegahan Stunting",
+    teks: "Asupan gizi yang baik bagi balita serta ibu hamil dan menyusui membantu upaya menurunkan angka stunting nasional.",
+    warna: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  },
+  {
+    tag: "Keamanan Pangan",
+    icon: "✅",
+    judul: "Sanitasi Terjaga di Setiap Tahap",
+    teks: "Prinsip keamanan pangan (food safety) diterapkan mulai dari penyimpanan bahan, pengolahan, hingga distribusi makanan.",
+    warna: "border-gold-500/30 bg-gold-500/10 text-gold-300",
+  },
+  {
+    tag: "Operasional",
+    icon: "⏱️",
+    judul: "Distribusi Tepat Waktu Setiap Hari",
+    teks: "Penyajian dan pengantaran dijadwalkan agar makanan sampai ke penerima dalam kondisi layak dan tepat waktu.",
+    warna: "border-ember-500/30 bg-ember-500/10 text-ember-400",
+  },
+  {
+    tag: "Kolaborasi",
+    icon: "🤝",
+    judul: "Sinergi Lintas Sektor",
+    teks: "Pelaksanaan melibatkan pemerintah pusat dan daerah, sekolah, serta masyarakat agar program tepat sasaran.",
+    warna: "border-emas-500/30 bg-emas-500/10 text-emas-300",
+  },
 ];
 
 export default function Home() {
@@ -156,7 +198,7 @@ export default function Home() {
           </a>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {berita.map((b) => (
             <a
               key={b.judul}
