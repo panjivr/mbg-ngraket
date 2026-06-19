@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
+import MoodAI from "@/components/MoodAI";
 
 interface SettingsLite {
   nama_dapur: string;
@@ -507,6 +508,9 @@ export default function AbsenPanel() {
           </div>
         </div>
       </div>
+
+      {/* Log bawah: Asisten AI suasana hati */}
+      {needSelfie && <MoodAI selfie={selfie} phase={phase} />}
     </div>
   );
 }

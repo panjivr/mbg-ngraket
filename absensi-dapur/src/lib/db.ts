@@ -160,6 +160,12 @@ async function doEnsureSchema(): Promise<void> {
       `ALTER TABLE divisi ADD COLUMN IF NOT EXISTS jobdesk TEXT`,
     );
 
+    // users -> foto profil & bio/status (untuk kartu pegawai)
+    await client.query(
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS foto_profil TEXT`,
+    );
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id              SERIAL PRIMARY KEY,

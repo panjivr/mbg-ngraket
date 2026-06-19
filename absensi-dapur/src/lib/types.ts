@@ -26,6 +26,29 @@ export interface User {
   created_at: string;
   divisi_id: number | null;
   divisi_nama?: string | null;
+  foto_profil?: string | null;
+  bio?: string | null;
+}
+
+/** Data kartu pegawai (gaya kartu koleksi) untuk dibagikan. */
+export interface KartuPegawai {
+  id: number;
+  nama: string;
+  jabatan: string | null;
+  nip: string | null;
+  divisi_nama: string | null;
+  jobdesk: string | null;
+  jam_masuk: string | null;
+  jam_pulang: string | null;
+  foto_profil: string | null;
+  bio: string | null;
+  created_at: string;
+  total_menit: number;
+  jumlah_shift: number;
+  tepat: number;
+  terlambat: number;
+  ketepatan: number;
+  bintang: number;
 }
 
 export interface Settings {

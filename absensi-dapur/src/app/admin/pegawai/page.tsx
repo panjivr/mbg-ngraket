@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import KartuShare from "@/components/KartuShare";
+import type { KartuPegawai as Kartu } from "@/lib/types";
 
 interface Employee {
   id: number;
@@ -52,6 +54,24 @@ export default function PegawaiPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [kartu, setKartu] = useState<Kartu | null>(null);
+  const [kartuOpen, setKartuOpen] = useState(false);
+  const [kartuLoading, setKartuLoading] = useState(false);
+
+  async function openKartu(e: Employee) {
+    setKartuOpen(true);
+    setKartu(null);
+    setKartuLoading(true);
+    try {
+      const res = await fetch(`/api/admin/employees/${e.id}/card`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (res.ok && data.kartu) setKartu(data.kartu);
+    } finally {
+      setKartuLoading(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -211,6 +231,12 @@ export default function PegawaiPage() {
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => openKartu(e)}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                        >
+                          🪪 Kartu
+                        </button>
+                        <button
                           onClick={() => openEdit(e)}
                           className="btn-ghost px-2.5 py-1 text-xs"
                         >
@@ -363,6 +389,33 @@ export default function PegawaiPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {kartuOpen && (
+        <div
+          className="fixed inset-0 z-20 grid place-items-center overflow-y-auto bg-black/60 p-4"
+          onClick={() => setKartuOpen(false)}
+        >
+          <div
+            className="card w-full max-w-sm p-5"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold">Kartu Pegawai</h2>
+              <button
+                onClick={() => setKartuOpen(false)}
+                className="btn-ghost px-2.5 py-1 text-xs"
+              >
+                Tutup
+              </button>
+            </div>
+            {kartuLoading || !kartu ? (
+              <p className="py-10 text-center text-slate-400">Memuat kartu…</p>
+            ) : (
+              <KartuShare data={kartu} />
+            )}
           </div>
         </div>
       )}
