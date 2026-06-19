@@ -64,6 +64,45 @@ export default function PegawaiPage() {
   const [kartu, setKartu] = useState<Kartu | null>(null);
   const [kartuOpen, setKartuOpen] = useState(false);
   const [kartuLoading, setKartuLoading] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    cocok: number;
+    total: number;
+    tidak_ditemukan: string[];
+    sisa_tanpa_tanggal: number;
+  } | null>(null);
+
+  async function importKelahiran() {
+    setImportBusy(true);
+    try {
+      // 1) Pratinjau dulu (tidak mengubah data).
+      const pv = await fetch("/api/admin/import-kelahiran", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preview: true }),
+      }).then((r) => r.json());
+      const ok = window.confirm(
+        `${pv.cocok} dari ${pv.total} nama di PDF cocok dengan akun yang ada` +
+          (pv.tidak_ditemukan?.length
+            ? `\n${pv.tidak_ditemukan.length} nama tidak ditemukan (akan dilewati).`
+            : "") +
+          `\n\nTerapkan tanggal & tempat lahir ke ${pv.cocok} akun? (akun tidak dibuat baru)`,
+      );
+      if (!ok) return;
+      // 2) Terapkan.
+      const res = await fetch("/api/admin/import-kelahiran", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).then((r) => r.json());
+      setImportResult(res);
+      await load();
+    } catch {
+      alert("Gagal mengimpor data. Coba lagi.");
+    } finally {
+      setImportBusy(false);
+    }
+  }
 
   async function openKartu(e: Employee) {
     setKartuOpen(true);
@@ -174,11 +213,21 @@ export default function PegawaiPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">Data Pegawai</h1>
-        <button onClick={openNew} className="btn-gold">
-          + Tambah Pegawai
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={importKelahiran}
+            disabled={importBusy}
+            className="btn-ghost"
+            title="Lengkapi tanggal & tempat lahir akun yang sudah ada dari data PDF"
+          >
+            {importBusy ? "Mengimpor…" : "📥 Impor Tgl Lahir (PDF)"}
+          </button>
+          <button onClick={openNew} className="btn-gold">
+            + Tambah Pegawai
+          </button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -427,6 +476,46 @@ export default function PegawaiPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {importResult && (
+        <div
+          className="fixed inset-0 z-20 grid place-items-center bg-black/60 p-4"
+          onClick={() => setImportResult(null)}
+        >
+          <div
+            className="card w-full max-w-md p-5"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <h2 className="text-base font-bold">Hasil Impor Tanggal Lahir</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              <span className="font-bold text-emerald-300">{importResult.cocok}</span> dari{" "}
+              {importResult.total} data PDF berhasil dicocokkan & diperbarui pada akun yang ada.
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Akun yang masih belum punya tanggal lahir: {importResult.sisa_tanpa_tanggal}.
+            </p>
+            {importResult.tidak_ditemukan.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-amber-300">
+                  Tidak ditemukan akun yang cocok ({importResult.tidak_ditemukan.length}) —
+                  periksa ejaan nama, lalu isi manual via Edit:
+                </p>
+                <ul className="mt-1 max-h-40 list-disc space-y-0.5 overflow-y-auto pl-5 text-xs text-slate-400">
+                  {importResult.tidak_ditemukan.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <button
+              onClick={() => setImportResult(null)}
+              className="btn-gold mt-4 w-full"
+            >
+              Selesai
+            </button>
           </div>
         </div>
       )}
