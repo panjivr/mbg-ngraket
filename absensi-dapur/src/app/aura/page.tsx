@@ -3,90 +3,33 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import BgnLogo from "@/components/BgnLogo";
-import {
-  hitungWeton,
-  hitungJodoh,
-  formatTanggalIndo,
-  type WetonInfo,
-} from "@/lib/weton";
-
-const WARNA_HEX: Record<string, string> = {
-  Putih: "#e2e8f0",
-  Merah: "#ef4444",
-  Kuning: "#eab308",
-  Hitam: "#0f172a",
-  "Campuran (Manca)": "#a78bfa",
-};
-
-function WetonResult({ w }: { w: WetonInfo }) {
-  return (
-    <div className="mt-4 space-y-4">
-      <div className="rounded-xl border border-emas-500/30 bg-emas-500/5 p-4 text-center">
-        <p className="text-xs uppercase tracking-wide text-slate-400">Weton Anda</p>
-        <p className="mt-1 text-3xl font-extrabold text-emas-300">{w.weton}</p>
-        <p className="mt-1 text-sm text-slate-400">
-          {formatTanggalIndo(w.tanggal)} · Neptu{" "}
-          <span className="font-bold text-slate-200">{w.neptu}</span> ({w.hari_neptu} +{" "}
-          {w.pasaran_neptu})
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="card flex items-center gap-3 p-4">
-          <span
-            className="h-9 w-9 shrink-0 rounded-full border border-white/20"
-            style={{ background: WARNA_HEX[w.aura_warna] || "#64748b" }}
-          />
-          <div>
-            <p className="text-xs text-slate-400">Aura / Warna</p>
-            <p className="font-semibold">{w.aura_warna}</p>
-          </div>
-        </div>
-        <div className="card flex items-center gap-3 p-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gold-500/15 text-lg">
-            🧭
-          </span>
-          <div>
-            <p className="text-xs text-slate-400">Arah</p>
-            <p className="font-semibold">{w.aura_arah}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">
-          ✨ Watak & Aura
-        </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-200">{w.watak}</p>
-      </div>
-    </div>
-  );
-}
+import RamalanLengkap from "@/components/RamalanLengkap";
+import { hitungWeton, hitungJodoh } from "@/lib/weton";
 
 function KalkulatorWeton() {
   const [tgl, setTgl] = useState("");
-  const w = useMemo(() => hitungWeton(tgl), [tgl]);
   return (
-    <div className="card p-5">
-      <h2 className="text-lg font-bold">🔮 Hitung Aura Weton</h2>
-      <p className="mt-1 text-sm text-slate-400">
-        Masukkan tanggal lahir untuk mengetahui weton, neptu, dan auramu.
-      </p>
-      <div className="mt-4">
-        <label className="label">Tanggal Lahir</label>
-        <input
-          type="date"
-          className="input"
-          value={tgl}
-          max="2099-12-31"
-          onChange={(e) => setTgl(e.target.value)}
-        />
+    <div className="space-y-4">
+      <div className="card p-5">
+        <h2 className="text-lg font-bold">🔮 Ramalan Kepribadian (Weton)</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Masukkan tanggal lahir untuk membaca ramalan kepribadian lengkap: weton, neptu,
+          wuku, pancasuda, pranata mangsa, bintang, sifat menonjol, asmara, rejeki, hingga
+          bio-rhythm hari ini.
+        </p>
+        <div className="mt-4">
+          <label className="label">Tanggal Lahir</label>
+          <input
+            type="date"
+            className="input"
+            value={tgl}
+            max="2099-12-31"
+            onChange={(e) => setTgl(e.target.value)}
+          />
+        </div>
+        {!tgl && <p className="mt-4 text-sm text-slate-500">Pilih tanggal lahir di atas.</p>}
       </div>
-      {w ? (
-        <WetonResult w={w} />
-      ) : (
-        <p className="mt-4 text-sm text-slate-500">Pilih tanggal lahir di atas.</p>
-      )}
+      {tgl && <RamalanLengkap tgl={tgl} />}
     </div>
   );
 }

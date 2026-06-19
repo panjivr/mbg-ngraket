@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import KartuShare from "@/components/KartuShare";
 import { fmtDurasi } from "@/lib/time";
-import { hitungWeton, formatTanggalIndo } from "@/lib/weton";
+import { formatTanggalIndo } from "@/lib/weton";
+import RamalanLengkap from "@/components/RamalanLengkap";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 
 interface Akun {
@@ -96,7 +97,6 @@ export default function LaporanPegawaiPage() {
     );
 
   const { kartu, akun, riwayat } = data;
-  const w = hitungWeton(kartu.tanggal_lahir);
 
   return (
     <div className="space-y-5">
@@ -158,24 +158,15 @@ export default function LaporanPegawaiPage() {
           <Row k="Bio" v={kartu.bio || "—"} />
         </div>
 
-        {/* Weton & aura */}
-        <div className="card p-5">
-          <p className="mb-2 text-sm font-semibold">🔮 Weton & Aura</p>
-          {w ? (
-            <>
-              <Row k="Weton" v={<span className="text-emas-300">{w.weton}</span>} />
-              <Row k="Neptu" v={`${w.neptu} (${w.hari_neptu} + ${w.pasaran_neptu})`} />
-              <Row k="Aura / Warna" v={w.aura_warna} />
-              <Row k="Arah" v={w.aura_arah} />
-              <Row k="Tingkat Aura" v={w.aura_tingkat} />
-              <p className="mt-3 text-sm leading-relaxed text-slate-200">{w.watak}</p>
-            </>
-          ) : (
-            <p className="text-sm text-slate-400">
-              Tanggal lahir belum diisi. Lengkapi di menu Pegawai → Edit untuk melihat weton.
-            </p>
-          )}
-        </div>
+        {/* Ramalan kepribadian lengkap */}
+        {kartu.tanggal_lahir ? (
+          <RamalanLengkap tgl={kartu.tanggal_lahir} nama={kartu.nama} />
+        ) : (
+          <div className="card p-5 text-sm text-slate-400">
+            🔮 Tanggal lahir belum diisi. Lengkapi di menu Pegawai → Edit untuk melihat
+            ramalan kepribadian.
+          </div>
+        )}
 
         {/* Jadwal & tugas */}
         <div className="card p-5">
