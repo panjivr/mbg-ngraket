@@ -205,6 +205,28 @@ export default function PegawaiPage() {
     }
   }
 
+  // Set jenis kelamin langsung dari daftar (cepat, simpan seketika).
+  async function setKelamin(e: Employee, val: string) {
+    const prevVal = e.jenis_kelamin ?? null;
+    const next = val || null;
+    setList((prev) =>
+      prev.map((x) => (x.id === e.id ? { ...x, jenis_kelamin: next } : x)),
+    );
+    try {
+      const res = await fetch(`/api/admin/employees/${e.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jenis_kelamin: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setList((prev) =>
+        prev.map((x) => (x.id === e.id ? { ...x, jenis_kelamin: prevVal } : x)),
+      );
+      alert("Gagal menyimpan jenis kelamin. Coba lagi.");
+    }
+  }
+
   async function remove(e: Employee) {
     if (!confirm(`Hapus pegawai "${e.nama}"? Tindakan ini permanen.`)) return;
     const res = await fetch(`/api/admin/employees/${e.id}`, { method: "DELETE" });
@@ -242,13 +264,14 @@ export default function PegawaiPage() {
           <p className="p-6 text-center text-slate-400">Belum ada pegawai.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[920px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Nama</th>
                   <th className="px-4 py-2.5">Username</th>
                   <th className="px-4 py-2.5">Divisi</th>
                   <th className="px-4 py-2.5">Jabatan</th>
+                  <th className="px-4 py-2.5">Kelamin</th>
                   <th className="px-4 py-2.5">Peran</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5 text-right">Aksi</th>
@@ -269,6 +292,21 @@ export default function PegawaiPage() {
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-slate-400">{e.jabatan || "—"}</td>
+                    <td className="px-4 py-2.5">
+                      <select
+                        value={e.jenis_kelamin || ""}
+                        onChange={(ev) => setKelamin(e, ev.target.value)}
+                        title="Jenis kelamin (untuk Shio & Fengshui / Angka Kua)"
+                        className={
+                          "input h-8 w-[112px] px-2 py-0 text-xs " +
+                          (e.jenis_kelamin ? "" : "text-slate-500")
+                        }
+                      >
+                        <option value="">— Pilih —</option>
+                        <option value="L">Laki-laki</option>
+                        <option value="P">Perempuan</option>
+                      </select>
+                    </td>
                     <td className="px-4 py-2.5">
                       <span
                         className={
