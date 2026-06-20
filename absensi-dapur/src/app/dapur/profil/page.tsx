@@ -40,6 +40,7 @@ export default function ProfilPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     setLoading(true);
@@ -70,7 +71,7 @@ export default function ProfilPage() {
     } catch {
       setMsg({ kind: "err", text: "Gagal membaca gambar." });
     } finally {
-      if (fileRef.current) fileRef.current.value = "";
+      e.target.value = ""; // reset agar bisa memilih file yang sama lagi
     }
   }
 
@@ -158,10 +159,16 @@ export default function ProfilPage() {
             </span>
             <div className="flex flex-wrap gap-2">
               <button
+                onClick={() => galleryRef.current?.click()}
+                className="btn-ghost px-3 py-1.5 text-xs"
+              >
+                🖼️ Galeri
+              </button>
+              <button
                 onClick={() => fileRef.current?.click()}
                 className="btn-ghost px-3 py-1.5 text-xs"
               >
-                Pilih / Ambil Foto
+                📷 Kamera
               </button>
               {foto && (
                 <button
@@ -172,6 +179,15 @@ export default function ProfilPage() {
                 </button>
               )}
             </div>
+            {/* Galeri: tanpa atribut capture agar membuka pemilih file/galeri */}
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onPickFile}
+            />
+            {/* Kamera: dengan capture agar langsung membuka kamera depan di ponsel */}
             <input
               ref={fileRef}
               type="file"
@@ -182,7 +198,8 @@ export default function ProfilPage() {
             />
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
-            Di ponsel, tombol ini bisa langsung membuka kamera. Gambar otomatis diperkecil.
+            Pilih <b>Galeri</b> untuk mengambil foto tersimpan, atau <b>Kamera</b> untuk
+            memotret langsung. Gambar otomatis diperkecil.
           </p>
         </div>
 

@@ -56,6 +56,7 @@ export default function AbsenPanel() {
 
   const [cameraOn, setCameraOn] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
+  const [moodOpen, setMoodOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
@@ -161,10 +162,12 @@ export default function AbsenPanel() {
     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
     setSelfie(dataUrl);
     stopCamera();
+    setMoodOpen(true); // buka pop-up analisis AI begitu foto diambil
   }
 
   function retake() {
     setSelfie(null);
+    setMoodOpen(false);
     startCamera();
   }
 
@@ -438,6 +441,11 @@ export default function AbsenPanel() {
                 Ambil Ulang
               </button>
             )}
+            {selfie && (
+              <button onClick={() => setMoodOpen(true)} className="btn-ghost flex-1">
+                🤖 Analisis AI
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -509,8 +517,38 @@ export default function AbsenPanel() {
         </div>
       </div>
 
-      {/* Log bawah: Asisten AI suasana hati */}
-      {needSelfie && <MoodAI selfie={selfie} phase={phase} />}
+      {/* Pop-up analisis AI wajah saat absen masuk/pulang */}
+      {needSelfie && moodOpen && selfie && (
+        <div
+          className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setMoodOpen(false)}
+        >
+          <div className="w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-white">
+                🤖 Analisis AI — Absen {phase === "masuk" ? "Masuk" : "Pulang"}
+              </p>
+              <button
+                onClick={() => setMoodOpen(false)}
+                className="rounded-lg bg-white/10 px-2.5 py-1 text-sm text-slate-200 hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-white/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={selfie} alt="Foto wajah" className="mx-auto max-h-56 w-full object-cover" />
+            </div>
+            <MoodAI selfie={selfie} phase={phase} />
+            <button
+              onClick={() => setMoodOpen(false)}
+              className="btn-gold w-full"
+            >
+              Tutup &amp; Lanjut Absen
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

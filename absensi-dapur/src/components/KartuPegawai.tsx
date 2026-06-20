@@ -1,4 +1,5 @@
 import { fmtDurasi } from "@/lib/time";
+import { kartuMistik } from "@/lib/kesimpulan";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 
 function initials(nama: string) {
@@ -18,6 +19,7 @@ function fmtBulanTahun(v: string) {
  */
 export default function KartuPegawai({ data }: { data: Kartu }) {
   const stars = Array.from({ length: 5 }, (_, i) => i < data.bintang);
+  const mistik = kartuMistik(data.nama, data.tanggal_lahir, data.jenis_kelamin);
 
   return (
     <div className="relative w-[340px] rounded-2xl bg-gradient-to-br from-emas-400 via-gold-400 to-emas-500 p-[3px] shadow-[0_18px_50px_-12px_rgba(224,169,46,0.5)]">
@@ -122,6 +124,48 @@ export default function KartuPegawai({ data }: { data: Kartu }) {
           <p className="mt-2 line-clamp-2 text-[11px] italic leading-snug text-slate-300">
             “{data.bio}”
           </p>
+        )}
+
+        {/* Primbon: Weton · Shio · Numerologi + Kesimpulan */}
+        {mistik && (
+          <div className="mt-2 rounded-lg border border-emas-400/25 bg-gradient-to-br from-emas-400/10 to-gold-500/5 p-2">
+            <div className="flex flex-wrap gap-1">
+              {mistik.weton && (
+                <span className="rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-semibold text-emas-200">
+                  🔮 {mistik.weton}
+                  {mistik.neptu ? ` · ${mistik.neptu}` : ""}
+                </span>
+              )}
+              {mistik.headline && (
+                <span className="rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-semibold text-emas-200">
+                  {mistik.shioEmoji ? mistik.shioEmoji + " " : "🧧 "}
+                  {mistik.headline}
+                </span>
+              )}
+              {mistik.angka != null && (
+                <span className="rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-semibold text-emas-200">
+                  🔢 Angka {mistik.angka}
+                  {mistik.planet ? ` · ${mistik.planet}` : ""}
+                </span>
+              )}
+            </div>
+            <p className="mt-1.5 text-[9px] font-bold uppercase tracking-wider text-emas-300">
+              ✦ Kesimpulan
+            </p>
+            <p className="text-[10px] font-semibold leading-snug text-white">
+              {mistik.peran}
+            </p>
+            {mistik.bidang && (
+              <p className="text-[10px] leading-snug text-slate-200">
+                Bidang cocok: {mistik.bidang}
+              </p>
+            )}
+            {mistik.kekuatan && (
+              <p className="text-[10px] leading-snug text-slate-300">
+                Kekuatan: {mistik.kekuatan}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Footer */}

@@ -56,6 +56,9 @@ export default function RekapPage() {
   const [rows, setRows] = useState<RekapRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [divisiFilter, setDivisiFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"waktu" | "nama" | "divisi" | "status">("waktu");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,20 +78,50 @@ export default function RekapPage() {
     load();
   }, [load]);
 
+  // Opsi divisi untuk filter (unik, urut abjad).
+  const divisiOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.divisi_nama) set.add(r.divisi_nama);
+    return [...set].sort((a, b) => a.localeCompare(b, "id"));
+  }, [rows]);
+
+  // Tampilan setelah filter (nama/divisi) & urut (waktu/nama/divisi/status).
+  const view = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    let v = rows.filter((r) => {
+      const okNama = !needle || r.nama.toLowerCase().includes(needle);
+      const okDiv = !divisiFilter || (r.divisi_nama || "") === divisiFilter;
+      return okNama && okDiv;
+    });
+    v = [...v].sort((a, b) => {
+      if (sortBy === "nama") return a.nama.localeCompare(b.nama, "id");
+      if (sortBy === "divisi")
+        return (a.divisi_nama || "~").localeCompare(b.divisi_nama || "~", "id") ||
+          a.nama.localeCompare(b.nama, "id");
+      if (sortBy === "status")
+        return (a.status_masuk || "~").localeCompare(b.status_masuk || "~", "id");
+      // waktu: terbaru dulu (tanggal lalu jam masuk)
+      const ta = `${a.tanggal} ${a.check_in || ""}`;
+      const tb = `${b.tanggal} ${b.check_in || ""}`;
+      return tb.localeCompare(ta);
+    });
+    return v;
+  }, [rows, q, divisiFilter, sortBy]);
+
   const ringkasan = useMemo(() => {
     let totalMenit = 0;
     let terlambat = 0;
     let selesai = 0;
-    for (const r of rows) {
+    for (const r of view) {
       totalMenit += durasiMenit(r.check_in, r.check_out);
       if (r.status_masuk === "Terlambat") terlambat += 1;
       if (r.check_out) selesai += 1;
     }
     return { totalMenit, terlambat, selesai };
-  }, [rows]);
+  }, [view]);
 
   async function unduhPdf() {
-    if (!rows.length) return;
+    if (!view.length) return;
     setPdfBusy(true);
     try {
       const { default: jsPDF } = await import("jspdf");
@@ -110,7 +143,7 @@ export default function RekapPage() {
         26,
       );
 
-      const body = rows.map((r) => [
+      const body = view.map((r) => [
         fmtDate(r.tanggal),
         r.nama,
         r.divisi_nama || "-",
@@ -138,7 +171,7 @@ export default function RekapPage() {
       doc.setFontSize(10);
       doc.setTextColor(20);
       doc.text(
-        `Total: ${rows.length} catatan · Total jam kerja: ${fmtDurasi(
+        `Total: ${view.length} catatan · Total jam kerja: ${fmtDurasi(
           ringkasan.totalMenit,
         )} · Terlambat: ${ringkasan.terlambat}`,
         14,
@@ -183,10 +216,63 @@ export default function RekapPage() {
           <a href={`/api/admin/export?from=${from}&to=${to}`} className="btn-ghost">
             ⬇ CSV
           </a>
-          <button onClick={unduhPdf} className="btn-gold" disabled={pdfBusy || !rows.length}>
+          <button onClick={unduhPdf} className="btn-gold" disabled={pdfBusy || !view.length}>
             {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
           </button>
         </div>
+      </div>
+
+      {/* Filter & urutan */}
+      <div className="card flex flex-wrap items-end gap-3 p-4">
+        <div className="min-w-[160px] flex-1">
+          <label className="label">Cari Nama</label>
+          <input
+            className="input"
+            value={q}
+            placeholder="Ketik nama pegawai…"
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="label">Divisi</label>
+          <select
+            className="input"
+            value={divisiFilter}
+            onChange={(e) => setDivisiFilter(e.target.value)}
+          >
+            <option value="">Semua Divisi</option>
+            {divisiOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Urutkan</label>
+          <select
+            className="input"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          >
+            <option value="waktu">Waktu (terbaru)</option>
+            <option value="nama">Nama (A–Z)</option>
+            <option value="divisi">Divisi (A–Z)</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+        {(q || divisiFilter || sortBy !== "waktu") && (
+          <button
+            onClick={() => {
+              setQ("");
+              setDivisiFilter("");
+              setSortBy("waktu");
+            }}
+            className="btn-ghost"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       {/* Ringkasan jam kerja */}
@@ -213,13 +299,15 @@ export default function RekapPage() {
 
       <div className="card overflow-hidden">
         <div className="border-b border-white/5 px-4 py-3 text-sm text-slate-400">
-          {rows.length} catatan
+          {view.length} dari {rows.length} catatan
         </div>
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
-        ) : rows.length === 0 ? (
+        ) : view.length === 0 ? (
           <p className="p-6 text-center text-slate-400">
-            Tidak ada data pada rentang ini.
+            {rows.length === 0
+              ? "Tidak ada data pada rentang ini."
+              : "Tidak ada catatan yang cocok dengan filter."}
           </p>
         ) : (
           <div className="scroll-x overflow-x-auto">
@@ -238,7 +326,7 @@ export default function RekapPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {rows.map((r) => (
+                {view.map((r) => (
                   <tr key={r.id}>
                     <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(r.tanggal)}</td>
                     <td className="px-4 py-2.5 font-medium">{r.nama}</td>

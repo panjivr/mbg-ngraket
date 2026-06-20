@@ -14,19 +14,36 @@ type Phase = "masuk" | "pulang";
 const CDN_SCRIPT = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js";
 const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 
+interface DetResult {
+  detection?: { score?: number };
+  expressions: Record<string, number>;
+  age?: number;
+  gender?: string;
+  genderProbability?: number;
+}
+interface LoadNet {
+  loadFromUri: (u: string) => Promise<void>;
+}
 interface FaceApiNS {
   nets: {
-    tinyFaceDetector: { loadFromUri: (u: string) => Promise<void> };
-    faceExpressionNet: { loadFromUri: (u: string) => Promise<void> };
+    tinyFaceDetector: LoadNet;
+    faceExpressionNet: LoadNet;
+    faceLandmark68Net: LoadNet;
+    ageGenderNet: LoadNet;
   };
-  TinyFaceDetectorOptions: new () => unknown;
+  TinyFaceDetectorOptions: new (opts?: {
+    inputSize?: number;
+    scoreThreshold?: number;
+  }) => unknown;
   detectSingleFace: (
     input: HTMLImageElement,
     opts: unknown,
   ) => {
-    withFaceExpressions: () => Promise<
-      { expressions: Record<string, number> } | undefined
-    >;
+    withFaceLandmarks: () => {
+      withFaceExpressions: () => {
+        withAgeAndGender: () => Promise<DetResult | undefined>;
+      };
+    };
   };
 }
 
@@ -98,8 +115,14 @@ function getFaceApi(): Promise<FaceApiNS> {
       await loadScript(CDN_SCRIPT);
       const api = (window as unknown as { faceapi?: FaceApiNS }).faceapi;
       if (!api) throw new Error("faceapi tidak tersedia");
-      await api.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await api.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+      // Muat model untuk deteksi + landmark + ekspresi + usia/gender agar
+      // analisa wajah lebih presisi.
+      await Promise.all([
+        api.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        api.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        api.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+        api.nets.ageGenderNet.loadFromUri(MODEL_URL),
+      ]);
       return api;
     })().catch((e) => {
       faceApiPromise = null; // izinkan retry di percobaan berikutnya
@@ -109,12 +132,20 @@ function getFaceApi(): Promise<FaceApiNS> {
   return faceApiPromise;
 }
 
+interface MoodData {
+  mood: string;
+  confidence: number; // 0..1 keyakinan ekspresi dominan
+  faceScore: number; // 0..1 keyakinan deteksi wajah
+  age: number | null;
+  gender: string | null;
+  genderProb: number | null;
+}
 type Status =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "noface" }
   | { kind: "unavailable" }
-  | { kind: "result"; mood: string };
+  | { kind: "result"; data: MoodData };
 
 export default function MoodAI({
   selfie,
@@ -139,17 +170,36 @@ export default function MoodAI({
         const img = new Image();
         img.src = selfie;
         await img.decode().catch(() => {});
+        // Detektor presisi: input lebih besar + ambang lebih rendah, lalu
+        // landmark + ekspresi + usia/gender.
         const det = await faceapi
-          .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-          .withFaceExpressions();
+          .detectSingleFace(
+            img,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 }),
+          )
+          .withFaceLandmarks()
+          .withFaceExpressions()
+          .withAgeAndGender();
         if (!alive) return;
         if (!det || !det.expressions) {
           setStatus({ kind: "noface" });
           return;
         }
-        const top = Object.entries(det.expressions).sort((a, b) => b[1] - a[1])[0];
+        const sorted = Object.entries(det.expressions).sort((a, b) => b[1] - a[1]);
+        const top = sorted[0];
         const key = top?.[0] && MOODS[top[0]] ? top[0] : "neutral";
-        setStatus({ kind: "result", mood: key });
+        setStatus({
+          kind: "result",
+          data: {
+            mood: key,
+            confidence: top?.[1] ?? 0,
+            faceScore: det.detection?.score ?? 0,
+            age: typeof det.age === "number" ? Math.round(det.age) : null,
+            gender: det.gender ?? null,
+            genderProb:
+              typeof det.genderProbability === "number" ? det.genderProbability : null,
+          },
+        });
       } catch {
         if (alive) setStatus({ kind: "unavailable" });
       }
@@ -198,23 +248,47 @@ export default function MoodAI({
           </p>
         )}
         {status.kind === "result" && (
-          <div className="flex items-start gap-3">
-            <span className="text-3xl leading-none">{MOODS[status.mood].emoji}</span>
-            <div>
-              <p className="font-semibold text-ember-200">
-                Terdeteksi: {MOODS[status.mood].label}
-              </p>
-              <p className="mt-0.5 leading-relaxed text-slate-200">
-                {MOODS[status.mood].pesan}
-                {restReminder}
-              </p>
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <span className="text-3xl leading-none">{MOODS[status.data.mood].emoji}</span>
+              <div>
+                <p className="font-semibold text-ember-200">
+                  Terdeteksi: {MOODS[status.data.mood].label}{" "}
+                  <span className="text-xs font-normal text-slate-400">
+                    ({Math.round(status.data.confidence * 100)}% yakin)
+                  </span>
+                </p>
+                <p className="mt-0.5 leading-relaxed text-slate-200">
+                  {MOODS[status.data.mood].pesan}
+                  {restReminder}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              {status.data.age != null && (
+                <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-300">
+                  Perkiraan usia ~{status.data.age} th
+                </span>
+              )}
+              {status.data.gender && (
+                <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-300">
+                  {status.data.gender === "male" ? "Laki-laki" : "Perempuan"}
+                  {status.data.genderProb != null
+                    ? ` (${Math.round(status.data.genderProb * 100)}%)`
+                    : ""}
+                </span>
+              )}
+              <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-300">
+                Kualitas wajah {Math.round(status.data.faceScore * 100)}%
+              </span>
             </div>
           </div>
         )}
       </div>
 
       <p className="mt-3 text-[10px] text-slate-500">
-        Deteksi berjalan di perangkatmu (privasi terjaga); hanya untuk menyemangati, tidak disimpan.
+        Analisa wajah (ekspresi, perkiraan usia/gender) berjalan di perangkatmu — privasi
+        terjaga, hasil tidak disimpan; hanya untuk menyemangati.
       </p>
     </div>
   );
