@@ -13,7 +13,7 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Tambah sub-shift ke sebuah divisi. */
 export const POST = route(async (req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const divisiId = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(divisiId)) return fail(400, "ID divisi tidak valid.");
 
@@ -32,7 +32,10 @@ export const POST = route(async (req: NextRequest, ctx: Ctx) => {
     return fail(400, "Toleransi tidak valid (0..240 menit).");
   }
 
-  const div = await query<{ id: number }>(`SELECT id FROM divisi WHERE id = $1`, [divisiId]);
+  const div = await query<{ id: number }>(
+    `SELECT id FROM divisi WHERE id = $1 AND sppg_id = $2`,
+    [divisiId, admin.sppg_id],
+  );
   if (!div.length) return fail(404, "Divisi tidak ditemukan.");
 
   const rows = await query<DivisiShift>(
@@ -48,15 +51,17 @@ export const POST = route(async (req: NextRequest, ctx: Ctx) => {
 
 /** Hapus sebuah sub-shift: DELETE ?shiftId=123 */
 export const DELETE = route(async (req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const divisiId = parseInt((await ctx.params).id, 10);
   const shiftId = parseInt(new URL(req.url).searchParams.get("shiftId") || "", 10);
   if (!Number.isFinite(divisiId) || !Number.isFinite(shiftId)) {
     return fail(400, "ID tidak valid.");
   }
-  await query(`DELETE FROM divisi_shift WHERE id = $1 AND divisi_id = $2`, [
-    shiftId,
-    divisiId,
-  ]);
+  await query(
+    `DELETE FROM divisi_shift
+      WHERE id = $1 AND divisi_id = $2
+        AND divisi_id IN (SELECT id FROM divisi WHERE sppg_id = $3)`,
+    [shiftId, divisiId, admin.sppg_id],
+  );
   return ok({ ok: true });
 });

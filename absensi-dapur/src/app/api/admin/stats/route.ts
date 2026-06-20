@@ -1,8 +1,8 @@
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { getSppg } from "@/lib/sppg";
 import { ok, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
-import type { Settings } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,22 +15,23 @@ interface StatRow {
 }
 
 export const GET = route(async () => {
-  await requireAdmin();
-  const settings = (
-    await query<Settings>(`SELECT tz FROM settings WHERE id = 1`)
-  )[0];
-  const tanggal = localDate(settings?.tz || "Asia/Jakarta");
+  const admin = await requireAdmin();
+  const sppg = await getSppg(admin.sppg_id as number);
+  const tanggal = localDate(sppg?.tz || "Asia/Jakarta");
 
   const rows = await query<StatRow>(
     `SELECT
-       (SELECT COUNT(*) FROM users WHERE aktif = TRUE)::text AS total_staff,
-       (SELECT COUNT(DISTINCT user_id) FROM attendance
-          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND check_in IS NOT NULL)::text AS hadir,
-       (SELECT COUNT(*) FROM attendance
-          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND status_masuk = 'Terlambat')::text AS terlambat,
-       (SELECT COUNT(*) FROM attendance
-          WHERE COALESCE(shift_tanggal, tanggal) = $1 AND check_out IS NOT NULL)::text AS pulang`,
-    [tanggal],
+       (SELECT COUNT(*) FROM users WHERE aktif = TRUE AND sppg_id = $2)::text AS total_staff,
+       (SELECT COUNT(DISTINCT a.user_id) FROM attendance a JOIN users u ON u.id = a.user_id
+          WHERE COALESCE(a.shift_tanggal, a.tanggal) = $1 AND a.check_in IS NOT NULL
+            AND u.sppg_id = $2)::text AS hadir,
+       (SELECT COUNT(*) FROM attendance a JOIN users u ON u.id = a.user_id
+          WHERE COALESCE(a.shift_tanggal, a.tanggal) = $1 AND a.status_masuk = 'Terlambat'
+            AND u.sppg_id = $2)::text AS terlambat,
+       (SELECT COUNT(*) FROM attendance a JOIN users u ON u.id = a.user_id
+          WHERE COALESCE(a.shift_tanggal, a.tanggal) = $1 AND a.check_out IS NOT NULL
+            AND u.sppg_id = $2)::text AS pulang`,
+    [tanggal, admin.sppg_id],
   );
 
   const r = rows[0];

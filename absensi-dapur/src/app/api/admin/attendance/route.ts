@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const GET = route(async (req: NextRequest) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const sp = req.nextUrl.searchParams;
   const today = localDate("Asia/Jakarta");
 
@@ -20,8 +20,8 @@ export const GET = route(async (req: NextRequest) => {
   const userId = parseInt(sp.get("user_id") || "", 10);
   const divisiId = parseInt(sp.get("divisi_id") || "", 10);
 
-  const conds = ["COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2"];
-  const params: unknown[] = [from, to];
+  const conds = ["COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2", "u.sppg_id = $3"];
+  const params: unknown[] = [from, to, admin.sppg_id];
   if (Number.isFinite(userId)) {
     params.push(userId);
     conds.push(`a.user_id = $${params.length}`);

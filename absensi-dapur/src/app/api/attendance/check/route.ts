@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { query, withClient } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { haversineMeters } from "@/lib/geo";
 import { localDate, shiftDate, statusMasukShift } from "@/lib/time";
-import type { Settings, Attendance } from "@/lib/types";
+import type { Attendance } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,9 +27,7 @@ export const POST = route(async (req: NextRequest) => {
   const lng = toNum(body.lng);
   const selfie = typeof body.selfie === "string" ? body.selfie : null;
 
-  const settings = (
-    await query<Settings>(`SELECT * FROM settings WHERE id = 1`)
-  )[0];
+  const settings = await getSppg(session.sppg_id as number);
   if (!settings) return fail(500, "Pengaturan dapur belum tersedia.");
 
   // Jadwal shift efektif: dari divisi pegawai bila ada, jika tidak pakai
@@ -92,8 +91,8 @@ export const POST = route(async (req: NextRequest) => {
       toleransi_menit: number;
     }>(
       `SELECT id, jam_masuk, jam_pulang, toleransi_menit FROM event_absensi
-        WHERE aktif = TRUE AND tanggal = $1 ORDER BY id DESC LIMIT 1`,
-      [tglEvent],
+        WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2 ORDER BY id DESC LIMIT 1`,
+      [tglEvent, session.sppg_id],
     )
   )[0];
   if (ev) {

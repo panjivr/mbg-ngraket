@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { query } from "./db";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -34,12 +35,28 @@ export async function clearSessionCookie(): Promise<void> {
 export async function requireSession(): Promise<SessionData> {
   const s = await getSession();
   if (!s) throw new HttpError(401, "Belum login.");
+  // Backfill sppg_id/is_super untuk token lama (sebelum fitur multi-dapur).
+  if (s.sppg_id == null || s.is_super === undefined) {
+    const r = await query<{ sppg_id: number | null; is_super: boolean }>(
+      `SELECT sppg_id, is_super FROM users WHERE id = $1`,
+      [s.uid],
+    );
+    s.sppg_id = r[0]?.sppg_id ?? 1;
+    s.is_super = !!r[0]?.is_super;
+  }
   return s;
 }
 
 export async function requireAdmin(): Promise<SessionData> {
   const s = await requireSession();
   if (s.role !== "admin") throw new HttpError(403, "Khusus admin.");
+  return s;
+}
+
+/** Hanya super admin pusat. */
+export async function requireSuper(): Promise<SessionData> {
+  const s = await requireAdmin();
+  if (!s.is_super) throw new HttpError(403, "Khusus super admin.");
   return s;
 }
 

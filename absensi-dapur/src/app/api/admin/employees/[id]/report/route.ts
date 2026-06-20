@@ -25,9 +25,16 @@ interface RiwayatRow {
 }
 
 export const GET = route(async (_req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const me = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
+
+  // Pastikan pegawai ini milik dapur admin yang sedang login.
+  const milik = await query<{ id: number }>(
+    `SELECT id FROM users WHERE id = $1 AND sppg_id = $2`,
+    [id, me.sppg_id],
+  );
+  if (!milik.length) return fail(404, "Pegawai tidak ditemukan.");
 
   const kartu = await getKartuPegawai(id);
   if (!kartu) return fail(404, "Pegawai tidak ditemukan.");

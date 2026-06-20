@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { getSppg } from "@/lib/sppg";
 import { fail, route } from "@/lib/api";
 import { fmtJam, localDate } from "@/lib/time";
-import type { AttendanceWithUser, Settings } from "@/lib/types";
+import type { AttendanceWithUser } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,10 +28,10 @@ function durasi(checkIn: string | null, checkOut: string | null): string {
 }
 
 export const GET = route(async (req: NextRequest) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const sp = req.nextUrl.searchParams;
-  const settings = (await query<Settings>(`SELECT * FROM settings WHERE id = 1`))[0];
-  const tz = settings?.tz || "Asia/Jakarta";
+  const sppg = await getSppg(admin.sppg_id as number);
+  const tz = sppg?.tz || "Asia/Jakarta";
   const today = localDate(tz);
 
   const from = DATE_RE.test(sp.get("from") || "") ? sp.get("from")! : today;
@@ -43,9 +44,9 @@ export const GET = route(async (req: NextRequest) => {
        FROM attendance a
        JOIN users u ON u.id = a.user_id
        LEFT JOIN divisi d ON d.id = a.divisi_id
-      WHERE COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2
+      WHERE COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2 AND u.sppg_id = $3
       ORDER BY COALESCE(a.shift_tanggal, a.tanggal) ASC, a.check_in ASC NULLS LAST, u.nama ASC`,
-    [from, to],
+    [from, to, admin.sppg_id],
   );
 
   const header = [

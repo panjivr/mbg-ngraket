@@ -10,15 +10,15 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export const GET = route(async (_req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
 
   const rows = await query<AttendanceWithUser>(
     `SELECT a.*, u.nama, u.jabatan, u.nip
        FROM attendance a JOIN users u ON u.id = a.user_id
-      WHERE a.id = $1`,
-    [id],
+      WHERE a.id = $1 AND u.sppg_id = $2`,
+    [id, admin.sppg_id],
   );
   if (!rows.length) return fail(404, "Data absensi tidak ditemukan.");
   return ok({ detail: rows[0] });

@@ -17,15 +17,16 @@ function withDerived(e: EventAbsensi): EventAbsensi {
 }
 
 export const GET = route(async () => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const rows = await query<EventAbsensi>(
-    `SELECT * FROM event_absensi ORDER BY tanggal DESC, id DESC`,
+    `SELECT * FROM event_absensi WHERE sppg_id = $1 ORDER BY tanggal DESC, id DESC`,
+    [admin.sppg_id],
   );
   return ok({ events: rows.map(withDerived) });
 });
 
 export const POST = route(async (req: NextRequest) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const b = await req.json().catch(() => ({}));
   const nama = String(b.nama ?? "").trim();
   const tanggal = String(b.tanggal ?? "").trim();
@@ -44,9 +45,9 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const rows = await query<EventAbsensi>(
-    `INSERT INTO event_absensi (nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif],
+    `INSERT INTO event_absensi (nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, sppg_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, admin.sppg_id],
   );
   // Terapkan ke absensi yang sudah tercatat pada tanggal event (retroaktif).
   const affected = aktif ? await applyEventToDate(rows[0].id) : 0;

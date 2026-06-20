@@ -18,7 +18,8 @@ function normalisasi(nama: string): string {
  * Mendukung pratinjau via body { preview: true } (tidak mengubah data).
  */
 export const POST = route(async (req: Request) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
+  const sppgId = admin.sppg_id;
   const body = await req.json().catch(() => ({}));
   const preview = body?.preview === true;
 
@@ -34,8 +35,9 @@ export const POST = route(async (req: Request) => {
           const r = await client.query(
             `SELECT 1 FROM users
               WHERE regexp_replace(upper(btrim(nama)), '\\s+', ' ', 'g') = $1
+                AND sppg_id = $2
               LIMIT 1`,
-            [norm],
+            [norm, sppgId],
           );
           if (r.rowCount && r.rowCount > 0) updatedNames.push(d.nama);
           else unmatched.push(d.nama);
@@ -43,8 +45,9 @@ export const POST = route(async (req: Request) => {
           const r = await client.query(
             `UPDATE users
                 SET tempat_lahir = $1, tanggal_lahir = $2
-              WHERE regexp_replace(upper(btrim(nama)), '\\s+', ' ', 'g') = $3`,
-            [d.tempat_lahir, d.tanggal_lahir, norm],
+              WHERE regexp_replace(upper(btrim(nama)), '\\s+', ' ', 'g') = $3
+                AND sppg_id = $4`,
+            [d.tempat_lahir, d.tanggal_lahir, norm, sppgId],
           );
           if (r.rowCount && r.rowCount > 0) updatedNames.push(d.nama);
           else unmatched.push(d.nama);
@@ -61,7 +64,8 @@ export const POST = route(async (req: Request) => {
   // Berapa akun yang masih belum punya tanggal lahir setelah impor.
   const sisa = (
     await query<{ c: string }>(
-      `SELECT COUNT(*)::text AS c FROM users WHERE tanggal_lahir IS NULL`,
+      `SELECT COUNT(*)::text AS c FROM users WHERE tanggal_lahir IS NULL AND sppg_id = $1`,
+      [sppgId],
     )
   )[0];
 

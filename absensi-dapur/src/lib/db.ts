@@ -277,6 +277,69 @@ async function doEnsureSchema(): Promise<void> {
       `INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
     );
 
+    // ================= MULTI-DAPUR (SPPG) =================
+    // Tiap SPPG/dapur punya konfigurasi (lokasi, geofence, jam, zona waktu)
+    // sendiri. Semua akun/divisi/event/absensi terikat ke satu sppg_id.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sppg (
+        id              SERIAL PRIMARY KEY,
+        nama            TEXT NOT NULL,
+        alamat          TEXT NOT NULL DEFAULT '',
+        lat             DOUBLE PRECISION NOT NULL DEFAULT -7.8657,
+        lng             DOUBLE PRECISION NOT NULL DEFAULT 111.4625,
+        radius_m        INTEGER NOT NULL DEFAULT 150,
+        geofence_aktif  BOOLEAN NOT NULL DEFAULT TRUE,
+        selfie_wajib    BOOLEAN NOT NULL DEFAULT TRUE,
+        jam_masuk       TEXT NOT NULL DEFAULT '07:00',
+        jam_pulang      TEXT NOT NULL DEFAULT '15:00',
+        tz              TEXT NOT NULL DEFAULT 'Asia/Jakarta',
+        aktif           BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
+    );
+    await client.query(
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_super BOOLEAN NOT NULL DEFAULT FALSE`,
+    );
+    await client.query(
+      `ALTER TABLE divisi ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE CASCADE`,
+    );
+    await client.query(
+      `ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE CASCADE`,
+    );
+    // Nama divisi cukup unik PER dapur (bukan global lagi).
+    await client.query(`ALTER TABLE divisi DROP CONSTRAINT IF EXISTS divisi_nama_key`);
+
+    // Dapur #1 = data lama. Ambil konfigurasi dari settings singleton.
+    await client.query(`
+      INSERT INTO sppg (id, nama, alamat, lat, lng, radius_m, geofence_aktif,
+                        selfie_wajib, jam_masuk, jam_pulang, tz)
+      SELECT 1, nama_dapur, alamat, lat, lng, radius_m, geofence_aktif,
+             selfie_wajib, jam_masuk, jam_pulang, tz
+        FROM settings WHERE id = 1
+      ON CONFLICT (id) DO NOTHING;
+    `);
+    await client.query(
+      `SELECT setval(pg_get_serial_sequence('sppg','id'),
+              GREATEST((SELECT COALESCE(MAX(id),1) FROM sppg), 1), true)`,
+    );
+    // Backfill data lama ke Dapur #1.
+    await client.query(`UPDATE users SET sppg_id = 1 WHERE sppg_id IS NULL`);
+    await client.query(`UPDATE divisi SET sppg_id = 1 WHERE sppg_id IS NULL`);
+    await client.query(`UPDATE event_absensi SET sppg_id = 1 WHERE sppg_id IS NULL`);
+    // Unik nama divisi per dapur.
+    await client.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS uniq_divisi_sppg_nama ON divisi (sppg_id, lower(nama))`,
+    );
+    // Jadikan admin pertama sebagai Super Admin bila belum ada super admin.
+    await client.query(`
+      UPDATE users SET is_super = TRUE
+       WHERE id = (SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1)
+         AND NOT EXISTS (SELECT 1 FROM users WHERE is_super = TRUE);
+    `);
+
     // Seed 3 shift untuk divisi keamanan (bila tabel shift masih kosong) agar
     // petugas keamanan bisa memilih shift sendiri & tidak terhitung terlambat.
     const shiftCount = await client.query<{ c: string }>(
@@ -349,8 +412,8 @@ async function doEnsureSchema(): Promise<void> {
       ];
       for (const [nama, jm, jp, tol, jobdesk] of sampleDiv) {
         await client.query(
-          `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, jobdesk)
-           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (nama) DO NOTHING`,
+          `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, jobdesk, sppg_id)
+           VALUES ($1, $2, $3, $4, $5, 1) ON CONFLICT DO NOTHING`,
           [nama, jm, jp, tol, jobdesk],
         );
       }
@@ -367,8 +430,8 @@ async function doEnsureSchema(): Promise<void> {
       const adminHash = await hashPassword(adminPass);
 
       await client.query(
-        `INSERT INTO users (nama, username, password_hash, role, jabatan)
-         VALUES ($1, $2, $3, 'admin', 'Kepala Dapur')`,
+        `INSERT INTO users (nama, username, password_hash, role, jabatan, sppg_id, is_super)
+         VALUES ($1, $2, $3, 'admin', 'Kepala Dapur', 1, TRUE)`,
         [adminNama, adminUser, adminHash],
       );
 
@@ -385,9 +448,9 @@ async function doEnsureSchema(): Promise<void> {
       ];
       for (const [nama, username, jabatan, nip, divNama, tl, tgl] of sampleStaff) {
         await client.query(
-          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, divisi_id, tempat_lahir, tanggal_lahir)
+          `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, divisi_id, tempat_lahir, tanggal_lahir, sppg_id)
            VALUES ($1, $2, $3, 'staff', $4, $5,
-                   (SELECT id FROM divisi WHERE nama = $6), $7, $8)`,
+                   (SELECT id FROM divisi WHERE nama = $6 AND sppg_id = 1), $7, $8, 1)`,
           [nama, username, staffPass, jabatan, nip, divNama, tl, tgl],
         );
       }

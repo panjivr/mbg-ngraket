@@ -15,13 +15,17 @@ function withDerived(d: Divisi): Divisi {
 }
 
 export const GET = route(async () => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const rows = await query<Divisi>(
     `SELECT d.*, (SELECT COUNT(*)::int FROM users u WHERE u.divisi_id = d.id) AS jumlah_staf
-       FROM divisi d ORDER BY d.nama ASC`,
+       FROM divisi d WHERE d.sppg_id = $1 ORDER BY d.nama ASC`,
+    [admin.sppg_id],
   );
   const shifts = await query<DivisiShift>(
-    `SELECT * FROM divisi_shift ORDER BY divisi_id, urutan, id`,
+    `SELECT * FROM divisi_shift
+      WHERE divisi_id IN (SELECT id FROM divisi WHERE sppg_id = $1)
+      ORDER BY divisi_id, urutan, id`,
+    [admin.sppg_id],
   );
   const byDiv = new Map<number, DivisiShift[]>();
   for (const s of shifts) {
@@ -35,7 +39,7 @@ export const GET = route(async () => {
 });
 
 export const POST = route(async (req: NextRequest) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const b = await req.json().catch(() => ({}));
   const nama = String(b.nama ?? "").trim();
   const jam_masuk = String(b.jam_masuk ?? "").trim();
@@ -53,15 +57,15 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const dup = await query<{ id: number }>(
-    `SELECT id FROM divisi WHERE lower(nama) = lower($1)`,
-    [nama],
+    `SELECT id FROM divisi WHERE lower(nama) = lower($1) AND sppg_id = $2`,
+    [nama, admin.sppg_id],
   );
   if (dup.length) return fail(409, "Nama divisi sudah dipakai.");
 
   const rows = await query<Divisi>(
-    `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk],
+    `INSERT INTO divisi (nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, sppg_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, admin.sppg_id],
   );
   return ok({ divisi: withDerived(rows[0]) }, { status: 201 });
 });

@@ -17,7 +17,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const body = await req.json().catch(() => ({}));
   const existing = (
-    await query<User>(`SELECT * FROM users WHERE id = $1`, [id])
+    await query<User>(`SELECT * FROM users WHERE id = $1 AND sppg_id = $2`, [
+      id,
+      admin.sppg_id,
+    ])
   )[0];
   if (!existing) return fail(404, "Pegawai tidak ditemukan.");
 
@@ -80,8 +83,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   // Guard: jangan menonaktifkan / menurunkan admin terakhir.
   if ((existing.role === "admin" && role !== "admin") || (existing.role === "admin" && !aktif)) {
     const otherAdmins = await query<{ c: string }>(
-      `SELECT COUNT(*)::text AS c FROM users WHERE role = 'admin' AND aktif = TRUE AND id <> $1`,
-      [id],
+      `SELECT COUNT(*)::text AS c FROM users
+        WHERE role = 'admin' AND aktif = TRUE AND id <> $1 AND sppg_id = $2`,
+      [id, admin.sppg_id],
     );
     if (Number(otherAdmins[0].c) === 0) {
       return fail(409, "Tidak bisa menonaktifkan/menurunkan admin terakhir.");
@@ -122,20 +126,24 @@ export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
   if (id === admin.uid) return fail(409, "Tidak bisa menghapus akun sendiri.");
 
   const target = (
-    await query<User>(`SELECT id, role FROM users WHERE id = $1`, [id])
+    await query<User>(`SELECT id, role FROM users WHERE id = $1 AND sppg_id = $2`, [
+      id,
+      admin.sppg_id,
+    ])
   )[0];
   if (!target) return fail(404, "Pegawai tidak ditemukan.");
 
   if (target.role === "admin") {
     const otherAdmins = await query<{ c: string }>(
-      `SELECT COUNT(*)::text AS c FROM users WHERE role = 'admin' AND id <> $1`,
-      [id],
+      `SELECT COUNT(*)::text AS c FROM users
+        WHERE role = 'admin' AND id <> $1 AND sppg_id = $2`,
+      [id, admin.sppg_id],
     );
     if (Number(otherAdmins[0].c) === 0) {
       return fail(409, "Tidak bisa menghapus admin terakhir.");
     }
   }
 
-  await query(`DELETE FROM users WHERE id = $1`, [id]);
+  await query(`DELETE FROM users WHERE id = $1 AND sppg_id = $2`, [id, admin.sppg_id]);
   return ok({ ok: true });
 });

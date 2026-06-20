@@ -1,8 +1,9 @@
 import { query } from "@/lib/db";
 import { requireSession } from "@/lib/session";
+import { getSppg } from "@/lib/sppg";
 import { ok, route } from "@/lib/api";
 import { isOvernight, localDate } from "@/lib/time";
-import type { Settings, DivisiShift, EventAbsensi } from "@/lib/types";
+import type { DivisiShift, EventAbsensi } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +32,11 @@ interface AbsRow {
 
 export const GET = route(async () => {
   const session = await requireSession();
-  const settings = (
-    await query<Settings>(`SELECT * FROM settings WHERE id = 1`)
-  )[0];
-  const tz = settings?.tz || "Asia/Jakarta";
+  const settings = await getSppg(session.sppg_id as number);
+  if (!settings) {
+    return ok({ current: null, last: null, tanggal: localDate(), shift: null, shifts: [], event: null, settings: null });
+  }
+  const tz = settings.tz || "Asia/Jakarta";
   const tanggal = localDate(tz);
 
   const shiftRow = (
@@ -61,13 +63,13 @@ export const GET = route(async () => {
       ).map((s) => ({ ...s, lintas_hari: isOvernight(s.jam_masuk, s.jam_pulang) }))
     : [];
 
-  // Event absensi aktif untuk hari ini (mis. general cleaning) — berlaku untuk semua.
+  // Event absensi aktif hari ini untuk dapur pegawai ini (mis. general cleaning).
   const event =
     (
       await query<EventAbsensi>(
-        `SELECT * FROM event_absensi WHERE aktif = TRUE AND tanggal = $1
+        `SELECT * FROM event_absensi WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2
           ORDER BY id DESC LIMIT 1`,
-        [tanggal],
+        [tanggal, session.sppg_id],
       )
     )[0] ?? null;
 
@@ -114,7 +116,7 @@ export const GET = route(async () => {
       ? { ...event, lintas_hari: isOvernight(event.jam_masuk, event.jam_pulang) }
       : null,
     settings: {
-      nama_dapur: settings.nama_dapur,
+      nama_dapur: settings.nama,
       alamat: settings.alamat,
       lat: settings.lat,
       lng: settings.lng,

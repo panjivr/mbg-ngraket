@@ -10,6 +10,10 @@ export interface SessionData {
   username: string;
   nama: string;
   role: Role;
+  /** Dapur/SPPG tempat akun bernaung (multi-tenant). */
+  sppg_id?: number;
+  /** Super admin pusat — bisa mengelola semua dapur. */
+  is_super?: boolean;
 }
 
 function secretKey(): Uint8Array {
@@ -56,6 +60,8 @@ export async function verifySession(
         username: payload.username,
         nama: payload.nama,
         role: payload.role,
+        sppg_id: typeof payload.sppg_id === "number" ? payload.sppg_id : undefined,
+        is_super: payload.is_super === true,
       };
     }
     return null;

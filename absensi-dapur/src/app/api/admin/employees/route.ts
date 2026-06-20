@@ -35,20 +35,22 @@ function toKelamin(v: unknown): string | null {
 }
 
 export const GET = route(async () => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const rows = await query<User>(
     `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
             u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin,
             d.nama AS divisi_nama
        FROM users u
        LEFT JOIN divisi d ON d.id = u.divisi_id
+      WHERE u.sppg_id = $1
       ORDER BY u.role DESC, u.nama ASC`,
+    [admin.sppg_id],
   );
   return ok({ employees: rows });
 });
 
 export const POST = route(async (req: NextRequest) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const body = await req.json().catch(() => ({}));
 
   const nama = String(body.nama ?? "").trim();
@@ -79,12 +81,22 @@ export const POST = route(async (req: NextRequest) => {
   );
   if (dup.length) return fail(409, "Username sudah dipakai.");
 
+  // Pastikan divisi (bila dipilih) milik dapur admin ini.
+  let divId = divisi_id;
+  if (divId !== null) {
+    const okDiv = await query<{ id: number }>(
+      `SELECT id FROM divisi WHERE id = $1 AND sppg_id = $2`,
+      [divId, admin.sppg_id],
+    );
+    if (!okDiv.length) divId = null;
+  }
+
   const hash = await hashPassword(password);
   const rows = await query<User>(
-    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin, sppg_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin`,
-    [nama, username, hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin],
+    [nama, username, hash, role, jabatan, nip, aktif, divId, tempat_lahir, tanggal_lahir, jenis_kelamin, admin.sppg_id],
   );
   return ok({ employee: rows[0] }, { status: 201 });
 });

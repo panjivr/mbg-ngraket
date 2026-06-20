@@ -12,11 +12,16 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 type Ctx = { params: Promise<{ id: string }> };
 
 export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
 
-  const cur = (await query<Divisi>(`SELECT * FROM divisi WHERE id = $1`, [id]))[0];
+  const cur = (
+    await query<Divisi>(`SELECT * FROM divisi WHERE id = $1 AND sppg_id = $2`, [
+      id,
+      admin.sppg_id,
+    ])
+  )[0];
   if (!cur) return fail(404, "Divisi tidak ditemukan.");
 
   const b = await req.json().catch(() => ({}));
@@ -42,27 +47,32 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   }
 
   const dup = await query<{ id: number }>(
-    `SELECT id FROM divisi WHERE lower(nama) = lower($1) AND id <> $2`,
-    [nama, id],
+    `SELECT id FROM divisi WHERE lower(nama) = lower($1) AND id <> $2 AND sppg_id = $3`,
+    [nama, id, admin.sppg_id],
   );
   if (dup.length) return fail(409, "Nama divisi sudah dipakai.");
 
   const rows = await query<Divisi>(
     `UPDATE divisi SET nama=$1, jam_masuk=$2, jam_pulang=$3, toleransi_menit=$4,
             aktif=$5, jobdesk=$6
-       WHERE id = $7 RETURNING *`,
-    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, id],
+       WHERE id = $7 AND sppg_id = $8 RETURNING *`,
+    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, id, admin.sppg_id],
   );
   return ok({ divisi: { ...rows[0], lintas_hari: isOvernight(jam_masuk, jam_pulang) } });
 });
 
 export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
-  const cur = (await query<{ id: number }>(`SELECT id FROM divisi WHERE id = $1`, [id]))[0];
+  const cur = (
+    await query<{ id: number }>(`SELECT id FROM divisi WHERE id = $1 AND sppg_id = $2`, [
+      id,
+      admin.sppg_id,
+    ])
+  )[0];
   if (!cur) return fail(404, "Divisi tidak ditemukan.");
   // users.divisi_id otomatis NULL (ON DELETE SET NULL).
-  await query(`DELETE FROM divisi WHERE id = $1`, [id]);
+  await query(`DELETE FROM divisi WHERE id = $1 AND sppg_id = $2`, [id, admin.sppg_id]);
   return ok({ ok: true });
 });

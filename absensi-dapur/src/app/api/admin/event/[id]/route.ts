@@ -13,13 +13,16 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Ubah event (mis. aktif/nonaktif). */
 export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
 
   const b = await req.json().catch(() => ({}));
   const existing = (
-    await query<EventAbsensi>(`SELECT * FROM event_absensi WHERE id = $1`, [id])
+    await query<EventAbsensi>(`SELECT * FROM event_absensi WHERE id = $1 AND sppg_id = $2`, [
+      id,
+      admin.sppg_id,
+    ])
   )[0];
   if (!existing) return fail(404, "Event tidak ditemukan.");
 
@@ -50,9 +53,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 });
 
 export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
-  await query(`DELETE FROM event_absensi WHERE id = $1`, [id]);
+  await query(`DELETE FROM event_absensi WHERE id = $1 AND sppg_id = $2`, [id, admin.sppg_id]);
   return ok({ ok: true });
 });

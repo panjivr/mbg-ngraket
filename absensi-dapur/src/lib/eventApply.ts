@@ -7,10 +7,11 @@
  */
 import { query } from "./db";
 import { statusMasukShift } from "./time";
-import type { Settings } from "./types";
+import { getSppg } from "./sppg";
 
 interface EventRow {
   id: number;
+  sppg_id: number | null;
   tanggal: string;
   jam_masuk: string;
   jam_pulang: string;
@@ -28,11 +29,6 @@ interface JadwalRow {
   toleransi_menit: number;
 }
 
-async function getTz(): Promise<string> {
-  const s = (await query<{ tz: string }>(`SELECT tz FROM settings WHERE id = 1`))[0];
-  return s?.tz || "Asia/Jakarta";
-}
-
 /**
  * Setel semua absensi pada tanggal event agar mengikuti jam event & hitung
  * ulang status masuk. Mengembalikan jumlah baris yang diperbarui.
@@ -40,17 +36,20 @@ async function getTz(): Promise<string> {
 export async function applyEventToDate(eventId: number): Promise<number> {
   const ev = (
     await query<EventRow>(
-      `SELECT id, tanggal, jam_masuk, jam_pulang, toleransi_menit
+      `SELECT id, sppg_id, tanggal, jam_masuk, jam_pulang, toleransi_menit
          FROM event_absensi WHERE id = $1`,
       [eventId],
     )
   )[0];
   if (!ev) return 0;
-  const tz = await getTz();
+  const sppg = await getSppg(ev.sppg_id as number);
+  const tz = sppg?.tz || "Asia/Jakarta";
+  // Hanya absensi pegawai di dapur yang sama dengan event.
   const rows = await query<AttRow>(
     `SELECT id, check_in FROM attendance
-      WHERE tanggal = $1 AND check_in IS NOT NULL`,
-    [ev.tanggal],
+      WHERE tanggal = $1 AND check_in IS NOT NULL
+        AND user_id IN (SELECT id FROM users WHERE sppg_id = $2)`,
+    [ev.tanggal, ev.sppg_id],
   );
   let n = 0;
   for (const r of rows) {
@@ -77,8 +76,14 @@ export async function applyEventToDate(eventId: number): Promise<number> {
  * (sub-shift bila ada, lalu divisi, lalu jam global) & hitung ulang status.
  */
 export async function revertEventFromDate(eventId: number): Promise<number> {
-  const tz = await getTz();
-  const settings = (await query<Settings>(`SELECT * FROM settings WHERE id = 1`))[0];
+  const ev = (
+    await query<{ sppg_id: number | null }>(
+      `SELECT sppg_id FROM event_absensi WHERE id = $1`,
+      [eventId],
+    )
+  )[0];
+  const sppg = ev ? await getSppg(ev.sppg_id as number) : null;
+  const tz = sppg?.tz || "Asia/Jakarta";
   const rows = await query<AttRow>(
     `SELECT id, check_in, divisi_id, divisi_shift_id
        FROM attendance WHERE event_id = $1 AND check_in IS NOT NULL`,
@@ -86,8 +91,8 @@ export async function revertEventFromDate(eventId: number): Promise<number> {
   );
   let n = 0;
   for (const r of rows) {
-    let jm = settings.jam_masuk;
-    let jp = settings.jam_pulang;
+    let jm = sppg?.jam_masuk || "07:00";
+    let jp = sppg?.jam_pulang || "15:00";
     let tol = 0;
     if (r.divisi_shift_id) {
       const sh = (
