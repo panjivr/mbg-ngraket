@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { isOvernight } from "@/lib/time";
+import { applyEventToDate } from "@/lib/eventApply";
 import { ok, fail, route } from "@/lib/api";
 import type { EventAbsensi } from "@/lib/types";
 
@@ -47,5 +48,7 @@ export const POST = route(async (req: NextRequest) => {
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
     [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif],
   );
-  return ok({ event: withDerived(rows[0]) }, { status: 201 });
+  // Terapkan ke absensi yang sudah tercatat pada tanggal event (retroaktif).
+  const affected = aktif ? await applyEventToDate(rows[0].id) : 0;
+  return ok({ event: withDerived(rows[0]), affected }, { status: 201 });
 });

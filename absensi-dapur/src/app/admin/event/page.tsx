@@ -46,6 +46,7 @@ export default function EventPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -64,6 +65,7 @@ export default function EventPage() {
   async function save() {
     setSaving(true);
     setError(null);
+    setMsg(null);
     try {
       const res = await fetch("/api/admin/event", {
         method: "POST",
@@ -76,6 +78,9 @@ export default function EventPage() {
         return;
       }
       setForm({ ...emptyForm });
+      setMsg(
+        `Event dibuat. ${data.affected ?? 0} absensi pada tanggal itu disesuaikan ke jadwal event (tidak terhitung terlambat).`,
+      );
       await load();
     } catch {
       setError("Tidak dapat terhubung ke server.");
@@ -85,11 +90,32 @@ export default function EventPage() {
   }
 
   async function toggle(e: EventRow) {
-    await fetch(`/api/admin/event/${e.id}`, {
+    setMsg(null);
+    const res = await fetch(`/api/admin/event/${e.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aktif: !e.aktif }),
     });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok)
+      setMsg(
+        e.aktif
+          ? `Event dinonaktifkan. ${data.affected ?? 0} absensi dikembalikan ke jadwal divisi/shift asal.`
+          : `Event diaktifkan. ${data.affected ?? 0} absensi disesuaikan ke jadwal event.`,
+      );
+    await load();
+  }
+
+  async function reapply(e: EventRow) {
+    setMsg(null);
+    const res = await fetch(`/api/admin/event/${e.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reapply: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok)
+      setMsg(`Disinkronkan. ${data.affected ?? 0} absensi mengikuti jadwal event.`);
     await load();
   }
 
@@ -174,6 +200,12 @@ export default function EventPage() {
         </button>
       </div>
 
+      {msg && (
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {msg}
+        </p>
+      )}
+
       {/* Daftar event */}
       <div className="card overflow-hidden">
         {loading ? (
@@ -231,7 +263,16 @@ export default function EventPage() {
                         </button>
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
+                          {e.aktif && (
+                            <button
+                              onClick={() => reapply(e)}
+                              className="btn-ghost px-2.5 py-1 text-xs"
+                              title="Terapkan ulang jadwal event ke absensi tanggal ini"
+                            >
+                              ↻ Sinkronkan
+                            </button>
+                          )}
                           <button
                             onClick={() => remove(e)}
                             className="btn-danger px-2.5 py-1 text-xs"
