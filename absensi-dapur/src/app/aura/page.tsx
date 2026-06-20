@@ -5,6 +5,7 @@ import Link from "next/link";
 import BgnLogo from "@/components/BgnLogo";
 import RamalanLengkap from "@/components/RamalanLengkap";
 import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
+import ChaldeanLengkap from "@/components/ChaldeanLengkap";
 import { hitungWeton, hitungJodoh } from "@/lib/weton";
 
 function KalkulatorWeton() {
@@ -53,6 +54,7 @@ function KalkulatorWeton() {
       </div>
       {tgl && <RamalanLengkap tgl={tgl} nama={nama || undefined} />}
       {tgl && <ShioFengshuiLengkap nama={nama} tgl={tgl} jenisKelamin={kelamin} />}
+      {tgl && nama.trim() && <ChaldeanLengkap nama={nama} tgl={tgl} />}
     </div>
   );
 }

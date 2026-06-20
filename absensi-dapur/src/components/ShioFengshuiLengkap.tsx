@@ -12,12 +12,12 @@ import {
 /* Palet & gaya "Pusaka Shio & Fengshui" (di-scope ke .sf-root agar tidak
    mengganggu tema aplikasi yang sudah ada). */
 const STYLE = `
-.sf-root{--ink:#0E0B0A;--surf:#1C1613;--surf2:#241B16;--gold:#C9A227;--gold-lite:#E4C66B;
-  --cinnabar:#C2402E;--cinnabar-lite:#E0654F;--jade:#5FA383;--parch:#EFE7D6;--muted:#A39A8B;
-  --line:rgba(201,162,39,.22);--good:#5FA383;
+.sf-root{--ink:#0a1740;--surf:#0e1f55;--surf2:#16306e;--gold:#e0a92e;--gold-lite:#f3c349;
+  --cinnabar:#ef4444;--cinnabar-lite:#f87171;--jade:#34d399;--parch:#e2e8f0;--muted:#94a3b8;
+  --line:rgba(91,139,255,.22);--good:#34d399;--blue:#5b8bff;
   color:var(--parch);background:
-   radial-gradient(900px 360px at 50% -10%,rgba(194,64,46,.12),transparent 60%),
-   radial-gradient(700px 320px at 95% 0%,rgba(201,162,39,.08),transparent 55%),
+   radial-gradient(900px 360px at 50% -10%,rgba(52,100,230,.16),transparent 60%),
+   radial-gradient(700px 320px at 95% 0%,rgba(243,195,73,.07),transparent 55%),
    var(--ink);
   border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .sf-root *{box-sizing:border-box}
@@ -25,12 +25,12 @@ const STYLE = `
 .sf-eyebrow{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.28em;
   text-transform:uppercase;color:var(--gold-lite)}
 .sf-hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap;
-  border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(201,162,39,.06),transparent)}
+  border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(52,100,230,.10),transparent)}
 .sf-glyph{width:96px;height:96px;flex:none;border-radius:14px;display:grid;place-items:center;
-  background:radial-gradient(circle at 50% 35%,rgba(194,64,46,.35),rgba(20,15,13,.9));
-  border:1px solid var(--line);box-shadow:inset 0 0 30px rgba(0,0,0,.5)}
+  background:radial-gradient(circle at 50% 35%,rgba(52,100,230,.38),rgba(10,23,64,.92));
+  border:1px solid var(--line);box-shadow:inset 0 0 30px rgba(0,0,0,.45)}
 .sf-glyph span{font-family:"Cormorant Garamond",serif;font-size:54px;line-height:1;color:var(--gold-lite);
-  text-shadow:0 2px 10px rgba(194,64,46,.5)}
+  text-shadow:0 2px 12px rgba(52,100,230,.55)}
 .sf-h2{font-family:"Cormorant Garamond",serif;font-size:clamp(26px,5vw,38px);font-weight:700;
   margin:.18em 0;line-height:1.05;color:var(--parch)}
 .sf-sub{font-size:13px;color:var(--gold-lite)}
@@ -93,17 +93,17 @@ function wheelHTML(activeNama: string): string {
   let s = "";
   for (let i = 0; i < 5; i++) {
     const a = pts[i], b = pts[(i + 2) % 5];
-    s += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(194,64,46,.45)" stroke-width="1.3"/>`;
+    s += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(239,68,68,.45)" stroke-width="1.3"/>`;
   }
   for (let i = 0; i < 5; i++) {
     const a = pts[i], b = pts[(i + 1) % 5];
-    s += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(95,163,131,.6)" stroke-width="1.6"/>`;
+    s += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(52,211,153,.6)" stroke-width="1.6"/>`;
   }
   pts.forEach((p) => {
     const on = E[p.id].nama === activeNama;
-    s += `<circle cx="${p.x}" cy="${p.y}" r="${on ? 22 : 17}" fill="${on ? E[p.id].hex : "#1C1613"}" stroke="${E[p.id].warna}" stroke-width="${on ? 3 : 1.6}"/>`;
-    s += `<text x="${p.x}" y="${p.y + 1}" text-anchor="middle" dominant-baseline="middle" font-family="Cormorant Garamond,serif" font-size="${on ? 20 : 16}" fill="${on ? "#0E0B0A" : E[p.id].warna}" font-weight="700">${E[p.id].han}</text>`;
-    s += `<text x="${p.x}" y="${p.y + (p.y < cy ? -28 : 30)}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="${on ? E[p.id].warna : "#A39A8B"}">${E[p.id].nama}</text>`;
+    s += `<circle cx="${p.x}" cy="${p.y}" r="${on ? 22 : 17}" fill="${on ? E[p.id].hex : "#0e1f55"}" stroke="${E[p.id].warna}" stroke-width="${on ? 3 : 1.6}"/>`;
+    s += `<text x="${p.x}" y="${p.y + 1}" text-anchor="middle" dominant-baseline="middle" font-family="Cormorant Garamond,serif" font-size="${on ? 20 : 16}" fill="${on ? "#0a1740" : E[p.id].warna}" font-weight="700">${E[p.id].han}</text>`;
+    s += `<text x="${p.x}" y="${p.y + (p.y < cy ? -28 : 30)}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="${on ? E[p.id].warna : "#94a3b8"}">${E[p.id].nama}</text>`;
   });
   return s;
 }
@@ -119,8 +119,8 @@ function compassHTML(k: SfFengshui): string {
   const q: Record<string, string> = {};
   k.baik.forEach((a) => (q[a.arahKode] = a.nama.includes("Sheng") ? "best" : "good"));
   k.buruk.forEach((a) => (q[a.arahKode] = a.nama.includes("Jue Ming") ? "worst" : "bad"));
-  const COL: Record<string, string> = { best: "#C9A227", good: "#5FA383", bad: "#C2402E", worst: "#7a1e16" };
-  let str = `<circle cx="${cx}" cy="${cy}" r="${R + 18}" fill="none" stroke="rgba(201,162,39,.18)"/>`;
+  const COL: Record<string, string> = { best: "#e0a92e", good: "#34d399", bad: "#ef4444", worst: "#7f1d1d" };
+  let str = `<circle cx="${cx}" cy="${cy}" r="${R + 18}" fill="none" stroke="rgba(243,195,73,.18)"/>`;
   order.forEach((code, i) => {
     const a0 = ((i * 45 - 22.5) * Math.PI) / 180 - Math.PI / 2;
     const a1 = ((i * 45 + 22.5) * Math.PI) / 180 - Math.PI / 2;
@@ -132,12 +132,12 @@ function compassHTML(k: SfFengshui): string {
     str += `<path d="M${x0},${y0} L${x1},${y1} A${rOut},${rOut} 0 0,1 ${x2},${y2} L${x3},${y3} A${rIn},${rIn} 0 0,0 ${x0},${y0} Z" fill="${col}" fill-opacity="${op}" stroke="#0E0B0A" stroke-width="1.5"/>`;
     const am = (i * 45 * Math.PI) / 180 - Math.PI / 2;
     const [lx, ly] = p(am, (rIn + rOut) / 2);
-    str += `<text x="${lx}" y="${ly - 3}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#0E0B0A">${code}</text>`;
-    str += `<text x="${lx}" y="${ly + 10}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(14,11,10,.8)">${ARAH[code].slice(0, 8)}</text>`;
+    str += `<text x="${lx}" y="${ly - 3}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#0a1740">${code}</text>`;
+    str += `<text x="${lx}" y="${ly + 10}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="rgba(10,23,64,.85)">${ARAH[code].slice(0, 8)}</text>`;
   });
-  str += `<circle cx="${cx}" cy="${cy}" r="30" fill="#16110F" stroke="rgba(201,162,39,.5)"/>`;
-  str += `<text x="${cx}" y="${cy - 3}" text-anchor="middle" font-family="Cormorant Garamond,serif" font-size="22" fill="#E4C66B" font-weight="700">${k.kuaNo}</text>`;
-  str += `<text x="${cx}" y="${cy + 12}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#A39A8B">KUA</text>`;
+  str += `<circle cx="${cx}" cy="${cy}" r="30" fill="#0e1f55" stroke="rgba(243,195,73,.5)"/>`;
+  str += `<text x="${cx}" y="${cy - 3}" text-anchor="middle" font-family="Cormorant Garamond,serif" font-size="22" fill="#f3c349" font-weight="700">${k.kuaNo}</text>`;
+  str += `<text x="${cx}" y="${cy + 12}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#94a3b8">KUA</text>`;
   return str;
 }
 
@@ -397,7 +397,7 @@ export default function ShioFengshuiLengkap({
                 <span><i style={{ background: "var(--gold)" }} />Sangat Baik</span>
                 <span><i style={{ background: "var(--jade)" }} />Baik</span>
                 <span><i style={{ background: "var(--cinnabar)" }} />Buruk</span>
-                <span><i style={{ background: "#7a1e16" }} />Terburuk</span>
+                <span><i style={{ background: "#7f1d1d" }} />Terburuk</span>
               </div>
             </div>
             <div className="sf-vizcard" style={{ alignItems: "stretch" }}>

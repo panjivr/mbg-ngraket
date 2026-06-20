@@ -8,6 +8,7 @@ import { fmtDurasi } from "@/lib/time";
 import { formatTanggalIndo } from "@/lib/weton";
 import RamalanLengkap from "@/components/RamalanLengkap";
 import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
+import ChaldeanLengkap from "@/components/ChaldeanLengkap";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 
 interface Akun {
@@ -176,6 +177,11 @@ export default function LaporanPegawaiPage() {
             tgl={kartu.tanggal_lahir}
             jenisKelamin={kartu.jenis_kelamin}
           />
+        )}
+
+        {/* Numerologi Chaldean — setelah Shio & Fengshui */}
+        {kartu.tanggal_lahir && (
+          <ChaldeanLengkap nama={kartu.nama} tgl={kartu.tanggal_lahir} />
         )}
 
         {/* Jadwal & tugas */}

@@ -5,6 +5,7 @@ import KartuShare from "@/components/KartuShare";
 import type { KartuPegawai as Kartu } from "@/lib/types";
 import RamalanLengkap from "@/components/RamalanLengkap";
 import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
+import ChaldeanLengkap from "@/components/ChaldeanLengkap";
 
 const MAX_BIO = 200;
 
@@ -134,6 +135,11 @@ export default function ProfilPage() {
           tgl={kartu.tanggal_lahir}
           jenisKelamin={kartu.jenis_kelamin}
         />
+      )}
+
+      {/* Numerologi Chaldean — setelah Shio & Fengshui */}
+      {kartu?.tanggal_lahir && (
+        <ChaldeanLengkap nama={kartu.nama} tgl={kartu.tanggal_lahir} />
       )}
 
       <div className="card space-y-4 p-4">
