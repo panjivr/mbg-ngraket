@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+interface ShiftOpt {
+  id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  lintas_hari?: boolean;
+}
+
 interface Divisi {
   id: number;
   nama: string;
@@ -12,6 +21,7 @@ interface Divisi {
   aktif: boolean;
   lintas_hari?: boolean;
   jumlah_staf?: number;
+  shifts?: ShiftOpt[];
 }
 
 interface FormState {
@@ -40,15 +50,68 @@ export default function DivisiPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shiftMgr, setShiftMgr] = useState<Divisi | null>(null);
+  const [newShift, setNewShift] = useState({
+    nama: "",
+    jam_masuk: "07:00",
+    jam_pulang: "15:00",
+    toleransi_menit: 10,
+  });
+  const [shiftBusy, setShiftBusy] = useState(false);
 
   async function load() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/divisi", { cache: "no-store" });
       const data = await res.json();
-      setList(data.divisi || []);
+      const divisi: Divisi[] = data.divisi || [];
+      setList(divisi);
+      // Segarkan modal shift bila sedang terbuka.
+      setShiftMgr((prev) => (prev ? divisi.find((x) => x.id === prev.id) ?? null : null));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function addShift() {
+    if (!shiftMgr) return;
+    if (!newShift.nama.trim()) {
+      setError("Nama shift wajib diisi.");
+      return;
+    }
+    setShiftBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/divisi/${shiftMgr.id}/shift`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newShift),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Gagal menambah shift.");
+        return;
+      }
+      setNewShift({ nama: "", jam_masuk: "07:00", jam_pulang: "15:00", toleransi_menit: 10 });
+      await load();
+    } catch {
+      setError("Tidak dapat terhubung ke server.");
+    } finally {
+      setShiftBusy(false);
+    }
+  }
+
+  async function deleteShift(shiftId: number) {
+    if (!shiftMgr) return;
+    if (!confirm("Hapus shift ini?")) return;
+    setShiftBusy(true);
+    try {
+      await fetch(`/api/admin/divisi/${shiftMgr.id}/shift?shiftId=${shiftId}`, {
+        method: "DELETE",
+      });
+      await load();
+    } finally {
+      setShiftBusy(false);
     }
   }
   useEffect(() => {
@@ -198,6 +261,16 @@ export default function DivisiPage() {
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => {
+                            setError(null);
+                            setShiftMgr(d);
+                          }}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                          title="Kelola sub-shift (mis. keamanan pagi/siang/malam)"
+                        >
+                          🕒 Shift{d.shifts?.length ? ` (${d.shifts.length})` : ""}
+                        </button>
+                        <button
                           onClick={() => openEdit(d)}
                           className="btn-ghost px-2.5 py-1 text-xs"
                         >
@@ -218,6 +291,113 @@ export default function DivisiPage() {
           </div>
         )}
       </div>
+
+      {/* Modal kelola sub-shift */}
+      {shiftMgr && (
+        <div
+          className="fixed inset-0 z-20 grid place-items-center overflow-y-auto bg-black/60 p-4"
+          onClick={() => setShiftMgr(null)}
+        >
+          <div
+            className="card w-full max-w-lg p-6"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">Shift — {shiftMgr.nama}</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Tambahkan beberapa shift agar staf (mis. keamanan) bisa memilih sendiri
+              shift-nya saat absen. Status tepat/terlambat mengikuti shift yang dipilih.
+            </p>
+
+            <div className="mt-4 space-y-2">
+              {shiftMgr.shifts && shiftMgr.shifts.length > 0 ? (
+                shiftMgr.shifts.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-lg border border-white/5 bg-ink-900/60 px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{s.nama}</p>
+                      <p className="font-mono text-xs text-slate-400">
+                        {s.jam_masuk}–{s.jam_pulang} · toleransi {s.toleransi_menit} mnt
+                        {s.lintas_hari ? " · lintas hari" : ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteShift(s.id)}
+                      disabled={shiftBusy}
+                      className="btn-danger px-2.5 py-1 text-xs"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-lg border border-white/5 bg-ink-900/60 px-3 py-2 text-sm text-slate-500">
+                  Belum ada sub-shift. Tanpa sub-shift, divisi memakai jam kerja utamanya.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-xl border border-white/10 p-3">
+              <p className="mb-2 text-sm font-semibold">Tambah Shift</p>
+              <div className="space-y-2">
+                <input
+                  className="input"
+                  placeholder="Nama shift, mis. Shift 1 (Pagi)"
+                  value={newShift.nama}
+                  onChange={(e) => setNewShift({ ...newShift, nama: e.target.value })}
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="label">Masuk</label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={newShift.jam_masuk}
+                      onChange={(e) => setNewShift({ ...newShift, jam_masuk: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Pulang</label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={newShift.jam_pulang}
+                      onChange={(e) => setNewShift({ ...newShift, jam_pulang: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Toleransi</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={240}
+                      className="input"
+                      value={newShift.toleransi_menit}
+                      onChange={(e) =>
+                        setNewShift({ ...newShift, toleransi_menit: Number(e.target.value) })
+                      }
+                    />
+                  </div>
+                </div>
+                <button onClick={addShift} disabled={shiftBusy} className="btn-gold w-full">
+                  {shiftBusy ? "Menyimpan…" : "+ Tambah Shift"}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {error}
+              </p>
+            )}
+
+            <button onClick={() => setShiftMgr(null)} className="btn-ghost mt-4 w-full">
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
 
       {form && (
         <div

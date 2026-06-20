@@ -39,6 +39,7 @@ export default async function AdminLayout({
           <NavLink href="/admin/rekap" label="Rekap Absensi" />
           <NavLink href="/admin/pegawai" label="Pegawai" />
           <NavLink href="/admin/divisi" label="Divisi" />
+          <NavLink href="/admin/event" label="Event" />
           <NavLink href="/admin/pengaturan" label="Pengaturan" />
         </nav>
       </header>

@@ -26,6 +26,23 @@ interface ShiftInfo {
   lintas_hari: boolean;
 }
 
+interface ShiftOpt {
+  id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  lintas_hari?: boolean;
+}
+
+interface EventInfo {
+  id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+}
+
 interface AbsRow {
   id: number;
   check_in: string | null;
@@ -45,6 +62,9 @@ export default function AbsenPanel() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<SettingsLite | null>(null);
   const [shift, setShift] = useState<ShiftInfo | null>(null);
+  const [shifts, setShifts] = useState<ShiftOpt[]>([]);
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [current, setCurrent] = useState<AbsRow | null>(null);
   const [last, setLast] = useState<AbsRow | null>(null);
   const [tanggal, setTanggal] = useState("");
@@ -78,9 +98,15 @@ export default function AbsenPanel() {
     const data = await res.json();
     setSettings(data.settings);
     setShift(data.shift);
+    setShifts(data.shifts || []);
+    setEventInfo(data.event || null);
     setCurrent(data.current);
     setLast(data.last);
     setTanggal(data.tanggal);
+    // Default pilihan shift ke opsi pertama bila belum dipilih.
+    setSelectedShiftId((prev) =>
+      prev ?? (data.shifts && data.shifts.length ? data.shifts[0].id : null),
+    );
   }, []);
 
   const requestLocation = useCallback(() => {
@@ -194,6 +220,8 @@ export default function AbsenPanel() {
           lat: geo?.lat ?? null,
           lng: geo?.lng ?? null,
           selfie,
+          // shift dipilih hanya saat check-in & tidak ada event yang menimpa.
+          shift_id: eventInfo ? null : selectedShiftId,
         }),
       });
       const data = await res.json();
@@ -293,25 +321,86 @@ export default function AbsenPanel() {
         <p className="mt-2 text-sm text-slate-400">{tanggalTampil}</p>
       </div>
 
+      {/* Banner event (mis. general cleaning) — menimpa jadwal semua orang */}
+      {eventInfo && (
+        <div className="card border-ember-500/40 bg-ember-500/10 p-4">
+          <p className="text-sm font-bold text-ember-200">📣 Hari Ini Ada Event</p>
+          <p className="mt-1 text-sm text-ember-100">
+            <b>{eventInfo.nama}</b> — semua karyawan mengikuti jadwal{" "}
+            <span className="font-mono">
+              {eventInfo.jam_masuk}–{eventInfo.jam_pulang}
+            </span>
+            . Selama event, jadwal divisi/shift tidak berlaku (tidak terhitung terlambat
+            bila masuk dalam jam event).
+          </p>
+        </div>
+      )}
+
+      {/* Pemilih shift (mis. keamanan pagi/siang/malam) — saat akan absen masuk */}
+      {!eventInfo && !current && shifts.length > 0 && (
+        <div className="card p-4">
+          <label className="label">Pilih Shift Anda</label>
+          <select
+            className="input"
+            value={selectedShiftId ?? ""}
+            onChange={(e) => setSelectedShiftId(Number(e.target.value) || null)}
+          >
+            {shifts.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nama} · {s.jam_masuk}–{s.jam_pulang}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-slate-500">
+            Status tepat/terlambat dihitung sesuai shift yang Anda pilih.
+          </p>
+        </div>
+      )}
+
       {/* Info shift / divisi */}
       {shift && (
         <div className="card p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Shift Anda</p>
-              <p className="mt-0.5 text-sm font-semibold">
-                {shift.divisi_nama || "Umum (jam global dapur)"}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-mono text-sm font-semibold text-gold-400">
-                {shift.jam_masuk}–{shift.jam_pulang}
-              </p>
-              {shift.lintas_hari && (
-                <span className="badge bg-ember-500/15 text-ember-400">lintas hari</span>
-              )}
-            </div>
-          </div>
+          {(() => {
+            const selShift = shifts.find((s) => s.id === selectedShiftId) || null;
+            const eff = eventInfo
+              ? {
+                  nama: `Event: ${eventInfo.nama}`,
+                  jam_masuk: eventInfo.jam_masuk,
+                  jam_pulang: eventInfo.jam_pulang,
+                  lintas: false,
+                }
+              : selShift && !current
+              ? {
+                  nama: `${shift.divisi_nama || "Divisi"} · ${selShift.nama}`,
+                  jam_masuk: selShift.jam_masuk,
+                  jam_pulang: selShift.jam_pulang,
+                  lintas: !!selShift.lintas_hari,
+                }
+              : {
+                  nama: shift.divisi_nama || "Umum (jam global dapur)",
+                  jam_masuk: shift.jam_masuk,
+                  jam_pulang: shift.jam_pulang,
+                  lintas: shift.lintas_hari,
+                };
+            return (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Jadwal Berlaku
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold">{eff.nama}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-sm font-semibold text-gold-400">
+                    {eff.jam_masuk}–{eff.jam_pulang}
+                  </p>
+                  {eff.lintas && (
+                    <span className="badge bg-ember-500/15 text-ember-400">lintas hari</span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {shift.jobdesk && (
             <div className="mt-3 rounded-lg border border-white/5 bg-ink-900/60 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">

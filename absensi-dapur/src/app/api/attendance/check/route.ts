@@ -43,9 +43,9 @@ export const POST = route(async (req: NextRequest) => {
     )
   )[0];
 
-  const jamMasuk = shift?.jam_masuk || settings.jam_masuk;
-  const jamPulang = shift?.jam_pulang || settings.jam_pulang;
-  const toleransi = shift?.toleransi_menit ?? 0;
+  let jamMasuk = shift?.jam_masuk || settings.jam_masuk;
+  let jamPulang = shift?.jam_pulang || settings.jam_pulang;
+  let toleransi = shift?.toleransi_menit ?? 0;
   const divisiId = shift?.divisi_id ?? null;
 
   // --- Validasi selfie ---
@@ -79,6 +79,51 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const now = new Date();
+
+  // --- Jadwal efektif untuk status masuk: Event > Sub-shift pilihan > Divisi > Global ---
+  let divisiShiftId: number | null = null;
+  let eventId: number | null = null;
+  const tglEvent = localDate(settings.tz, now);
+  const ev = (
+    await query<{
+      id: number;
+      jam_masuk: string;
+      jam_pulang: string;
+      toleransi_menit: number;
+    }>(
+      `SELECT id, jam_masuk, jam_pulang, toleransi_menit FROM event_absensi
+        WHERE aktif = TRUE AND tanggal = $1 ORDER BY id DESC LIMIT 1`,
+      [tglEvent],
+    )
+  )[0];
+  if (ev) {
+    jamMasuk = ev.jam_masuk;
+    jamPulang = ev.jam_pulang;
+    toleransi = ev.toleransi_menit;
+    eventId = ev.id;
+  } else {
+    const shiftIdReq = toNum(body.shift_id);
+    if (shiftIdReq !== null && divisiId) {
+      const sh = (
+        await query<{
+          id: number;
+          jam_masuk: string;
+          jam_pulang: string;
+          toleransi_menit: number;
+        }>(
+          `SELECT id, jam_masuk, jam_pulang, toleransi_menit FROM divisi_shift
+            WHERE id = $1 AND divisi_id = $2`,
+          [shiftIdReq, divisiId],
+        )
+      )[0];
+      if (sh) {
+        jamMasuk = sh.jam_masuk;
+        jamPulang = sh.jam_pulang;
+        toleransi = sh.toleransi_menit;
+        divisiShiftId = sh.id;
+      }
+    }
+  }
 
   const result = await withClient(async (client) => {
     await client.query("BEGIN");
@@ -125,8 +170,9 @@ export const POST = route(async (req: NextRequest) => {
         await client.query<Attendance>(
           `INSERT INTO attendance
              (user_id, tanggal, shift_tanggal, divisi_id, shift_masuk, shift_pulang,
-              check_in, status_masuk, check_in_lat, check_in_lng, check_in_jarak, selfie_in)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+              check_in, status_masuk, check_in_lat, check_in_lng, check_in_jarak, selfie_in,
+              divisi_shift_id, event_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
            RETURNING *`,
           [
             session.uid,
@@ -141,6 +187,8 @@ export const POST = route(async (req: NextRequest) => {
             lng,
             jarak,
             selfie,
+            divisiShiftId,
+            eventId,
           ],
         )
       ).rows[0];

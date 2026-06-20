@@ -3,7 +3,7 @@ import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import { isOvernight } from "@/lib/time";
-import type { Divisi } from "@/lib/types";
+import type { Divisi, DivisiShift } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,18 @@ export const GET = route(async () => {
     `SELECT d.*, (SELECT COUNT(*)::int FROM users u WHERE u.divisi_id = d.id) AS jumlah_staf
        FROM divisi d ORDER BY d.nama ASC`,
   );
-  return ok({ divisi: rows.map(withDerived) });
+  const shifts = await query<DivisiShift>(
+    `SELECT * FROM divisi_shift ORDER BY divisi_id, urutan, id`,
+  );
+  const byDiv = new Map<number, DivisiShift[]>();
+  for (const s of shifts) {
+    const arr = byDiv.get(s.divisi_id) ?? [];
+    arr.push({ ...s, lintas_hari: isOvernight(s.jam_masuk, s.jam_pulang) });
+    byDiv.set(s.divisi_id, arr);
+  }
+  return ok({
+    divisi: rows.map((d) => withDerived({ ...d, shifts: byDiv.get(d.id) ?? [] })),
+  });
 });
 
 export const POST = route(async (req: NextRequest) => {

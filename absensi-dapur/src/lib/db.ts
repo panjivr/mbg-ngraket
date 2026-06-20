@@ -230,10 +230,78 @@ async function doEnsureSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_attendance_user ON attendance (user_id)`,
     );
 
+    // --- Sub-shift per divisi (mis. Keamanan: pagi/siang/malam) ---
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS divisi_shift (
+        id              SERIAL PRIMARY KEY,
+        divisi_id       INTEGER NOT NULL REFERENCES divisi(id) ON DELETE CASCADE,
+        nama            TEXT NOT NULL,
+        jam_masuk       TEXT NOT NULL,
+        jam_pulang      TEXT NOT NULL,
+        toleransi_menit INTEGER NOT NULL DEFAULT 10,
+        urutan          INTEGER NOT NULL DEFAULT 0,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_divisi_shift_divisi ON divisi_shift (divisi_id)`,
+    );
+
+    // --- Event absensi (mis. "General Cleaning" — semua serentak, hari tertentu) ---
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS event_absensi (
+        id              SERIAL PRIMARY KEY,
+        nama            TEXT NOT NULL,
+        tanggal         DATE NOT NULL,
+        jam_masuk       TEXT NOT NULL,
+        jam_pulang      TEXT NOT NULL,
+        toleransi_menit INTEGER NOT NULL DEFAULT 15,
+        aktif           BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_event_tanggal ON event_absensi (tanggal)`,
+    );
+
+    // Jejak shift/event yang dipakai saat absen (untuk rekap).
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS divisi_shift_id INTEGER`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS event_id INTEGER`,
+    );
+
     // Seed singleton settings row.
     await client.query(
       `INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
     );
+
+    // Seed 3 shift untuk divisi keamanan (bila tabel shift masih kosong) agar
+    // petugas keamanan bisa memilih shift sendiri & tidak terhitung terlambat.
+    const shiftCount = await client.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM divisi_shift`,
+    );
+    if (Number(shiftCount.rows[0].c) === 0) {
+      const keamanan = await client.query<{ id: number }>(
+        `SELECT id FROM divisi WHERE nama ILIKE '%keamanan%' ORDER BY id LIMIT 1`,
+      );
+      if (keamanan.rows[0]) {
+        const kid = keamanan.rows[0].id;
+        const shifts: Array<[string, string, string, number, number]> = [
+          ["Shift 1 (Pagi)", "07:00", "15:00", 10, 1],
+          ["Shift 2 (Siang)", "15:00", "23:00", 10, 2],
+          ["Shift 3 (Malam)", "23:00", "07:00", 10, 3],
+        ];
+        for (const [nama, jm, jp, tol, urut] of shifts) {
+          await client.query(
+            `INSERT INTO divisi_shift (divisi_id, nama, jam_masuk, jam_pulang, toleransi_menit, urutan)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [kid, nama, jm, jp, tol, urut],
+          );
+        }
+      }
+    }
 
     // Seed contoh divisi (hanya bila tabel divisi masih kosong). Termasuk
     // satu shift malam lintas hari sebagai contoh (22:00 -> 08:00).

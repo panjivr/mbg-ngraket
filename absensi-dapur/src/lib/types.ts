@@ -13,6 +13,31 @@ export interface Divisi {
   /** Turunan: shift melewati tengah malam (jam_pulang <= jam_masuk). */
   lintas_hari?: boolean;
   jumlah_staf?: number;
+  /** Turunan: daftar sub-shift (mis. keamanan pagi/siang/malam). */
+  shifts?: DivisiShift[];
+}
+
+export interface DivisiShift {
+  id: number;
+  divisi_id: number;
+  nama: string;
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  urutan: number;
+  lintas_hari?: boolean;
+}
+
+export interface EventAbsensi {
+  id: number;
+  nama: string;
+  tanggal: string; // YYYY-MM-DD
+  jam_masuk: string;
+  jam_pulang: string;
+  toleransi_menit: number;
+  aktif: boolean;
+  created_at: string;
+  lintas_hari?: boolean;
 }
 
 export interface User {
