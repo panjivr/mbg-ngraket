@@ -56,6 +56,7 @@ export default async function AdminLayout({
         <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
           <NavLink href="/admin" label="Dashboard" exact />
           <NavLink href="/admin/rekap" label="Rekap Absensi" />
+          <NavLink href="/admin/gaji" label="Rekap Gaji" />
           <NavLink href="/admin/pegawai" label="Pegawai" />
           <NavLink href="/admin/divisi" label="Divisi" />
           <NavLink href="/admin/event" label="Event" />
