@@ -184,6 +184,10 @@ export default function AbsenPanel() {
     canvas.height = Math.round(vh * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    // Balik horizontal agar foto tersimpan dalam orientasi asli (tidak mirror),
+    // konsisten dengan preview yang juga dibalik via CSS (-scale-x-100).
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
     setSelfie(dataUrl);
@@ -503,7 +507,8 @@ export default function AbsenPanel() {
                 playsInline
                 muted
                 className={
-                  "mx-auto max-h-72 w-full object-cover " + (cameraOn ? "" : "hidden")
+                  "mx-auto max-h-72 w-full -scale-x-100 object-cover " +
+                  (cameraOn ? "" : "hidden")
                 }
               />
             )}

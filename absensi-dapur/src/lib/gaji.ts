@@ -40,6 +40,8 @@ export interface BarisPegawai {
   /** Kunci = tanggal "YYYY-MM-DD". */
   sel: Map<string, SelHari>;
   jumlahHadir: number;
+  /** Total menit kerja seluruh tanggal hadir (untuk ringkasan total jam). */
+  totalMenit: number;
 }
 
 export interface GrupDivisi {
@@ -99,6 +101,7 @@ export function buildMatrix(rows: BarisAbsensi[], opsi: OpsiMatriks): Matriks {
         nip: r.nip,
         sel: new Map(),
         jumlahHadir: 0,
+        totalMenit: 0,
       };
       pegMap.set(r.user_id, peg);
     }
@@ -117,7 +120,12 @@ export function buildMatrix(rows: BarisAbsensi[], opsi: OpsiMatriks): Matriks {
   const divisiList: GrupDivisi[] = [...divisiMap.entries()]
     .map(([nama, pegMap]) => {
       const pegawai = [...pegMap.values()];
-      for (const p of pegawai) p.jumlahHadir = p.sel.size;
+      for (const p of pegawai) {
+        p.jumlahHadir = p.sel.size;
+        let total = 0;
+        for (const s of p.sel.values()) total += s.menit;
+        p.totalMenit = total;
+      }
       pegawai.sort((a, b) => a.nama.localeCompare(b.nama, "id"));
       return { nama, pegawai };
     })
