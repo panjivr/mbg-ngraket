@@ -61,6 +61,7 @@ export default async function AdminLayout({
           <NavLink href="/admin/divisi" label="Divisi" />
           <NavLink href="/admin/event" label="Event" />
           <NavLink href="/admin/pengaturan" label="Pengaturan" />
+          {isSuper && <NavLink href="/admin/pusat" label="🌐 Semua Dapur" />}
           {isSuper && <NavLink href="/admin/sppg" label="🏢 Kelola Dapur" />}
         </nav>
       </header>
