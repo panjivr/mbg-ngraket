@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
+import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,7 @@ export default async function AdminLayout({
           {isSuper && <NavLink href="/admin/sppg" label="🏢 Kelola Dapur" />}
         </nav>
       </header>
+      <BirthdayGreeting />
       {children}
     </div>
   );

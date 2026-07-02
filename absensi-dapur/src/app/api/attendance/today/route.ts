@@ -28,6 +28,7 @@ interface AbsRow {
   shift_pulang: string | null;
   check_in_jarak: number | null;
   check_out_jarak: number | null;
+  lokasi: string | null;
 }
 
 export const GET = route(async () => {
@@ -78,7 +79,7 @@ export const GET = route(async () => {
     (
       await query<AbsRow>(
         `SELECT id, shift_tanggal, tanggal, check_in, check_out, status_masuk,
-                shift_masuk, shift_pulang, check_in_jarak, check_out_jarak
+                shift_masuk, shift_pulang, check_in_jarak, check_out_jarak, lokasi
            FROM attendance
           WHERE user_id = $1 AND check_in IS NOT NULL AND check_out IS NULL
           ORDER BY check_in DESC LIMIT 1`,
@@ -91,7 +92,7 @@ export const GET = route(async () => {
     (
       await query<AbsRow>(
         `SELECT id, shift_tanggal, tanggal, check_in, check_out, status_masuk,
-                shift_masuk, shift_pulang, check_in_jarak, check_out_jarak
+                shift_masuk, shift_pulang, check_in_jarak, check_out_jarak, lokasi
            FROM attendance
           WHERE user_id = $1
           ORDER BY check_in DESC NULLS LAST, id DESC LIMIT 1`,

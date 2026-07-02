@@ -39,7 +39,7 @@ export const GET = route(async (req: NextRequest) => {
             a.shift_tanggal, a.divisi_id, a.shift_masuk, a.shift_pulang,
             a.check_in, a.check_out, a.status_masuk,
             a.check_in_lat, a.check_in_lng, a.check_in_jarak,
-            a.check_out_lat, a.check_out_lng, a.check_out_jarak, a.catatan,
+            a.check_out_lat, a.check_out_lng, a.check_out_jarak, a.catatan, a.lokasi,
             u.nama, u.jabatan, u.nip, d.nama AS divisi_nama
        FROM attendance a
        JOIN users u ON u.id = a.user_id

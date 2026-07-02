@@ -18,6 +18,7 @@ interface RekapRow {
   status_masuk: string | null;
   check_in_jarak: number | null;
   check_out_jarak: number | null;
+  lokasi: string | null;
 }
 
 function jakartaToday(): string {
@@ -317,6 +318,7 @@ export default function RekapPage() {
                   <th className="px-4 py-2.5">Tanggal</th>
                   <th className="px-4 py-2.5">Nama</th>
                   <th className="px-4 py-2.5">Divisi</th>
+                  <th className="px-4 py-2.5">Lokasi</th>
                   <th className="px-4 py-2.5">Jadwal</th>
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
@@ -331,6 +333,7 @@ export default function RekapPage() {
                     <td className="px-4 py-2.5 whitespace-nowrap">{fmtDate(r.tanggal)}</td>
                     <td className="px-4 py-2.5 font-medium">{r.nama}</td>
                     <td className="px-4 py-2.5">{r.divisi_nama || "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{r.lokasi || "—"}</td>
                     <td className="px-4 py-2.5 font-mono text-slate-400">
                       {r.shift_masuk && r.shift_pulang
                         ? `${r.shift_masuk}–${r.shift_pulang}`

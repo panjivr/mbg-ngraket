@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
+import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function DapurLayout({
           )}
         </nav>
       </header>
+      <BirthdayGreeting />
       {children}
     </div>
   );
