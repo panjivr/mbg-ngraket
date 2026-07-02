@@ -14,6 +14,13 @@ interface EventRow {
   radius_m: number | null;
   aktif: boolean;
   lintas_hari?: boolean;
+  peserta_ids: number[];
+}
+
+interface PegawaiLite {
+  id: number;
+  nama: string;
+  divisi_nama: string | null;
 }
 
 function jakartaToday(): string {
@@ -43,6 +50,7 @@ const emptyForm = {
   lat: "",
   lng: "",
   radius_m: "",
+  peserta: [] as number[],
 };
 
 export default function EventPage() {
@@ -53,13 +61,27 @@ export default function EventPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [pegawai, setPegawai] = useState<PegawaiLite[]>([]);
+  const [editPeserta, setEditPeserta] = useState<{ ev: EventRow; sel: number[] } | null>(null);
+  const [pesertaSaving, setPesertaSaving] = useState(false);
 
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/event", { cache: "no-store" });
+      const [res, pRes] = await Promise.all([
+        fetch("/api/admin/event", { cache: "no-store" }),
+        fetch("/api/admin/employees", { cache: "no-store" }),
+      ]);
       const data = await res.json();
+      const p = await pRes.json();
       setList(data.events || []);
+      setPegawai(
+        (p.employees || []).map((e: { id: number; nama: string; divisi_nama?: string | null }) => ({
+          id: e.id,
+          nama: e.nama,
+          divisi_nama: e.divisi_nama ?? null,
+        })),
+      );
     } finally {
       setLoading(false);
     }
@@ -129,6 +151,36 @@ export default function EventPage() {
     if (!confirm(`Hapus event "${e.nama}"?`)) return;
     await fetch(`/api/admin/event/${e.id}`, { method: "DELETE" });
     await load();
+  }
+
+  function toggleId(arr: number[], id: number): number[] {
+    return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+  }
+
+  async function simpanPeserta() {
+    if (!editPeserta) return;
+    setPesertaSaving(true);
+    try {
+      const res = await fetch(`/api/admin/event/${editPeserta.ev.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peserta: editPeserta.sel }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        alert(d.error || "Gagal menyimpan peserta.");
+        return;
+      }
+      setEditPeserta(null);
+      setMsg(
+        editPeserta.sel.length
+          ? `Peserta event disimpan (${editPeserta.sel.length} orang). Hanya mereka yang mengikuti jadwal & titik event; sisanya absen normal di dapur.`
+          : "Daftar peserta dikosongkan — event berlaku untuk semua pegawai.",
+      );
+      await load();
+    } finally {
+      setPesertaSaving(false);
+    }
   }
 
   return (
@@ -245,6 +297,33 @@ export default function EventPage() {
             absen di titik dapur.
           </p>
         </div>
+        <div className="mt-3">
+          <p className="label">
+            Peserta Event ({form.peserta.length ? `${form.peserta.length} orang` : "kosong = semua pegawai"})
+          </p>
+          <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2">
+            {pegawai.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setForm({ ...form, peserta: toggleId(form.peserta, p.id) })}
+                className={
+                  "rounded-lg border px-2.5 py-1 text-xs font-medium transition " +
+                  (form.peserta.includes(p.id)
+                    ? "border-emas-500/60 bg-emas-500/15 text-emas-300"
+                    : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10")
+                }
+              >
+                {p.nama}
+                {p.divisi_nama ? ` · ${p.divisi_nama}` : ""}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Pilih siapa saja yang ikut kegiatan (mis. 10 orang ke tempat B). Yang
+            tidak dipilih tetap absen dengan jadwal & titik dapur seperti biasa.
+          </p>
+        </div>
         {error && (
           <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {error}
@@ -275,6 +354,7 @@ export default function EventPage() {
                   <th className="px-4 py-2.5">Event</th>
                   <th className="px-4 py-2.5">Tanggal</th>
                   <th className="px-4 py-2.5">Jadwal</th>
+                  <th className="px-4 py-2.5">Peserta</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5 text-right">Aksi</th>
                 </tr>
@@ -307,6 +387,20 @@ export default function EventPage() {
                             lintas hari
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button
+                          onClick={() =>
+                            setEditPeserta({ ev: e, sel: [...(e.peserta_ids || [])] })
+                          }
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                          title="Atur siapa saja yang ikut event ini"
+                        >
+                          👥{" "}
+                          {e.peserta_ids && e.peserta_ids.length
+                            ? `${e.peserta_ids.length} orang`
+                            : "Semua"}
+                        </button>
                       </td>
                       <td className="px-4 py-2.5">
                         <button
@@ -349,6 +443,61 @@ export default function EventPage() {
           </div>
         )}
       </div>
+      {editPeserta && (
+        <div
+          className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4"
+          onClick={() => setEditPeserta(null)}
+        >
+          <div
+            className="card max-h-[85dvh] w-full max-w-md overflow-y-auto p-6"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">Peserta — {editPeserta.ev.nama}</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Hanya peserta yang mengikuti jadwal & titik event; pegawai lain
+              absen normal di dapur. Kosongkan untuk memberlakukan ke semua.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {pegawai.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() =>
+                    setEditPeserta({
+                      ...editPeserta,
+                      sel: toggleId(editPeserta.sel, p.id),
+                    })
+                  }
+                  className={
+                    "rounded-lg border px-2.5 py-1 text-xs font-medium transition " +
+                    (editPeserta.sel.includes(p.id)
+                      ? "border-emas-500/60 bg-emas-500/15 text-emas-300"
+                      : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10")
+                  }
+                >
+                  {p.nama}
+                  {p.divisi_nama ? ` · ${p.divisi_nama}` : ""}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Terpilih: {editPeserta.sel.length || "semua (kosong)"}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setEditPeserta(null)} className="btn-ghost flex-1">
+                Batal
+              </button>
+              <button
+                onClick={simpanPeserta}
+                className="btn-gold flex-1"
+                disabled={pesertaSaving}
+              >
+                {pesertaSaving ? "Menyimpan…" : "Simpan Peserta"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -76,8 +76,12 @@ export const POST = route(async (req: NextRequest) => {
     }>(
       `SELECT id, nama, jam_masuk, jam_pulang, toleransi_menit, lat, lng, radius_m
          FROM event_absensi
-        WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2 ORDER BY id DESC LIMIT 1`,
-      [tglEvent, session.sppg_id],
+        WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2
+          AND (NOT EXISTS (SELECT 1 FROM event_peserta ep WHERE ep.event_id = event_absensi.id)
+               OR EXISTS (SELECT 1 FROM event_peserta ep
+                           WHERE ep.event_id = event_absensi.id AND ep.user_id = $3))
+        ORDER BY id DESC LIMIT 1`,
+      [tglEvent, session.sppg_id, session.uid],
     )
   )[0];
   if (ev) {

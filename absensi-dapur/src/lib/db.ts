@@ -269,6 +269,14 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
     await client.query(`ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS radius_m INTEGER`);
     await client.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lokasi TEXT`);
+    // Peserta event: bila terisi, event hanya berlaku untuk mereka.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS event_peserta (
+        event_id INTEGER NOT NULL REFERENCES event_absensi(id) ON DELETE CASCADE,
+        user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (event_id, user_id)
+      );
+    `);
 
     // Jejak shift/event yang dipakai saat absen (untuk rekap).
     await client.query(
@@ -277,6 +285,30 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS event_id INTEGER`,
     );
+    // Self-healing: versi lawas pernah membuat FK event_id -> tabel "events"
+    // (sudah tidak dipakai). Arahkan ulang ke event_absensi agar insert tidak
+    // gagal foreign key.
+    await client.query(`
+      DO $mig$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+          JOIN pg_class ft ON ft.oid = c.confrelid
+          WHERE t.relname = 'attendance'
+            AND c.conname = 'attendance_event_id_fkey'
+            AND ft.relname <> 'event_absensi'
+        ) THEN
+          ALTER TABLE attendance DROP CONSTRAINT attendance_event_id_fkey;
+          UPDATE attendance SET event_id = NULL
+           WHERE event_id IS NOT NULL
+             AND event_id NOT IN (SELECT id FROM event_absensi);
+          ALTER TABLE attendance ADD CONSTRAINT attendance_event_id_fkey
+            FOREIGN KEY (event_id) REFERENCES event_absensi(id) ON DELETE SET NULL;
+        END IF;
+      END
+      $mig$;
+    `);
 
     // Seed singleton settings row.
     await client.query(

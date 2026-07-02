@@ -19,7 +19,12 @@ function withDerived(e: EventAbsensi): EventAbsensi {
 export const GET = route(async () => {
   const admin = await requireAdmin();
   const rows = await query<EventAbsensi>(
-    `SELECT * FROM event_absensi WHERE sppg_id = $1 ORDER BY tanggal DESC, id DESC`,
+    `SELECT e.*, COALESCE(p.ids, '{}') AS peserta_ids
+       FROM event_absensi e
+       LEFT JOIN LATERAL (
+         SELECT array_agg(ep.user_id) AS ids FROM event_peserta ep WHERE ep.event_id = e.id
+       ) p ON TRUE
+      WHERE e.sppg_id = $1 ORDER BY e.tanggal DESC, e.id DESC`,
     [admin.sppg_id],
   );
   return ok({ events: rows.map(withDerived) });
@@ -70,6 +75,27 @@ export const POST = route(async (req: NextRequest) => {
     [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, admin.sppg_id, lat, lng, radius_m],
   );
   // Terapkan ke absensi yang sudah tercatat pada tanggal event (retroaktif).
+  // Peserta (opsional): bila diisi, event hanya berlaku untuk mereka.
+  const pesertaIds: number[] = Array.isArray(b.peserta)
+    ? ([
+        ...new Set(
+          b.peserta
+            .map((x: unknown) => parseInt(String(x), 10))
+            .filter((n: number) => Number.isFinite(n)),
+        ),
+      ] as number[])
+    : [];
+  if (pesertaIds.length) {
+    await query(
+      `INSERT INTO event_peserta (event_id, user_id)
+       SELECT $1, u.id FROM users u WHERE u.id = ANY($2::int[]) AND u.sppg_id = $3
+       ON CONFLICT DO NOTHING`,
+      [rows[0].id, pesertaIds, admin.sppg_id],
+    );
+  }
   const affected = aktif ? await applyEventToDate(rows[0].id) : 0;
-  return ok({ event: withDerived(rows[0]), affected }, { status: 201 });
+  return ok(
+    { event: { ...withDerived(rows[0]), peserta_ids: pesertaIds }, affected },
+    { status: 201 },
+  );
 });
