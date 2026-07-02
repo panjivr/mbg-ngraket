@@ -9,6 +9,9 @@ interface EventRow {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  lat: number | null;
+  lng: number | null;
+  radius_m: number | null;
   aktif: boolean;
   lintas_hari?: boolean;
 }
@@ -37,6 +40,9 @@ const emptyForm = {
   jam_masuk: "08:00",
   jam_pulang: "11:30",
   toleransi_menit: 15,
+  lat: "",
+  lng: "",
+  radius_m: "",
 };
 
 export default function EventPage() {
@@ -190,6 +196,55 @@ export default function EventPage() {
             />
           </div>
         </div>
+        <div className="mt-3">
+          <p className="label">
+            Titik GPS Event (opsional — kosongkan bila event di dapur)
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <input
+              className="input max-w-[160px]"
+              placeholder="Latitude"
+              value={form.lat}
+              onChange={(e) => setForm({ ...form, lat: e.target.value })}
+            />
+            <input
+              className="input max-w-[160px]"
+              placeholder="Longitude"
+              value={form.lng}
+              onChange={(e) => setForm({ ...form, lng: e.target.value })}
+            />
+            <input
+              className="input max-w-[130px]"
+              placeholder="Radius (m)"
+              value={form.radius_m}
+              onChange={(e) => setForm({ ...form, radius_m: e.target.value })}
+            />
+            <button
+              type="button"
+              className="btn-ghost px-3 py-2.5 text-xs"
+              title="Gunakan lokasi saya"
+              onClick={() => {
+                navigator.geolocation?.getCurrentPosition(
+                  (pos) =>
+                    setForm((fm) => ({
+                      ...fm,
+                      lat: pos.coords.latitude.toFixed(6),
+                      lng: pos.coords.longitude.toFixed(6),
+                      radius_m: fm.radius_m || "150",
+                    })),
+                  () => setError("Gagal membaca lokasi GPS."),
+                  { enableHighAccuracy: true, timeout: 15000 },
+                );
+              }}
+            >
+              📍 Lokasi Saya
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Jika diisi, peserta event absen di titik ini; penjaga dapur tetap
+            absen di titik dapur.
+          </p>
+        </div>
         {error && (
           <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {error}
@@ -234,6 +289,11 @@ export default function EventPage() {
                         {isToday && e.aktif && (
                           <span className="badge ml-2 bg-ember-500/15 text-ember-300">
                             hari ini
+                          </span>
+                        )}
+                        {e.lat !== null && e.lng !== null && (
+                          <span className="badge ml-2 bg-sky-500/15 text-sky-300">
+                            📌 titik GPS sendiri
                           </span>
                         )}
                       </td>

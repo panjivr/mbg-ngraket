@@ -41,6 +41,9 @@ interface EventInfo {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  lat: number | null;
+  lng: number | null;
+  radius_m: number | null;
 }
 
 interface AbsRow {
@@ -78,6 +81,7 @@ export default function AbsenPanel() {
   const [selfie, setSelfie] = useState<string | null>(null);
   const [moodOpen, setMoodOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
@@ -100,6 +104,9 @@ export default function AbsenPanel() {
     setShift(data.shift);
     setShifts(data.shifts || []);
     setEventInfo(data.event || null);
+    if (data.event && data.event.lat !== null && data.event.lat !== undefined) {
+      setTitik("event");
+    }
     setCurrent(data.current);
     setLast(data.last);
     setTanggal(data.tanggal);
@@ -202,10 +209,25 @@ export default function AbsenPanel() {
   }
 
   const phase: Phase = current ? "pulang" : "masuk";
+  // Titik absen: event dengan koordinat sendiri vs titik dapur.
+  const eventPunyaTitik =
+    !!eventInfo && eventInfo.lat !== null && eventInfo.lng !== null;
+  const pakaiEvent = eventPunyaTitik && titik === "event";
+  const target = pakaiEvent
+    ? {
+        lat: eventInfo!.lat as number,
+        lng: eventInfo!.lng as number,
+        radius_m: eventInfo!.radius_m ?? settings?.radius_m ?? 150,
+        nama: eventInfo!.nama,
+      }
+    : settings
+      ? { lat: settings.lat, lng: settings.lng, radius_m: settings.radius_m, nama: settings.nama_dapur || "Dapur" }
+      : null;
   const jarak =
-    geo && settings ? haversineMeters(settings.lat, settings.lng, geo.lat, geo.lng) : null;
+    geo && target ? haversineMeters(target.lat, target.lng, geo.lat, geo.lng) : null;
   const inRadius =
-    !settings?.geofence_aktif || (jarak !== null && jarak <= settings.radius_m);
+    !settings?.geofence_aktif ||
+    (jarak !== null && target !== null && jarak <= target.radius_m);
   const needSelfie = !!settings?.selfie_wajib;
 
   const requirementsOk =
@@ -226,6 +248,7 @@ export default function AbsenPanel() {
           selfie,
           // shift dipilih hanya saat check-in & tidak ada event yang menimpa.
           shift_id: eventInfo ? null : selectedShiftId,
+          titik: pakaiEvent ? "event" : "dapur",
         }),
       });
       const data = await res.json();
@@ -337,6 +360,39 @@ export default function AbsenPanel() {
             . Selama event, jadwal divisi/shift tidak berlaku (tidak terhitung terlambat
             bila masuk dalam jam event).
           </p>
+          {eventPunyaTitik && (
+            <div className="mt-3">
+              <p className="label">Absen di titik mana?</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setTitik("event")}
+                  className={
+                    "rounded-xl border px-3 py-2 text-sm font-medium transition " +
+                    (titik === "event"
+                      ? "border-emas-500/60 bg-emas-500/15 text-emas-300"
+                      : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10")
+                  }
+                >
+                  📌 Lokasi Event ({eventInfo!.nama})
+                </button>
+                <button
+                  onClick={() => setTitik("dapur")}
+                  className={
+                    "rounded-xl border px-3 py-2 text-sm font-medium transition " +
+                    (titik === "dapur"
+                      ? "border-emas-500/60 bg-emas-500/15 text-emas-300"
+                      : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10")
+                  }
+                >
+                  🍲 Tetap di Dapur (penjaga)
+                </button>
+              </div>
+              <p className="mt-1.5 text-xs text-ember-100/70">
+                Divisi yang ikut event pilih lokasi event; yang jaga dapur pilih
+                dapur. Jarak divalidasi ke titik yang dipilih.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -475,9 +531,9 @@ export default function AbsenPanel() {
           <div className="mt-2 text-sm">
             {settings?.geofence_aktif ? (
               <p className={inRadius ? "text-emerald-300" : "text-red-300"}>
-                {inRadius ? "✓ Anda di area dapur" : "✗ Di luar area dapur"} ·{" "}
+                {inRadius ? `✓ Anda di area ${target?.nama ?? "dapur"}` : `✗ Di luar area ${target?.nama ?? "dapur"}`} ·{" "}
                 <span className="text-slate-400">
-                  {jarak} m dari titik dapur (maks {settings.radius_m} m)
+                  {jarak} m dari titik {target?.nama ?? "dapur"} (maks {target?.radius_m ?? settings.radius_m} m)
                 </span>
               </p>
             ) : (

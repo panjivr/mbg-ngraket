@@ -263,6 +263,12 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_event_tanggal ON event_absensi (tanggal)`,
     );
+    // Titik GPS opsional per event — kalau diisi, peserta event absen di
+    // koordinat ini; penjaga dapur tetap absen di titik dapur.
+    await client.query(`ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`);
+    await client.query(`ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
+    await client.query(`ALTER TABLE event_absensi ADD COLUMN IF NOT EXISTS radius_m INTEGER`);
+    await client.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS lokasi TEXT`);
 
     // Jejak shift/event yang dipakai saat absen (untuk rekap).
     await client.query(

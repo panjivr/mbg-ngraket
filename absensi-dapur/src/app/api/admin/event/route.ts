@@ -44,10 +44,30 @@ export const POST = route(async (req: NextRequest) => {
     return fail(400, "Toleransi tidak valid (0..240 menit).");
   }
 
+  // Koordinat opsional: kalau diisi, peserta event bisa absen di titik ini.
+  const lat = b.lat !== undefined && b.lat !== null && b.lat !== "" ? Number(b.lat) : null;
+  const lng = b.lng !== undefined && b.lng !== null && b.lng !== "" ? Number(b.lng) : null;
+  const radius_m =
+    b.radius_m !== undefined && b.radius_m !== null && b.radius_m !== ""
+      ? Math.round(Number(b.radius_m))
+      : null;
+  if ((lat === null) !== (lng === null)) {
+    return fail(400, "Latitude dan longitude harus diisi berpasangan.");
+  }
+  if (lat !== null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) {
+    return fail(400, "Latitude tidak valid (-90..90).");
+  }
+  if (lng !== null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) {
+    return fail(400, "Longitude tidak valid (-180..180).");
+  }
+  if (radius_m !== null && (!Number.isFinite(radius_m) || radius_m < 10 || radius_m > 100000)) {
+    return fail(400, "Radius tidak valid (10..100000 m).");
+  }
+
   const rows = await query<EventAbsensi>(
-    `INSERT INTO event_absensi (nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, sppg_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, admin.sppg_id],
+    `INSERT INTO event_absensi (nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, sppg_id, lat, lng, radius_m)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+    [nama, tanggal, jam_masuk, jam_pulang, toleransi_menit, aktif, admin.sppg_id, lat, lng, radius_m],
   );
   // Terapkan ke absensi yang sudah tercatat pada tanggal event (retroaktif).
   const affected = aktif ? await applyEventToDate(rows[0].id) : 0;

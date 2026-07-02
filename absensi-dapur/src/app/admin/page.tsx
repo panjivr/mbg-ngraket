@@ -42,6 +42,7 @@ interface RekapRow {
   check_in_jarak: number | null;
   shift_masuk: string | null;
   shift_pulang: string | null;
+  lokasi: string | null;
 }
 
 interface TrendRow {
@@ -658,6 +659,7 @@ export default function AdminDashboard() {
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">Nama</th>
                   <th className="px-4 py-2.5">Divisi</th>
+                  <th className="px-4 py-2.5">Lokasi</th>
                   <th className="px-4 py-2.5">Shift</th>
                   <th className="px-4 py-2.5">Masuk</th>
                   <th className="px-4 py-2.5">Status</th>
@@ -684,6 +686,7 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-slate-400">{r.divisi_nama || "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-400">{r.lokasi || "—"}</td>
                       <td className="px-4 py-2.5 text-slate-400">
                         {r.shift_masuk && r.shift_pulang
                           ? `${r.shift_masuk}–${r.shift_pulang}`

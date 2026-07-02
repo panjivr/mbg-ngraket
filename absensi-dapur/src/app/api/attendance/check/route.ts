@@ -57,26 +57,6 @@ export const POST = route(async (req: NextRequest) => {
     return fail(413, "Ukuran foto selfie terlalu besar.");
   }
 
-  // --- Validasi geofence ---
-  let jarak: number | null = null;
-  if (lat !== null && lng !== null) {
-    jarak = haversineMeters(settings.lat, settings.lng, lat, lng);
-  }
-  if (settings.geofence_aktif) {
-    if (lat === null || lng === null) {
-      return fail(
-        400,
-        "Lokasi GPS tidak terdeteksi. Izinkan akses lokasi lalu coba lagi.",
-      );
-    }
-    if (jarak !== null && jarak > settings.radius_m) {
-      return fail(
-        403,
-        `Anda berada ${jarak} m dari dapur (maks ${settings.radius_m} m). Absen hanya bisa di lokasi dapur.`,
-      );
-    }
-  }
-
   const now = new Date();
 
   // --- Jadwal efektif untuk status masuk: Event > Sub-shift pilihan > Divisi > Global ---
@@ -86,11 +66,16 @@ export const POST = route(async (req: NextRequest) => {
   const ev = (
     await query<{
       id: number;
+      nama: string;
       jam_masuk: string;
       jam_pulang: string;
       toleransi_menit: number;
+      lat: number | null;
+      lng: number | null;
+      radius_m: number | null;
     }>(
-      `SELECT id, jam_masuk, jam_pulang, toleransi_menit FROM event_absensi
+      `SELECT id, nama, jam_masuk, jam_pulang, toleransi_menit, lat, lng, radius_m
+         FROM event_absensi
         WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2 ORDER BY id DESC LIMIT 1`,
       [tglEvent, session.sppg_id],
     )
@@ -121,6 +106,45 @@ export const POST = route(async (req: NextRequest) => {
         toleransi = sh.toleransi_menit;
         divisiShiftId = sh.id;
       }
+    }
+  }
+
+  // --- Titik absen: dapur (default) atau titik GPS event (bila event punya
+  // koordinat dan pegawai memilih absen di lokasi event). Penjaga dapur
+  // cukup memilih "dapur" — geofence tetap divalidasi ke titik dapur.
+  const pilihEvent =
+    body.titik === "event" && !!ev && ev.lat !== null && ev.lng !== null;
+  const target = pilihEvent
+    ? {
+        lat: ev!.lat as number,
+        lng: ev!.lng as number,
+        radius_m: ev!.radius_m ?? settings.radius_m,
+        nama: ev!.nama,
+      }
+    : {
+        lat: settings.lat,
+        lng: settings.lng,
+        radius_m: settings.radius_m,
+        nama: settings.nama || "Dapur",
+      };
+
+  // --- Validasi geofence terhadap titik terpilih ---
+  let jarak: number | null = null;
+  if (lat !== null && lng !== null) {
+    jarak = haversineMeters(target.lat, target.lng, lat, lng);
+  }
+  if (settings.geofence_aktif) {
+    if (lat === null || lng === null) {
+      return fail(
+        400,
+        "Lokasi GPS tidak terdeteksi. Izinkan akses lokasi lalu coba lagi.",
+      );
+    }
+    if (jarak !== null && jarak > target.radius_m) {
+      return fail(
+        403,
+        `Anda berada ${jarak} m dari titik "${target.nama}" (maks ${target.radius_m} m). Absen hanya bisa di lokasi tersebut.`,
+      );
     }
   }
 
@@ -170,8 +194,8 @@ export const POST = route(async (req: NextRequest) => {
           `INSERT INTO attendance
              (user_id, tanggal, shift_tanggal, divisi_id, shift_masuk, shift_pulang,
               check_in, status_masuk, check_in_lat, check_in_lng, check_in_jarak, selfie_in,
-              divisi_shift_id, event_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+              divisi_shift_id, event_id, lokasi)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
            RETURNING *`,
           [
             session.uid,
@@ -188,6 +212,7 @@ export const POST = route(async (req: NextRequest) => {
             selfie,
             divisiShiftId,
             eventId,
+            target.nama,
           ],
         )
       ).rows[0];

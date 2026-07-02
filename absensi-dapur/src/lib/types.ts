@@ -35,6 +35,9 @@ export interface EventAbsensi {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  lat: number | null;
+  lng: number | null;
+  radius_m: number | null;
   aktif: boolean;
   created_at: string;
   lintas_hari?: boolean;
@@ -117,6 +120,7 @@ export interface Attendance {
   selfie_in: string | null;
   selfie_out: string | null;
   catatan: string | null;
+  lokasi: string | null;
 }
 
 export interface AttendanceWithUser extends Attendance {
