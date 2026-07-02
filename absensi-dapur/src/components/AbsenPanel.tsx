@@ -353,12 +353,13 @@ export default function AbsenPanel() {
         <div className="card border-ember-500/40 bg-ember-500/10 p-4">
           <p className="text-sm font-bold text-ember-200">📣 Hari Ini Ada Event</p>
           <p className="mt-1 text-sm text-ember-100">
-            <b>{eventInfo.nama}</b> — semua karyawan mengikuti jadwal{" "}
+            <b>{eventInfo.nama}</b> — Anda terdaftar mengikuti event ini dengan jadwal{" "}
             <span className="font-mono">
               {eventInfo.jam_masuk}–{eventInfo.jam_pulang}
             </span>
-            . Selama event, jadwal divisi/shift tidak berlaku (tidak terhitung terlambat
-            bila masuk dalam jam event).
+            . Selama event, jadwal divisi/shift Anda tidak berlaku (tidak terhitung
+            terlambat bila masuk dalam jam event). Pegawai yang tidak terdaftar
+            di event tetap absen normal di dapur.
           </p>
           {eventPunyaTitik && (
             <div className="mt-3">

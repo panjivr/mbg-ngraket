@@ -38,6 +38,39 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     });
   }
 
+  // Ganti daftar peserta lalu sinkron ulang pengaruh event.
+  if (Array.isArray(b.peserta)) {
+    const ids: number[] = [
+      ...new Set(
+        b.peserta.map((x: unknown) => parseInt(String(x), 10)).filter(Number.isFinite),
+      ),
+    ] as number[];
+    await query(`DELETE FROM event_peserta WHERE event_id = $1`, [id]);
+    if (ids.length) {
+      await query(
+        `INSERT INTO event_peserta (event_id, user_id)
+         SELECT $1, u.id FROM users u WHERE u.id = ANY($2::int[]) AND u.sppg_id = $3
+         ON CONFLICT DO NOTHING`,
+        [id, ids, admin.sppg_id],
+      );
+    }
+    // Yang terlanjur kena event tapi bukan peserta lagi -> kembali ke jadwal
+    // asli; lalu terapkan ulang ke peserta.
+    let affected = 0;
+    if (existing.aktif) {
+      await revertEventFromDate(id);
+      affected = await applyEventToDate(id);
+    }
+    return ok({
+      event: {
+        ...existing,
+        lintas_hari: isOvernight(existing.jam_masuk, existing.jam_pulang),
+        peserta_ids: ids,
+      },
+      affected,
+    });
+  }
+
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : existing.aktif;
 
   const rows = await query<EventAbsensi>(

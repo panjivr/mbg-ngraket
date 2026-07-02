@@ -41,6 +41,7 @@ export interface EventAbsensi {
   aktif: boolean;
   created_at: string;
   lintas_hari?: boolean;
+  peserta_ids?: number[];
 }
 
 export interface User {

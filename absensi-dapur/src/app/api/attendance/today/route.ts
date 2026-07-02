@@ -68,9 +68,13 @@ export const GET = route(async () => {
   const event =
     (
       await query<EventAbsensi>(
-        `SELECT * FROM event_absensi WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2
+        `SELECT * FROM event_absensi
+          WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2
+            AND (NOT EXISTS (SELECT 1 FROM event_peserta ep WHERE ep.event_id = event_absensi.id)
+                 OR EXISTS (SELECT 1 FROM event_peserta ep
+                             WHERE ep.event_id = event_absensi.id AND ep.user_id = $3))
           ORDER BY id DESC LIMIT 1`,
-        [tanggal, session.sppg_id],
+        [tanggal, session.sppg_id, session.uid],
       )
     )[0] ?? null;
 

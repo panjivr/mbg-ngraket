@@ -48,8 +48,10 @@ export async function applyEventToDate(eventId: number): Promise<number> {
   const rows = await query<AttRow>(
     `SELECT id, check_in FROM attendance
       WHERE tanggal = $1 AND check_in IS NOT NULL
-        AND user_id IN (SELECT id FROM users WHERE sppg_id = $2)`,
-    [ev.tanggal, ev.sppg_id],
+        AND user_id IN (SELECT id FROM users WHERE sppg_id = $2)
+        AND (NOT EXISTS (SELECT 1 FROM event_peserta ep WHERE ep.event_id = $3)
+             OR user_id IN (SELECT ep.user_id FROM event_peserta ep WHERE ep.event_id = $3))`,
+    [ev.tanggal, ev.sppg_id, ev.id],
   );
   let n = 0;
   for (const r of rows) {
