@@ -79,6 +79,27 @@ export default function RekapPage() {
     load();
   }, [load]);
 
+  // Tutup absen pulang pegawai yang lupa menekan tombol pulang.
+  async function tutupAbsen(id: number, nama: string) {
+    if (
+      !confirm(
+        `Tutup absen pulang untuk "${nama}"?\nJam pulang dicatat sesuai jadwal shift-nya (atau sekarang bila shift belum berakhir).`,
+      )
+    )
+      return;
+    const res = await fetch(`/api/admin/attendance/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "force_checkout" }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || "Gagal menutup absen.");
+      return;
+    }
+    await load();
+  }
+
   // Opsi divisi untuk filter (unik, urut abjad).
   const divisiOptions = useMemo(() => {
     const set = new Set<string>();
@@ -356,7 +377,19 @@ export default function RekapPage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-2.5">{fmtTime(r.check_out)}</td>
+                    <td className="px-4 py-2.5">
+                      {r.check_in && !r.check_out ? (
+                        <button
+                          onClick={() => tutupAbsen(r.id, r.nama)}
+                          className="btn-ghost px-2 py-0.5 text-[11px]"
+                          title="Tutup absen pulang (untuk yang lupa menekan pulang)"
+                        >
+                          ⏹ Tutup
+                        </button>
+                      ) : (
+                        fmtTime(r.check_out)
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 font-medium text-gold-400">
                       {fmtDurasi(durasiMenit(r.check_in, r.check_out))}
                     </td>

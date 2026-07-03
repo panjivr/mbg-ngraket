@@ -204,6 +204,27 @@ export default function AdminDashboard() {
     load();
   }, [load]);
 
+  // Tutup absen pulang pegawai yang lupa menekan tombol pulang.
+  async function tutupAbsen(id: number, nama: string) {
+    if (
+      !confirm(
+        `Tutup absen pulang untuk "${nama}"?\nJam pulang dicatat sesuai jadwal shift-nya (atau sekarang bila shift belum berakhir).`,
+      )
+    )
+      return;
+    const res = await fetch(`/api/admin/attendance/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "force_checkout" }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || "Gagal menutup absen.");
+      return;
+    }
+    await load();
+  }
+
   // Jam berjalan (WIB).
   useEffect(() => {
     setNow(new Date());
@@ -711,9 +732,18 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-2.5 tabular-nums">
                         {masihBekerja ? (
-                          <span className="badge bg-sky-500/15 text-sky-300">
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
-                            Bertugas
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="badge bg-sky-500/15 text-sky-300">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
+                              Bertugas
+                            </span>
+                            <button
+                              onClick={() => tutupAbsen(r.id, r.nama)}
+                              className="btn-ghost px-2 py-0.5 text-[11px]"
+                              title="Tutup absen pulang (untuk yang lupa menekan pulang)"
+                            >
+                              ⏹ Tutup
+                            </button>
                           </span>
                         ) : (
                           fmtTime(r.check_out)
