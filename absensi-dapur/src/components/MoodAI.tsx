@@ -27,6 +27,7 @@ interface LoadNet {
 interface FaceApiNS {
   nets: {
     tinyFaceDetector: LoadNet;
+    ssdMobilenetv1: LoadNet;
     faceExpressionNet: LoadNet;
     faceLandmark68Net: LoadNet;
     ageGenderNet: LoadNet;
@@ -34,6 +35,10 @@ interface FaceApiNS {
   TinyFaceDetectorOptions: new (opts?: {
     inputSize?: number;
     scoreThreshold?: number;
+  }) => unknown;
+  SsdMobilenetv1Options: new (opts?: {
+    minConfidence?: number;
+    maxResults?: number;
   }) => unknown;
   detectSingleFace: (
     input: HTMLImageElement,
@@ -85,7 +90,12 @@ const MOODS: Record<string, { emoji: string; label: string; pesan: string }> = {
   },
 };
 
-let faceApiPromise: Promise<FaceApiNS> | null = null;
+interface FaceApiBundle {
+  api: FaceApiNS;
+  ssd: boolean; // apakah detektor SSD MobileNet v1 (lebih akurat) tersedia
+}
+
+let faceApiPromise: Promise<FaceApiBundle> | null = null;
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -109,21 +119,30 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-function getFaceApi(): Promise<FaceApiNS> {
+function getFaceApi(): Promise<FaceApiBundle> {
   if (!faceApiPromise) {
     faceApiPromise = (async () => {
       await loadScript(CDN_SCRIPT);
       const api = (window as unknown as { faceapi?: FaceApiNS }).faceapi;
       if (!api) throw new Error("faceapi tidak tersedia");
       // Muat model untuk deteksi + landmark + ekspresi + usia/gender agar
-      // analisa wajah lebih presisi.
+      // analisa wajah lebih presisi. Detektor utama SSD MobileNet v1 dimuat
+      // secara opsional: bila HANYA model itu gagal, deteksi tetap jalan
+      // memakai TinyFaceDetector sebagai cadangan (fail-safe).
+      let ssd = true;
       await Promise.all([
         api.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         api.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         api.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         api.nets.ageGenderNet.loadFromUri(MODEL_URL),
+        // Bungkus agar galat sinkron maupun asinkron tidak menggagalkan yang lain.
+        Promise.resolve()
+          .then(() => api.nets.ssdMobilenetv1.loadFromUri(MODEL_URL))
+          .catch(() => {
+            ssd = false;
+          }),
       ]);
-      return api;
+      return { api, ssd };
     })().catch((e) => {
       faceApiPromise = null; // izinkan retry di percobaan berikutnya
       throw e;
@@ -166,20 +185,36 @@ export default function MoodAI({
 
     (async () => {
       try {
-        const faceapi = await getFaceApi();
+        const { api: faceapi, ssd } = await getFaceApi();
+        // Baca gambar pada resolusi asli (data URL selfie apa adanya). Bila
+        // dekode gagal atau ukurannya sangat kecil, tetap lanjutkan — detektor
+        // akan menilai sendiri; alur absensi tidak boleh terhambat.
         const img = new Image();
         img.src = selfie;
         await img.decode().catch(() => {});
-        // Detektor presisi: input lebih besar + ambang lebih rendah, lalu
-        // landmark + ekspresi + usia/gender.
-        const det = await faceapi
-          .detectSingleFace(
-            img,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 }),
-          )
-          .withFaceLandmarks()
-          .withFaceExpressions()
-          .withAgeAndGender();
+
+        // Detektor utama: SSD MobileNet v1 (lebih akurat). Bila modelnya tidak
+        // tersedia atau tidak menemukan wajah, jatuh ke TinyFaceDetector dengan
+        // input lebih besar + ambang lebih rendah. Semua diikuti landmark +
+        // ekspresi + usia/gender.
+        let det: DetResult | undefined;
+        if (ssd) {
+          det = await faceapi
+            .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .withFaceLandmarks()
+            .withFaceExpressions()
+            .withAgeAndGender();
+        }
+        if (!det) {
+          det = await faceapi
+            .detectSingleFace(
+              img,
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 }),
+            )
+            .withFaceLandmarks()
+            .withFaceExpressions()
+            .withAgeAndGender();
+        }
         if (!alive) return;
         if (!det || !det.expressions) {
           setStatus({ kind: "noface" });
@@ -281,6 +316,11 @@ export default function MoodAI({
               <span className="rounded-md bg-white/5 px-2 py-0.5 text-slate-300">
                 Kualitas wajah {Math.round(status.data.faceScore * 100)}%
               </span>
+              {status.data.faceScore > 0.9 && (
+                <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                  Deteksi akurat
+                </span>
+              )}
             </div>
           </div>
         )}

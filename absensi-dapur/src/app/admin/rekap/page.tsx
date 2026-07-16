@@ -6,6 +6,7 @@ import FotoAbsen from "@/components/FotoAbsen";
 
 interface RekapRow {
   id: number;
+  user_id: number;
   nama: string;
   jabatan: string | null;
   nip: string | null;
@@ -19,6 +20,29 @@ interface RekapRow {
   check_in_jarak: number | null;
   check_out_jarak: number | null;
   lokasi: string | null;
+}
+
+interface EmployeeLite {
+  id: number;
+  nama: string;
+  divisi_nama: string | null;
+}
+
+// Form absen manual (untuk pegawai yang lupa absen masuk).
+interface ManualForm {
+  user_id: string;
+  tanggal: string;
+  jam_masuk: string;
+  jam_pulang: string;
+}
+
+// Form edit jam masuk/pulang satu catatan yang sudah ada.
+interface EditForm {
+  id: number;
+  nama: string;
+  tanggal: string;
+  jam_masuk: string;
+  jam_pulang: string;
 }
 
 function jakartaToday(): string {
@@ -50,6 +74,19 @@ function fmtDate(v: string) {
   }).format(new Date(v + "T00:00:00"));
 }
 
+// ISO timestamp -> "HH:mm" pada zona Asia/Jakarta (kosong bila null/invalid).
+function toHHmm(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 export default function RekapPage() {
   const today = jakartaToday();
   const [from, setFrom] = useState(today);
@@ -60,6 +97,19 @@ export default function RekapPage() {
   const [q, setQ] = useState("");
   const [divisiFilter, setDivisiFilter] = useState("");
   const [sortBy, setSortBy] = useState<"waktu" | "nama" | "divisi" | "status">("waktu");
+
+  // Daftar pegawai (dimuat sekali) untuk pilihan di modal absen manual.
+  const [employees, setEmployees] = useState<EmployeeLite[]>([]);
+
+  // Modal absen manual.
+  const [manual, setManual] = useState<ManualForm | null>(null);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+
+  // Modal edit satu catatan.
+  const [edit, setEdit] = useState<EditForm | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +128,22 @@ export default function RekapPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Muat daftar pegawai sekali (untuk pilihan pada modal absen manual).
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/employees", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { employees?: EmployeeLite[] }) => {
+        if (alive) setEmployees(d.employees || []);
+      })
+      .catch(() => {
+        /* diamkan; modal tetap bisa dibuka meski kosong */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Tutup absen pulang pegawai yang lupa menekan tombol pulang.
   async function tutupAbsen(id: number, nama: string) {
@@ -98,6 +164,100 @@ export default function RekapPage() {
       return;
     }
     await load();
+  }
+
+  // Buka modal absen manual (default tanggal = filter "Dari" atau hari ini).
+  function openManual() {
+    setManualError(null);
+    setManual({
+      user_id: "",
+      tanggal: from || today,
+      jam_masuk: "",
+      jam_pulang: "",
+    });
+  }
+
+  // Simpan absen manual → POST /api/admin/attendance.
+  async function saveManual() {
+    if (!manual) return;
+    if (!manual.user_id) {
+      setManualError("Pilih pegawai terlebih dahulu.");
+      return;
+    }
+    if (!manual.jam_masuk) {
+      setManualError("Jam masuk wajib diisi.");
+      return;
+    }
+    setManualSaving(true);
+    setManualError(null);
+    try {
+      const res = await fetch("/api/admin/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: Number(manual.user_id),
+          tanggal: manual.tanggal,
+          jam_masuk: manual.jam_masuk,
+          jam_pulang: manual.jam_pulang || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setManualError(data.error || "Gagal menyimpan absen manual.");
+        return;
+      }
+      setManual(null);
+      await load();
+    } catch {
+      setManualError("Tidak dapat terhubung ke server.");
+    } finally {
+      setManualSaving(false);
+    }
+  }
+
+  // Buka modal edit dengan jam masuk/pulang saat ini (HH:mm, Asia/Jakarta).
+  function openEdit(r: RekapRow) {
+    setEditError(null);
+    setEdit({
+      id: r.id,
+      nama: r.nama,
+      tanggal: r.tanggal,
+      jam_masuk: toHHmm(r.check_in),
+      jam_pulang: toHHmm(r.check_out),
+    });
+  }
+
+  // Simpan perubahan jam → PUT /api/admin/attendance/:id { action:"edit" }.
+  async function saveEdit() {
+    if (!edit) return;
+    if (!edit.jam_masuk) {
+      setEditError("Jam masuk wajib diisi.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/admin/attendance/${edit.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "edit",
+          jam_masuk: edit.jam_masuk,
+          jam_pulang: edit.jam_pulang || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEditError(data.error || "Gagal menyimpan perubahan.");
+        return;
+      }
+      setEdit(null);
+      await load();
+    } catch {
+      setEditError("Tidak dapat terhubung ke server.");
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   // Opsi divisi untuk filter (unik, urut abjad).
@@ -208,7 +368,12 @@ export default function RekapPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold">Rekap Absensi</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold">Rekap Absensi</h1>
+        <button onClick={openManual} className="btn-gold">
+          ➕ Absen Manual
+        </button>
+      </div>
 
       <div className="card flex flex-wrap items-end gap-3 p-4">
         <div>
@@ -235,8 +400,8 @@ export default function RekapPage() {
           {loading ? "Memuat…" : "Tampilkan"}
         </button>
         <div className="ml-auto flex gap-2">
-          <a href={`/api/admin/export?from=${from}&to=${to}`} className="btn-ghost">
-            ⬇ CSV
+          <a href={`/api/admin/export-xlsx?from=${from}&to=${to}`} className="btn-ghost">
+            ⬇ Excel
           </a>
           <button onClick={unduhPdf} className="btn-gold" disabled={pdfBusy || !view.length}>
             {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
@@ -346,6 +511,7 @@ export default function RekapPage() {
                   <th className="px-4 py-2.5">Pulang</th>
                   <th className="px-4 py-2.5">Durasi</th>
                   <th className="px-4 py-2.5 text-right">Foto</th>
+                  <th className="px-4 py-2.5 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -398,6 +564,17 @@ export default function RekapPage() {
                         <FotoAbsen id={r.id} nama={r.nama} />
                       </div>
                     </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                          title="Edit jam masuk / pulang"
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -405,6 +582,150 @@ export default function RekapPage() {
           </div>
         )}
       </div>
+
+      {/* Modal: Absen Manual */}
+      {manual && (
+        <div
+          className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4"
+          onClick={() => setManual(null)}
+        >
+          <div
+            className="card w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">Absen Manual</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Catat kehadiran pegawai yang lupa menekan tombol absen masuk.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="label">Pegawai</label>
+                <select
+                  className="input"
+                  value={manual.user_id}
+                  onChange={(e) => setManual({ ...manual, user_id: e.target.value })}
+                >
+                  <option value="">— Pilih Pegawai —</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.nama}
+                      {emp.divisi_nama ? ` — ${emp.divisi_nama}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Tanggal</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={manual.tanggal}
+                  onChange={(e) => setManual({ ...manual, tanggal: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Jam Masuk</label>
+                  <input
+                    type="time"
+                    required
+                    className="input"
+                    value={manual.jam_masuk}
+                    onChange={(e) => setManual({ ...manual, jam_masuk: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Jam Pulang (opsional)</label>
+                  <input
+                    type="time"
+                    className="input"
+                    value={manual.jam_pulang}
+                    onChange={(e) => setManual({ ...manual, jam_pulang: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {manualError && (
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                  {manualError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setManual(null)} className="btn-ghost flex-1">
+                  Batal
+                </button>
+                <button
+                  onClick={saveManual}
+                  className="btn-gold flex-1"
+                  disabled={manualSaving}
+                >
+                  {manualSaving ? "Menyimpan…" : "Simpan"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Absensi */}
+      {edit && (
+        <div
+          className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4"
+          onClick={() => setEdit(null)}
+        >
+          <div
+            className="card w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold">Edit Absensi</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {edit.nama} · {fmtDate(edit.tanggal)}
+            </p>
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Jam Masuk</label>
+                  <input
+                    type="time"
+                    className="input"
+                    value={edit.jam_masuk}
+                    onChange={(e) => setEdit({ ...edit, jam_masuk: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="label">Jam Pulang (opsional)</label>
+                  <input
+                    type="time"
+                    className="input"
+                    value={edit.jam_pulang}
+                    onChange={(e) => setEdit({ ...edit, jam_pulang: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {editError && (
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                  {editError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setEdit(null)} className="btn-ghost flex-1">
+                  Batal
+                </button>
+                <button
+                  onClick={saveEdit}
+                  className="btn-gold flex-1"
+                  disabled={editSaving}
+                >
+                  {editSaving ? "Menyimpan…" : "Simpan"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
