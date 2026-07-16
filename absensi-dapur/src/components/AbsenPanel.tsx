@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
+import { quoteAcak, type Quote } from "@/lib/quotes";
 import MoodAI from "@/components/MoodAI";
 
 interface SettingsLite {
@@ -83,6 +84,7 @@ export default function AbsenPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
+  const [quote, setQuote] = useState<Quote | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
   );
@@ -258,6 +260,7 @@ export default function AbsenPanel() {
       }
       const label = data.action === "check_out" ? "Absen pulang" : "Absen masuk";
       setMessage({ kind: "ok", text: `${label} berhasil dicatat. Terima kasih!` });
+      setQuote(quoteAcak());
       setSelfie(null);
       await loadToday();
     } catch {
@@ -613,6 +616,15 @@ export default function AbsenPanel() {
         >
           {message.text}
         </p>
+      )}
+
+      {/* Kutipan motivasi setelah absen berhasil */}
+      {quote && (
+        <div className="card border-emas-500/25 bg-emas-500/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">✨ Kutipan Hari Ini</p>
+          <p className="mt-2 text-sm italic leading-relaxed text-slate-100">“{quote.teks}”</p>
+          <p className="mt-1 text-xs text-slate-400">— {quote.sumber}</p>
+        </div>
       )}
 
       {/* Tombol aksi */}
