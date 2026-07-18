@@ -32,6 +32,7 @@ export default async function DapurLayout({
         <nav className="mt-3 flex items-center gap-1">
           <NavLink href="/dapur" label="Absen" exact />
           <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
+          <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />
           {session.role === "admin" && (
             <Link
