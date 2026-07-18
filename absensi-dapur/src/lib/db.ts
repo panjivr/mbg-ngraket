@@ -1,5 +1,6 @@
 import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
 import { hashPassword } from "./password";
+import { SOP_SEED } from "./sop-seed";
 
 // Kembalikan kolom DATE (OID 1082) sebagai string "YYYY-MM-DD" apa adanya,
 // bukan objek Date (yang akan terserialisasi jadi ISO timestamp dengan TZ).
@@ -335,6 +336,27 @@ async function doEnsureSchema(): Promise<void> {
         created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `);
+    // --- SOP (Standar Operasional Prosedur) per dapur --- (butuh tabel sppg)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sop (
+        id               SERIAL PRIMARY KEY,
+        sppg_id          INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        kode             TEXT NOT NULL DEFAULT '',
+        judul            TEXT NOT NULL,
+        kategori         TEXT NOT NULL DEFAULT 'Umum',
+        tujuan           TEXT NOT NULL DEFAULT '',
+        ruang_lingkup    TEXT NOT NULL DEFAULT '',
+        penanggung_jawab TEXT NOT NULL DEFAULT '',
+        prosedur         TEXT NOT NULL DEFAULT '',
+        referensi        TEXT NOT NULL DEFAULT '',
+        urutan           INTEGER NOT NULL DEFAULT 0,
+        aktif            BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sop_sppg ON sop (sppg_id)`);
+
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
@@ -490,6 +512,37 @@ async function doEnsureSchema(): Promise<void> {
            VALUES ($1, $2, $3, 'staff', $4, $5,
                    (SELECT id FROM divisi WHERE nama = $6 AND sppg_id = 1), $7, $8, 1)`,
           [nama, username, staffPass, jabatan, nip, divNama, tl, tgl],
+        );
+      }
+    }
+
+    // Seed SOP awal (dari dokumen SOP SPPG) untuk dapur pertama, bila kosong.
+    const sopCount = await client.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM sop`,
+    );
+    if (Number(sopCount.rows[0].c) === 0 && SOP_SEED.length > 0) {
+      const firstSppg = await client.query<{ id: number }>(
+        `SELECT id FROM sppg ORDER BY id ASC LIMIT 1`,
+      );
+      const sppgId = firstSppg.rows[0]?.id ?? 1;
+      let urut = 1;
+      for (const s of SOP_SEED) {
+        await client.query(
+          `INSERT INTO sop (sppg_id, kode, judul, kategori, tujuan, ruang_lingkup,
+                            penanggung_jawab, prosedur, referensi, urutan)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            sppgId,
+            s.kode,
+            s.judul,
+            s.kategori,
+            s.tujuan,
+            s.ruang_lingkup,
+            s.penanggung_jawab,
+            s.prosedur,
+            s.referensi,
+            urut++,
+          ],
         );
       }
     }
