@@ -1,0 +1,211 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+interface Baris {
+  penerima_id: number;
+  jenis: "serdik" | "b3";
+  nama: string;
+  jenjang: string;
+  jam_kirim: string;
+  besar: number;
+  kecil: number;
+  b3: number;
+  pj: number;
+  ikut: boolean;
+}
+interface DistData {
+  tanggal: string;
+  sppg: { nama: string; kepala_sppg: string; alamat: string };
+  distribusi: { driver: string; menu: string; catatan: string };
+  baris: Baris[];
+}
+
+function jakartaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+}
+const D = (t: string) => new Date(t + "T00:00:00");
+const hari = (t: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(D(t));
+const tglLong = (t: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(D(t));
+const tglSlash = (t: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(D(t)).replace(/\//g, "/");
+
+function Ttd({ kiri, kanan }: { kiri: React.ReactNode; kanan: React.ReactNode }) {
+  return (
+    <div className="mt-6 flex justify-between text-sm">
+      <div className="w-1/2 pr-4">{kiri}</div>
+      <div className="w-1/2 pl-4 text-center">{kanan}</div>
+    </div>
+  );
+}
+
+function Inner() {
+  const sp = useSearchParams();
+  const tanggal = /^\d{4}-\d{2}-\d{2}$/.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : jakartaToday();
+  const dok = sp.get("dok") || "semua";
+  const [data, setData] = useState<DistData | null>(null);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/admin/distribusi?tanggal=${tanggal}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: DistData) => setData(d))
+      .catch(() => setErr(true));
+  }, [tanggal]);
+
+  if (err) return <p className="p-8 text-center">Gagal memuat data distribusi.</p>;
+  if (!data) return <p className="p-8 text-center">Memuat…</p>;
+
+  const sppg = data.sppg;
+  const serdik = data.baris.filter((b) => b.jenis === "serdik" && b.ikut && b.besar + b.kecil > 0);
+  const b3 = data.baris.filter((b) => b.jenis === "b3" && b.ikut && b.b3 > 0);
+  const showBast = dok === "bast" || dok === "semua";
+  const showSJ = dok === "surat-jalan" || dok === "semua";
+  const showOrg = dok === "organoleptik" || dok === "semua";
+  const menu = data.distribusi.menu || "________________";
+
+  return (
+    <div className="min-h-screen bg-white py-6 text-black">
+      <style>{`@media print{@page{size:A4;margin:15mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
+      <div className="no-print mx-auto mb-4 flex max-w-[760px] items-center justify-between px-4">
+        <p className="text-sm text-gray-600">{serdik.length} sekolah · {b3.length} posyandu · {tglLong(tanggal)}</p>
+        <button onClick={() => window.print()} className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white">
+          🖨️ Cetak / Simpan PDF
+        </button>
+      </div>
+
+      {/* ===== BAST per sekolah ===== */}
+      {showBast && serdik.map((s) => {
+        const jml = s.besar + s.kecil;
+        return (
+          <div key={"bast-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif leading-relaxed shadow-sm">
+            <h2 className="text-center text-sm font-bold uppercase">Berita Acara Penerimaan Paket Makanan Program Makan Bergizi Gratis</h2>
+            <h3 className="mb-4 text-center text-sm font-bold">Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}</h3>
+            <p className="text-justify text-sm">
+              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam ______ telah diterima paket makanan sejumlah:{" "}
+              <b>{jml} Paket</b> Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}, yang melayani{" "}
+              <b>{s.nama}</b>. Baik dimakan sebelum jam ______
+            </p>
+            <p className="mt-3 text-sm">Yang menyerahkan : ______________________</p>
+            <p className="text-sm">Nomor Telepon &nbsp;&nbsp;: ______________________</p>
+            <Ttd
+              kiri={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
+              kanan={<>Diterima oleh,<br /><br /><br />(________________)<br />Nama PIC Sekolah Penerima</>}
+            />
+            <hr className="my-5 border-gray-400" />
+            <h3 className="text-center text-sm font-bold uppercase">Berita Acara Pengembalian Alat Makan (Ompreng)</h3>
+            <p className="mt-3 text-justify text-sm">
+              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam ______ telah diserahkan kembali ompreng sejumlah:{" "}
+              <b>{jml}</b> dari {s.nama} kepada SPPG {sppg.nama}.
+            </p>
+            <p className="mt-3 text-sm">Yang menyerahkan : ______________________ (Nama PIC Sekolah)</p>
+          </div>
+        );
+      })}
+
+      {/* ===== Surat Jalan ===== */}
+      {showSJ && (
+        <div className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif shadow-sm">
+          <h2 className="text-center text-base font-bold uppercase">Surat Jalan</h2>
+          <h3 className="mb-4 text-center text-sm">Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}</h3>
+          <table className="mb-3 text-sm">
+            <tbody>
+              <tr><td className="pr-3">Hari / Tanggal</td><td>: {hari(tanggal)}, {tglSlash(tanggal)}</td></tr>
+              <tr><td className="pr-3">Menu</td><td>: {menu}</td></tr>
+              <tr><td className="pr-3">Driver</td><td>: {data.distribusi.driver || "________________"}</td></tr>
+            </tbody>
+          </table>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                {["No", "Nama Sekolah", "Jenjang", "Jam", "Besar", "Kecil", "Total"].map((h) => (
+                  <th key={h} className="border border-black px-2 py-1 text-center">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {serdik.map((s, i) => (
+                <tr key={s.penerima_id}>
+                  <td className="border border-black px-2 py-1 text-center">{i + 1}</td>
+                  <td className="border border-black px-2 py-1">{s.nama}</td>
+                  <td className="border border-black px-2 py-1">{s.jenjang}</td>
+                  <td className="border border-black px-2 py-1 text-center">{s.jam_kirim}</td>
+                  <td className="border border-black px-2 py-1 text-center">{s.besar || ""}</td>
+                  <td className="border border-black px-2 py-1 text-center">{s.kecil || ""}</td>
+                  <td className="border border-black px-2 py-1 text-center font-semibold">{s.besar + s.kecil}</td>
+                </tr>
+              ))}
+              <tr className="font-bold">
+                <td className="border border-black px-2 py-1 text-center" colSpan={4}>TOTAL</td>
+                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.besar, 0)}</td>
+                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.kecil, 0)}</td>
+                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.besar + s.kecil, 0)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <Ttd
+            kiri={<>Driver,<br /><br /><br />(________________)</>}
+            kanan={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
+          />
+        </div>
+      )}
+
+      {/* ===== Uji Organoleptik per penerima ===== */}
+      {showOrg && [...serdik, ...b3].map((s) => (
+        <div key={"org-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif shadow-sm">
+          <h2 className="mb-4 text-center text-base font-bold uppercase">Form Uji Organoleptik</h2>
+          <table className="mb-3 text-sm">
+            <tbody>
+              <tr><td className="pr-3">Hari/Tanggal</td><td>: {hari(tanggal)} {tglLong(tanggal)}</td></tr>
+              <tr><td className="pr-3">Nama {s.jenis === "b3" ? "Posyandu" : "Sekolah"}</td><td>: {s.nama}</td></tr>
+              <tr><td className="pr-3">Asal Sampel</td><td>: SPPG {sppg.nama}</td></tr>
+              <tr><td className="pr-3">Menu</td><td>: {menu}</td></tr>
+              <tr><td className="pr-3">Petugas Sampel</td><td>: ({s.jenis === "b3" ? "pihak Posyandu" : "pihak sekolah"})</td></tr>
+            </tbody>
+          </table>
+          <p className="mb-2 text-sm">Instruksi: Isilah dengan memberi tanda centang (✓) pada indikator penilaian.</p>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                {["No", "Indikator", "Baik", "Cukup", "Kurang"].map((h) => (
+                  <th key={h} className="border border-black px-2 py-1 text-center">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {["Warna", "Aroma", "Rasa", "Tekstur", "Kematangan", "Kebersihan", "Suhu"].map((ind, i) => (
+                <tr key={ind}>
+                  <td className="border border-black px-2 py-1 text-center">{i + 1}</td>
+                  <td className="border border-black px-2 py-1">{ind}</td>
+                  <td className="border border-black px-2 py-1"></td>
+                  <td className="border border-black px-2 py-1"></td>
+                  <td className="border border-black px-2 py-1"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Ttd
+            kiri={<>Petugas Sampel,<br /><br /><br />(________________)</>}
+            kanan={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
+          />
+        </div>
+      ))}
+
+      {serdik.length === 0 && b3.length === 0 && (
+        <p className="p-8 text-center text-gray-600">
+          Belum ada data distribusi untuk tanggal ini. Isi &amp; simpan di halaman Distribusi Harian dulu.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function CetakDistribusiPage() {
+  return (
+    <Suspense fallback={<p className="p-8 text-center">Memuat…</p>}>
+      <Inner />
+    </Suspense>
+  );
+}

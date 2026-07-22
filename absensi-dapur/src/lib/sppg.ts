@@ -15,6 +15,11 @@ export interface Sppg {
   tz: string;
   aktif: boolean;
   created_at: string;
+  // Distribusi & dokumen
+  kepala_sppg: string;
+  harga_besar: number;
+  harga_kecil: number;
+  harga_b3: number;
 }
 
 /** Ambil konfigurasi dapur tertentu (null bila tak ada). */
