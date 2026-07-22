@@ -363,6 +363,8 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_besar INTEGER NOT NULL DEFAULT 10000`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_kecil INTEGER NOT NULL DEFAULT 8000`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_b3 INTEGER NOT NULL DEFAULT 8000`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS ahli_gizi TEXT NOT NULL DEFAULT 'Dyah Paramita Ratna Muda'`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS koordinator TEXT NOT NULL DEFAULT 'Panji Vatorrohman'`);
 
     // Master penerima (sekolah/SERDIK & kelompok B3 posyandu).
     await client.query(`
