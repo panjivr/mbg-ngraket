@@ -89,7 +89,7 @@ export default function MusicPlayer({ src }: MusicPlayerProps) {
         aria-pressed={playing}
         aria-label={playing ? "Musik latar aktif" : "Musik latar mati"}
         title="Musik latar"
-        className="fixed bottom-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-lg leading-none shadow-lg backdrop-blur transition-colors hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+        className="fixed bottom-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-lg leading-none shadow-lg backdrop-blur transition-colors hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 print:hidden"
       >
         <span aria-hidden="true">{playing ? "🎵" : "🔇"}</span>
       </button>
