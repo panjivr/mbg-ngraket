@@ -5,7 +5,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
 
-  const isAdminArea = pathname.startsWith("/admin");
+  const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/cetak");
   const isStaffArea = pathname.startsWith("/dapur");
 
   if (!session) {
@@ -27,5 +27,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dapur/:path*", "/admin/:path*"],
+  matcher: ["/dapur/:path*", "/admin/:path*", "/cetak/:path*"],
 };

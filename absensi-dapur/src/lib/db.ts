@@ -1,6 +1,7 @@
 import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
 import { hashPassword } from "./password";
 import { SOP_SEED } from "./sop-seed";
+import { PENERIMA_SEED } from "./distribusi-seed";
 
 // Kembalikan kolom DATE (OID 1082) sebagai string "YYYY-MM-DD" apa adanya,
 // bukan objek Date (yang akan terserialisasi jadi ISO timestamp dengan TZ).
@@ -357,6 +358,57 @@ async function doEnsureSchema(): Promise<void> {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sop_sppg ON sop (sppg_id)`);
 
+    // --- Distribusi: kepala SPPG & harga pagu per porsi ---
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS kepala_sppg TEXT NOT NULL DEFAULT ''`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_besar INTEGER NOT NULL DEFAULT 10000`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_kecil INTEGER NOT NULL DEFAULT 8000`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_b3 INTEGER NOT NULL DEFAULT 8000`);
+
+    // Master penerima (sekolah/SERDIK & kelompok B3 posyandu).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS penerima (
+        id        SERIAL PRIMARY KEY,
+        sppg_id   INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        jenis     TEXT NOT NULL DEFAULT 'serdik',
+        nama      TEXT NOT NULL,
+        jenjang   TEXT NOT NULL DEFAULT '',
+        besar     INTEGER NOT NULL DEFAULT 0,
+        kecil     INTEGER NOT NULL DEFAULT 0,
+        b3        INTEGER NOT NULL DEFAULT 0,
+        pj        INTEGER NOT NULL DEFAULT 0,
+        jam_kirim TEXT NOT NULL DEFAULT '07:00',
+        urutan    INTEGER NOT NULL DEFAULT 0,
+        aktif     BOOLEAN NOT NULL DEFAULT TRUE
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_penerima_sppg ON penerima (sppg_id)`);
+
+    // Satu hari distribusi + baris penerima (angka bisa di-adjust harian).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS distribusi (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL,
+        driver     TEXT NOT NULL DEFAULT '',
+        menu       TEXT NOT NULL DEFAULT '',
+        catatan    TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, tanggal)
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS distribusi_item (
+        id            SERIAL PRIMARY KEY,
+        distribusi_id INTEGER NOT NULL REFERENCES distribusi(id) ON DELETE CASCADE,
+        penerima_id   INTEGER NOT NULL REFERENCES penerima(id) ON DELETE CASCADE,
+        besar         INTEGER NOT NULL DEFAULT 0,
+        kecil         INTEGER NOT NULL DEFAULT 0,
+        b3            INTEGER NOT NULL DEFAULT 0,
+        ikut          BOOLEAN NOT NULL DEFAULT TRUE,
+        UNIQUE (distribusi_id, penerima_id)
+      );
+    `);
+
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
@@ -543,6 +595,30 @@ async function doEnsureSchema(): Promise<void> {
             s.referensi,
             urut++,
           ],
+        );
+      }
+    }
+
+    // Kepala SPPG default untuk dapur #1 (dari dokumen).
+    await client.query(
+      `UPDATE sppg SET kepala_sppg = 'Abdullah Indriawan' WHERE id = 1 AND (kepala_sppg IS NULL OR kepala_sppg = '')`,
+    );
+
+    // Seed master penerima (dari RAB) untuk dapur pertama, bila kosong.
+    const penerimaCount = await client.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM penerima`,
+    );
+    if (Number(penerimaCount.rows[0].c) === 0 && PENERIMA_SEED.length > 0) {
+      const firstSppg2 = await client.query<{ id: number }>(
+        `SELECT id FROM sppg ORDER BY id ASC LIMIT 1`,
+      );
+      const sppgId2 = firstSppg2.rows[0]?.id ?? 1;
+      let urut2 = 1;
+      for (const p of PENERIMA_SEED) {
+        await client.query(
+          `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, besar, kecil, b3, pj, jam_kirim, urutan)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [sppgId2, p.jenis, p.nama, p.jenjang, p.besar, p.kecil, p.b3, p.pj, p.jam_kirim, urut2++],
         );
       }
     }
