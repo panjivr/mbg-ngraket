@@ -17,7 +17,7 @@ interface Baris {
 }
 interface DistData {
   tanggal: string;
-  sppg: { nama: string; kepala_sppg: string; alamat: string };
+  sppg: { nama: string; kepala_sppg: string; alamat: string; ahli_gizi: string; koordinator: string };
   distribusi: { driver: string; menu: string; catatan: string };
   baris: Baris[];
 }
@@ -31,6 +31,16 @@ const D = (t: string) => new Date(t + "T00:00:00");
 const hari = (t: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(D(t));
 const tglLong = (t: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(D(t));
 const tglSlash = (t: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(D(t)).replace(/\//g, "/");
+
+/** Rincian "Kelas" pada Surat Jalan: Besar/Kecil/Guru untuk sekolah, B3 untuk posyandu. */
+function kelasRows(s: Baris): { kelas: string; porsi: number }[] {
+  if (s.jenis === "b3") return s.b3 > 0 ? [{ kelas: "B3", porsi: s.b3 }] : [];
+  const r: { kelas: string; porsi: number }[] = [];
+  if (s.besar > 0) r.push({ kelas: "Besar", porsi: s.besar });
+  if (s.kecil > 0) r.push({ kelas: "Kecil", porsi: s.kecil });
+  if (s.pj > 0) r.push({ kelas: "Guru", porsi: s.pj });
+  return r;
+}
 
 function Ttd({ kiri, kanan }: { kiri: React.ReactNode; kanan: React.ReactNode }) {
   return (
@@ -65,6 +75,7 @@ function Inner() {
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
   const menu = data.distribusi.menu || "________________";
+  const sppgLine = ("SPPG " + (sppg.nama || "").replace(/^SPPG\s+/i, "")).toUpperCase();
 
   return (
     <div className="min-h-screen bg-white py-6 text-black">
@@ -105,52 +116,95 @@ function Inner() {
         );
       })}
 
-      {/* ===== Surat Jalan ===== */}
-      {showSJ && (
-        <div className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif shadow-sm">
-          <h2 className="text-center text-base font-bold uppercase">Surat Jalan</h2>
-          <h3 className="mb-4 text-center text-sm">Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}</h3>
-          <table className="mb-3 text-sm">
-            <tbody>
-              <tr><td className="pr-3">Hari / Tanggal</td><td>: {hari(tanggal)}, {tglSlash(tanggal)}</td></tr>
-              <tr><td className="pr-3">Menu</td><td>: {menu}</td></tr>
-              <tr><td className="pr-3">Driver</td><td>: {data.distribusi.driver || "________________"}</td></tr>
-            </tbody>
-          </table>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                {["No", "Nama Sekolah", "Jenjang", "Jam", "Besar", "Kecil", "Total"].map((h) => (
-                  <th key={h} className="border border-black px-2 py-1 text-center">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {serdik.map((s, i) => (
-                <tr key={s.penerima_id}>
-                  <td className="border border-black px-2 py-1 text-center">{i + 1}</td>
-                  <td className="border border-black px-2 py-1">{s.nama}</td>
-                  <td className="border border-black px-2 py-1">{s.jenjang}</td>
-                  <td className="border border-black px-2 py-1 text-center">{s.jam_kirim}</td>
-                  <td className="border border-black px-2 py-1 text-center">{s.besar || ""}</td>
-                  <td className="border border-black px-2 py-1 text-center">{s.kecil || ""}</td>
-                  <td className="border border-black px-2 py-1 text-center font-semibold">{s.besar + s.kecil}</td>
+      {/* ===== Surat Jalan per penerima ===== */}
+      {showSJ && [...serdik, ...b3].map((s) => {
+        const rows = kelasRows(s);
+        const totalPorsi = rows.reduce((a, r) => a + r.porsi, 0);
+        const pad = Math.max(0, 5 - rows.length);
+        return (
+          <div key={"sj-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+            <div className="text-center leading-snug">
+              <p className="text-base font-bold">SURAT JALAN</p>
+              <p className="text-base font-bold">PROGRAM MAKAN BERGIZI GRATIS</p>
+              <p className="text-base font-bold">{sppgLine}</p>
+            </div>
+            <div className="mt-1 border-b-4 border-black" />
+
+            <div className="mt-6 flex justify-between text-sm">
+              <div className="pt-1">Kepada : {s.nama}</div>
+              <table className="text-sm">
+                <tbody>
+                  <tr><td className="pr-4">Hari / Tanggal</td><td>: {tglSlash(tanggal)}</td></tr>
+                  <tr><td className="pr-4">Waktu Pengiriman</td><td>: {s.jam_kirim || ""}</td></tr>
+                  <tr><td className="pr-4">Driver</td><td>: {data.distribusi.driver || ""}</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <table className="mt-6 w-full border-collapse text-center text-sm">
+              <thead>
+                <tr className="bg-[#dbe5f1]">
+                  <th rowSpan={2} className="border border-black px-2 py-1">No</th>
+                  <th rowSpan={2} className="border border-black px-2 py-1">Kelas</th>
+                  <th rowSpan={2} className="border border-black px-2 py-1">Jumlah<br />Porsi</th>
+                  <th colSpan={2} className="border border-black px-2 py-1">Jumlah Packaging</th>
+                  <th rowSpan={2} className="border border-black px-2 py-1">Keterangan</th>
                 </tr>
-              ))}
-              <tr className="font-bold">
-                <td className="border border-black px-2 py-1 text-center" colSpan={4}>TOTAL</td>
-                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.besar, 0)}</td>
-                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.kecil, 0)}</td>
-                <td className="border border-black px-2 py-1 text-center">{serdik.reduce((a, s) => a + s.besar + s.kecil, 0)}</td>
-              </tr>
-            </tbody>
-          </table>
-          <Ttd
-            kiri={<>Driver,<br /><br /><br />(________________)</>}
-            kanan={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
-          />
-        </div>
-      )}
+                <tr className="bg-[#dbe5f1]">
+                  <th className="border border-black px-2 py-1">Sebelum</th>
+                  <th className="border border-black px-2 py-1">Sesudah</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={r.kelas}>
+                    <td className="border border-black px-2 py-1">{i + 1}</td>
+                    <td className="border border-black px-2 py-1">{r.kelas}</td>
+                    <td className="border border-black px-2 py-1">{r.porsi}</td>
+                    <td className="border border-black px-2 py-1"></td>
+                    <td className="border border-black px-2 py-1"></td>
+                    <td className="border border-black px-2 py-1"></td>
+                  </tr>
+                ))}
+                {Array.from({ length: pad }).map((_, i) => (
+                  <tr key={"pad" + i}>
+                    <td className="border border-black px-2 py-3"></td>
+                    <td className="border border-black"></td>
+                    <td className="border border-black"></td>
+                    <td className="border border-black"></td>
+                    <td className="border border-black"></td>
+                    <td className="border border-black"></td>
+                  </tr>
+                ))}
+                <tr className="font-bold">
+                  <td className="border border-black px-2 py-1" colSpan={2}>Total</td>
+                  <td className="border border-black px-2 py-1">{totalPorsi}</td>
+                  <td className="border border-black px-2 py-1"></td>
+                  <td className="border border-black px-2 py-1"></td>
+                  <td className="border border-black px-2 py-1"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="mt-10 text-sm">
+              <div className="flex justify-between">
+                <div className="w-2/3 text-center">Diperiksa Oleh,</div>
+                <div className="w-1/3 text-center">Diterima Oleh,<br />Pihak {s.jenis === "b3" ? "Posyandu" : "Sekolah"},</div>
+              </div>
+              <div className="mt-1 flex">
+                <div className="w-1/3 text-center">Ahli Gizi Dapur,</div>
+                <div className="w-1/3 text-center">Koordinator Lapangan</div>
+                <div className="w-1/3" />
+              </div>
+              <div className="mt-16 flex items-end">
+                <div className="w-1/3 text-center font-bold">{sppg.ahli_gizi || "____________"}</div>
+                <div className="w-1/3 text-center font-bold">{sppg.koordinator || "____________"}</div>
+                <div className="w-1/3 px-2"><div className="border-b border-black" /></div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
 
       {/* ===== Uji Organoleptik per penerima ===== */}
       {showOrg && [...serdik, ...b3].map((s) => (

@@ -29,6 +29,8 @@ interface Pengaturan {
   harga_besar: number;
   harga_kecil: number;
   harga_b3: number;
+  ahli_gizi: string;
+  koordinator: string;
 }
 
 function jakartaToday(): string {
@@ -294,6 +296,16 @@ export default function DistribusiPage() {
               <div>
                 <label className="label">Kepala SPPG</label>
                 <input className="input" value={setel.kepala_sppg} onChange={(e) => setSetel({ ...setel, kepala_sppg: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Ahli Gizi Dapur</label>
+                  <input className="input" value={setel.ahli_gizi} onChange={(e) => setSetel({ ...setel, ahli_gizi: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label">Koordinator Lapangan</label>
+                  <input className="input" value={setel.koordinator} onChange={(e) => setSetel({ ...setel, koordinator: e.target.value })} />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div><label className="label">Besar</label><input type="number" className="input" value={setel.harga_besar} onChange={(e) => setSetel({ ...setel, harga_besar: parseInt(e.target.value) || 0 })} /></div>

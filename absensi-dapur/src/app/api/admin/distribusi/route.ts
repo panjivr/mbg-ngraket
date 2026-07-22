@@ -87,6 +87,8 @@ export const GET = route(async (req: NextRequest) => {
       harga_besar: hb,
       harga_kecil: hk,
       harga_b3: h3,
+      ahli_gizi: s?.ahli_gizi ?? "",
+      koordinator: s?.koordinator ?? "",
       tz,
     },
     distribusi: dist

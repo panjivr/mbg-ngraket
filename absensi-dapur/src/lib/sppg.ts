@@ -20,6 +20,8 @@ export interface Sppg {
   harga_besar: number;
   harga_kecil: number;
   harga_b3: number;
+  ahli_gizi: string;
+  koordinator: string;
 }
 
 /** Ambil konfigurasi dapur tertentu (null bila tak ada). */
