@@ -410,6 +410,9 @@ async function doEnsureSchema(): Promise<void> {
         UNIQUE (distribusi_id, penerima_id)
       );
     `);
+    // Menu terstruktur untuk form Uji Organoleptik (grup + item), per jenis penerima.
+    await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_sekolah JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_posyandu JSONB NOT NULL DEFAULT '[]'::jsonb`);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,

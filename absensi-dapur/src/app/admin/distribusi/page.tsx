@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import type { MenuGrup } from "@/lib/distribusi-types";
 
 interface Baris {
   penerima_id: number;
@@ -19,7 +20,7 @@ interface DistData {
   tanggal: string;
   tersimpan: boolean;
   sppg: { nama: string; kepala_sppg: string; harga_besar: number; harga_kecil: number; harga_b3: number };
-  distribusi: { driver: string; menu: string; catatan: string };
+  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[] };
   baris: Baris[];
   total: { besar: number; kecil: number; b3: number; porsi: number; pagu: number };
 }
@@ -60,6 +61,8 @@ export default function DistribusiPage() {
   const [driver, setDriver] = useState("");
   const [menu, setMenu] = useState("");
   const [catatan, setCatatan] = useState("");
+  const [menuSekolah, setMenuSekolah] = useState<MenuGrup[]>([]);
+  const [menuPosyandu, setMenuPosyandu] = useState<MenuGrup[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -76,6 +79,8 @@ export default function DistribusiPage() {
       setDriver(d.distribusi?.driver || "");
       setMenu(d.distribusi?.menu || "");
       setCatatan(d.distribusi?.catatan || "");
+      setMenuSekolah(d.distribusi?.menu_sekolah || []);
+      setMenuPosyandu(d.distribusi?.menu_posyandu || []);
     } finally {
       setLoading(false);
     }
@@ -114,6 +119,7 @@ export default function DistribusiPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tanggal, driver, menu, catatan,
+          menu_sekolah: menuSekolah, menu_posyandu: menuPosyandu,
           items: baris.map((b) => ({
             penerima_id: b.penerima_id, besar: b.besar, kecil: b.kecil, b3: b.b3, ikut: b.ikut,
           })),
@@ -203,6 +209,12 @@ export default function DistribusiPage() {
           <label className="label">Catatan</label>
           <input className="input" value={catatan} onChange={(e) => setCatatan(e.target.value)} />
         </div>
+      </div>
+
+      {/* Menu terstruktur untuk form Uji Organoleptik (bisa diisi & diganti tiap hari) */}
+      <div className="grid gap-3 lg:grid-cols-2">
+        <MenuEditor judul="🍚 Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={setMenuSekolah} />
+        <MenuEditor judul="👶 Menu Posyandu / Balita — Uji Organoleptik" warna="text-amber-300" value={menuPosyandu} onChange={setMenuPosyandu} />
       </div>
 
       {msg && (
@@ -320,6 +332,63 @@ export default function DistribusiPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Editor menu terstruktur: daftar grup, tiap grup punya judul + daftar item. */
+function MenuEditor({
+  judul, warna, value, onChange,
+}: {
+  judul: string;
+  warna: string;
+  value: MenuGrup[];
+  onChange: (v: MenuGrup[]) => void;
+}) {
+  const setGrup = (gi: number, patch: Partial<MenuGrup>) =>
+    onChange(value.map((g, i) => (i === gi ? { ...g, ...patch } : g)));
+  const addGrup = () => onChange([...value, { judul: "", items: [""] }]);
+  const delGrup = (gi: number) => onChange(value.filter((_, i) => i !== gi));
+  const setItem = (gi: number, ii: number, v: string) =>
+    setGrup(gi, { items: value[gi].items.map((it, i) => (i === ii ? v : it)) });
+  const addItem = (gi: number) => setGrup(gi, { items: [...value[gi].items, ""] });
+  const delItem = (gi: number, ii: number) =>
+    setGrup(gi, { items: value[gi].items.filter((_, i) => i !== ii) });
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className={"text-sm font-semibold " + warna}>{judul}</h3>
+        <button onClick={addGrup} className="btn-ghost px-2.5 py-1 text-xs">+ Grup</button>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Grup mis. “Menu Basah”, “Menu Jumat (Kering)”. Item = nama sampel makanan.
+      </p>
+      {value.length === 0 && (
+        <p className="mt-3 text-xs text-slate-500">Belum ada grup menu. Klik “+ Grup”.</p>
+      )}
+      <div className="mt-3 space-y-3">
+        {value.map((g, gi) => (
+          <div key={gi} className="rounded-lg border border-white/10 p-3">
+            <div className="flex items-center gap-2">
+              <input className="input flex-1 text-sm" placeholder="Judul grup (mis. Menu Basah)"
+                value={g.judul} onChange={(e) => setGrup(gi, { judul: e.target.value })} />
+              <button onClick={() => delGrup(gi)} className="btn-danger px-2 py-1 text-xs">Hapus</button>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {g.items.map((it, ii) => (
+                <div key={ii} className="flex items-center gap-2">
+                  <span className="w-5 text-right text-xs text-slate-500">{ii + 1}.</span>
+                  <input className="input flex-1 px-2 py-1 text-sm" placeholder="Nama sampel makanan"
+                    value={it} onChange={(e) => setItem(gi, ii, e.target.value)} />
+                  <button onClick={() => delItem(gi, ii)} className="btn-ghost px-2 py-1 text-xs">✕</button>
+                </div>
+              ))}
+              <button onClick={() => addItem(gi)} className="btn-ghost px-2.5 py-1 text-xs">+ Item</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
