@@ -93,6 +93,15 @@ export default function DistribusiPage() {
   function upd(id: number, patch: Partial<Baris>) {
     setBaris((prev) => prev.map((b) => (b.penerima_id === id ? { ...b, ...patch } : b)));
   }
+  function pilihSemua(v: boolean) {
+    setBaris((prev) => prev.map((b) => ({ ...b, ikut: v })));
+  }
+  function pilihGrup(jenjang: string, v: boolean) {
+    setBaris((prev) => prev.map((b) => (b.jenjang === jenjang ? { ...b, ikut: v } : b)));
+  }
+  const jmlIkut = baris.filter((b) => b.ikut).length;
+  const semuaIkut = baris.length > 0 && jmlIkut === baris.length;
+  const sebagianIkut = jmlIkut > 0 && jmlIkut < baris.length;
 
   const harga = data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" };
   const total = useMemo(() => {
@@ -221,6 +230,21 @@ export default function DistribusiPage() {
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{msg}</p>
       )}
 
+      {/* Checklist pilih penerima manfaat (PM) */}
+      {!loading && baris.length > 0 && (
+        <label className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-gold-500"
+            ref={(el) => { if (el) el.indeterminate = sebagianIkut; }}
+            checked={semuaIkut}
+            onChange={(e) => pilihSemua(e.target.checked)}
+          />
+          <span className="font-semibold">Pilih Semua PM</span>
+          <span className="text-slate-400">({jmlIkut}/{baris.length} penerima dipilih)</span>
+        </label>
+      )}
+
       {/* Tabel penerima */}
       {loading ? (
         <div className="card p-6 text-center text-slate-400">Memuat…</div>
@@ -242,7 +266,18 @@ export default function DistribusiPage() {
                 {grup.map(([jenjang, rows]) => (
                   <Fragment key={jenjang}>
                     <tr className="bg-white/5">
-                      <td colSpan={6} className="px-3 py-1.5 text-xs font-semibold text-gold-400">{jenjang}</td>
+                      <td className="px-3 py-1.5">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-gold-500"
+                          ref={(el) => { if (el) el.indeterminate = rows.some((r) => r.ikut) && !rows.every((r) => r.ikut); }}
+                          checked={rows.every((r) => r.ikut)}
+                          onChange={(e) => pilihGrup(jenjang, e.target.checked)}
+                        />
+                      </td>
+                      <td colSpan={5} className="px-3 py-1.5 text-xs font-semibold text-gold-400">
+                        {jenjang} <span className="font-normal text-slate-500">({rows.filter((r) => r.ikut).length}/{rows.length})</span>
+                      </td>
                     </tr>
                     {rows.map((b) => (
                       <tr key={b.penerima_id} className={"border-b border-white/5 " + (b.ikut ? "" : "opacity-40")}>

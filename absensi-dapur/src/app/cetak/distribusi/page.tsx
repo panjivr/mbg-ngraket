@@ -50,15 +50,6 @@ function kelasRows(s: Baris): { kelas: string; porsi: number }[] {
   return r;
 }
 
-function Ttd({ kiri, kanan }: { kiri: React.ReactNode; kanan: React.ReactNode }) {
-  return (
-    <div className="mt-6 flex justify-between text-sm">
-      <div className="w-1/2 pr-4">{kiri}</div>
-      <div className="w-1/2 pl-4 text-center">{kanan}</div>
-    </div>
-  );
-}
-
 /** Kop surat resmi Badan Gizi Nasional (logo + 3 baris + garis tebal). */
 function KopBGN() {
   return (
@@ -71,6 +62,20 @@ function KopBGN() {
         <p className="text-sm font-bold">KABUPATEN PONOROGO BALONG NGRAKET</p>
       </div>
       <div className="mt-2 border-b-4 border-black" />
+    </div>
+  );
+}
+
+/** Kop Berita Acara: logo BGN di kiri + dua baris judul. */
+function KopBerita({ judul, sppgNama }: { judul: string; sppgNama: string }) {
+  return (
+    <div className="relative min-h-[3.75rem]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/bgn-logo.webp" alt="Logo BGN" className="absolute left-0 top-1/2 h-14 w-14 -translate-y-1/2 object-contain" />
+      <div className="px-2 text-center font-bold leading-snug">
+        <p className="text-[13px]">{judul}</p>
+        <p className="text-[13px]">SATUAN PELAYANAN PEMENUHAN GIZI (SPPG), {sppgNama.toUpperCase()}</p>
+      </div>
     </div>
   );
 }
@@ -139,7 +144,8 @@ function Inner() {
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
-  const sppgLine = ("SPPG " + (sppg.nama || "").replace(/^SPPG\s+/i, "")).toUpperCase();
+  const namaSppg = (sppg.nama || "").replace(/^SPPG\s+/i, "");
+  const sppgLine = ("SPPG " + namaSppg).toUpperCase();
 
   return (
     <div className="min-h-screen bg-white py-6 text-black">
@@ -160,31 +166,66 @@ function Inner() {
         </div>
       </div>
 
-      {/* ===== BAST per sekolah ===== */}
-      {showBast && serdik.map((s) => {
-        const jml = s.besar + s.kecil;
+      {/* ===== BAST per penerima (sekolah & posyandu) ===== */}
+      {showBast && [...serdik, ...b3].map((s) => {
+        const isB3 = s.jenis === "b3";
+        const jml = kelasRows(s).reduce((a, r) => a + r.porsi, 0);
+        const pic = isB3 ? "(Nama PIC Penerima)" : "(Nama PIC Sekolah Penerima)";
+        const L = "______________________";
+        const Box = () => (
+          <div className="w-64 shrink-0 self-start border border-black p-3 text-sm">
+            <p>Mengetahui:</p>
+            <div className="h-12" />
+            <p>{sppg.kepala_sppg || "____________"}</p>
+            <p>Kepala SPPG,&nbsp; {namaSppg}</p>
+          </div>
+        );
         return (
-          <div key={"bast-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif leading-relaxed shadow-sm">
-            <h2 className="text-center text-sm font-bold uppercase">Berita Acara Penerimaan Paket Makanan Program Makan Bergizi Gratis</h2>
-            <h3 className="mb-4 text-center text-sm font-bold">Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}</h3>
-            <p className="text-justify text-sm">
-              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam ______ telah diterima paket makanan sejumlah:{" "}
-              <b>{jml} Paket</b> Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {sppg.nama}, yang melayani{" "}
-              <b>{s.nama}</b>. Baik dimakan sebelum jam ______
+          <div key={"bast-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+            {/* --- Berita Acara Penerimaan --- */}
+            <KopBerita judul="BERITA ACARA PENERIMAAN PAKET MAKANAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
+            <p className="mt-6 text-justify text-sm leading-relaxed">
+              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam__________telah diterima paket makanan
+              sejumlah : <u>{jml}</u> Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg},
+              yang melayani {isB3 ? "" : "sekolah "}<u>{s.nama}</u> Baik dimakan sebelum jam _______________
             </p>
-            <p className="mt-3 text-sm">Yang menyerahkan : ______________________</p>
-            <p className="text-sm">Nomor Telepon &nbsp;&nbsp;: ______________________</p>
-            <Ttd
-              kiri={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
-              kanan={<>Diterima oleh,<br /><br /><br />(________________)<br />Nama PIC Sekolah Penerima</>}
-            />
-            <hr className="my-5 border-gray-400" />
-            <h3 className="text-center text-sm font-bold uppercase">Berita Acara Pengembalian Alat Makan (Ompreng)</h3>
-            <p className="mt-3 text-justify text-sm">
-              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam ______ telah diserahkan kembali ompreng sejumlah:{" "}
-              <b>{jml}</b> dari {s.nama} kepada SPPG {sppg.nama}.
-            </p>
-            <p className="mt-3 text-sm">Yang menyerahkan : ______________________ (Nama PIC Sekolah)</p>
+            <div className="mt-4 text-sm">
+              <p>Yang menyerahkan &nbsp;: {L}</p>
+              <p>Nomor Telepon &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {L}</p>
+            </div>
+            <p className="mt-8 text-sm">({L})</p>
+            <div className="mt-1 flex justify-between gap-4">
+              <div className="text-sm">
+                <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
+                <p className="pl-[6.5rem]">{pic}</p>
+                <p className="mt-3">Nomor Telepon : {L}</p>
+              </div>
+              <Box />
+            </div>
+            <p className="mt-6 text-sm">({L})</p>
+
+            {/* --- Berita Acara Pengembalian --- */}
+            <div className="mt-12">
+              <KopBerita judul="BERITA ACARA  PENGEMBALIAN ALAT MAKAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
+              <p className="mt-6 text-justify text-sm leading-relaxed">
+                Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam __________telah diserahkan kembali ompreng
+                sejumlah : {jml} Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg}.
+              </p>
+              <div className="mt-4 text-sm">
+                <p>Yang menyerahkan : {L}</p>
+                <p className="pl-[7.5rem]">{pic}</p>
+                <p className="mt-2">Nomor Telepon : {L}</p>
+              </div>
+              <p className="mt-8 text-sm">( {L})</p>
+              <div className="mt-1 flex justify-between gap-4">
+                <div className="text-sm">
+                  <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
+                  <p className="mt-1">Nomor Telepon : {L}</p>
+                </div>
+                <Box />
+              </div>
+              <p className="mt-6 text-sm">({L})</p>
+            </div>
           </div>
         );
       })}
@@ -292,7 +333,7 @@ function Inner() {
               {[
                 { l: <>Hari/Tanggal</>, v: <>{(hari(tanggal) + " " + tglLong(tanggal)).toUpperCase()}</> },
                 { l: <>Nama Sekolah</>, v: <b>{s.nama}</b> },
-                { l: <>Asal Sampel</>, v: <b>SPPG {sppg.nama}</b> },
+                { l: <>Asal Sampel</>, v: <b>SPPG {namaSppg}</b> },
                 { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isB3 ? "Posyandu" : "sekolah"})</span></>, v: null },
                 { l: <>Menu</>, v: data.distribusi.menu ? <>{data.distribusi.menu}</> : null },
                 { l: <>Instruksi</>, v: <>Isilah dengan memberi tanda centang (✓) pada Indikator Penilaian Uji Organoleptik</> },
