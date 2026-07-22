@@ -69,10 +69,10 @@ function KopBGN() {
 /** Kop Berita Acara: logo BGN di kiri + dua baris judul. */
 function KopBerita({ judul, sppgNama }: { judul: string; sppgNama: string }) {
   return (
-    <div className="relative min-h-[3.75rem]">
+    <div className="flex items-center gap-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/bgn-logo.webp" alt="Logo BGN" className="absolute left-0 top-1/2 h-14 w-14 -translate-y-1/2 object-contain" />
-      <div className="px-2 text-center font-bold leading-snug">
+      <img src="/bgn-logo.webp" alt="Logo BGN" className="h-14 w-14 shrink-0 object-contain" />
+      <div className="flex-1 text-center font-bold leading-snug">
         <p className="text-[13px]">{judul}</p>
         <p className="text-[13px]">SATUAN PELAYANAN PEMENUHAN GIZI (SPPG), {sppgNama.toUpperCase()}</p>
       </div>
