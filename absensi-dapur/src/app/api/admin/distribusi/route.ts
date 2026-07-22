@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
-import type { Penerima, DistribusiBaris } from "@/lib/distribusi-types";
+import type { Penerima, DistribusiBaris, MenuGrup } from "@/lib/distribusi-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +17,18 @@ interface ItemRow {
   kecil: number;
   b3: number;
   ikut: boolean;
+}
+
+/** Bersihkan struktur menu (grup + item) dari input agar aman disimpan. */
+function cleanMenu(v: unknown): MenuGrup[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 30).map((g) => {
+    const o = (g ?? {}) as Record<string, unknown>;
+    const items = Array.isArray(o.items)
+      ? (o.items as unknown[]).slice(0, 60).map((i) => String(i ?? "").slice(0, 200))
+      : [];
+    return { judul: String(o.judul ?? "").slice(0, 160), items };
+  });
 }
 
 export const GET = route(async (req: NextRequest) => {
@@ -32,8 +44,12 @@ export const GET = route(async (req: NextRequest) => {
   );
 
   const dist = (
-    await query<{ id: number; driver: string; menu: string; catatan: string }>(
-      `SELECT id, driver, menu, catatan FROM distribusi WHERE sppg_id = $1 AND tanggal = $2`,
+    await query<{
+      id: number; driver: string; menu: string; catatan: string;
+      menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[];
+    }>(
+      `SELECT id, driver, menu, catatan, menu_sekolah, menu_posyandu
+         FROM distribusi WHERE sppg_id = $1 AND tanggal = $2`,
       [admin.sppg_id, tanggal],
     )
   )[0];
@@ -92,8 +108,12 @@ export const GET = route(async (req: NextRequest) => {
       tz,
     },
     distribusi: dist
-      ? { driver: dist.driver, menu: dist.menu, catatan: dist.catatan }
-      : { driver: "", menu: "", catatan: "" },
+      ? {
+          driver: dist.driver, menu: dist.menu, catatan: dist.catatan,
+          menu_sekolah: dist.menu_sekolah ?? [],
+          menu_posyandu: dist.menu_posyandu ?? [],
+        }
+      : { driver: "", menu: "", catatan: "", menu_sekolah: [], menu_posyandu: [] },
     baris,
     total: {
       besar: tBesar,
@@ -113,6 +133,8 @@ export const POST = route(async (req: NextRequest) => {
   const driver = String(b.driver ?? "").trim();
   const menu = String(b.menu ?? "").trim();
   const catatan = String(b.catatan ?? "").trim();
+  const menuSekolah = cleanMenu(b.menu_sekolah);
+  const menuPosyandu = cleanMenu(b.menu_posyandu);
   const items = Array.isArray(b.items) ? (b.items as Record<string, unknown>[]) : [];
 
   await withClient(async (client) => {
@@ -120,12 +142,13 @@ export const POST = route(async (req: NextRequest) => {
     try {
       const dist = (
         await client.query<{ id: number }>(
-          `INSERT INTO distribusi (sppg_id, tanggal, driver, menu, catatan)
-           VALUES ($1,$2,$3,$4,$5)
+          `INSERT INTO distribusi (sppg_id, tanggal, driver, menu, catatan, menu_sekolah, menu_posyandu)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb)
            ON CONFLICT (sppg_id, tanggal) DO UPDATE
-             SET driver = EXCLUDED.driver, menu = EXCLUDED.menu, catatan = EXCLUDED.catatan
+             SET driver = EXCLUDED.driver, menu = EXCLUDED.menu, catatan = EXCLUDED.catatan,
+                 menu_sekolah = EXCLUDED.menu_sekolah, menu_posyandu = EXCLUDED.menu_posyandu
            RETURNING id`,
-          [admin.sppg_id, tanggal, driver, menu, catatan],
+          [admin.sppg_id, tanggal, driver, menu, catatan, JSON.stringify(menuSekolah), JSON.stringify(menuPosyandu)],
         )
       ).rows[0];
 

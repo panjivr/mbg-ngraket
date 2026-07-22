@@ -2,6 +2,13 @@
 
 export type JenisPenerima = "serdik" | "b3";
 
+// Menu terstruktur untuk form Uji Organoleptik: grup (mis. "Menu Basah",
+// "Menu Jumat (Kering)") berisi daftar nama sampel makanan.
+export interface MenuGrup {
+  judul: string;
+  items: string[];
+}
+
 // Master penerima (sekolah/SERDIK atau kelompok B3 posyandu) per dapur.
 export interface Penerima {
   id: number;

@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import type { MenuGrup } from "@/lib/distribusi-types";
 
 interface Baris {
   penerima_id: number;
@@ -18,9 +19,16 @@ interface Baris {
 interface DistData {
   tanggal: string;
   sppg: { nama: string; kepala_sppg: string; alamat: string; ahli_gizi: string; koordinator: string };
-  distribusi: { driver: string; menu: string; catatan: string };
+  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[] };
   baris: Baris[];
 }
+
+const PAPERS: Record<string, { label: string; size: string }> = {
+  A4: { label: "A4 (210×297)", size: "210mm 297mm" },
+  F4: { label: "F4 / Folio (215×330)", size: "215mm 330mm" },
+  Letter: { label: "Letter (216×279)", size: "216mm 279mm" },
+  Legal: { label: "Legal (216×356)", size: "216mm 356mm" },
+};
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -51,12 +59,69 @@ function Ttd({ kiri, kanan }: { kiri: React.ReactNode; kanan: React.ReactNode })
   );
 }
 
+/** Kop surat resmi Badan Gizi Nasional (logo + 3 baris + garis tebal). */
+function KopBGN() {
+  return (
+    <div className="relative">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/bgn-logo.webp" alt="Logo BGN" className="absolute left-0 top-1/2 h-16 w-16 -translate-y-1/2 object-contain" />
+      <div className="px-20 text-center leading-snug">
+        <p className="text-sm font-bold">BADAN GIZI NASIONAL (<span className="italic">NATIONAL NUTRITION AGENCY</span>)</p>
+        <p className="text-sm font-bold">SATUAN PELAYANAN PEMENUHAN GIZI</p>
+        <p className="text-sm font-bold">KABUPATEN PONOROGO BALONG NGRAKET</p>
+      </div>
+      <div className="mt-2 border-b-4 border-black" />
+    </div>
+  );
+}
+
+/** Isi tabel Uji Organoleptik: grup menu + item bernomor (indikator kosong untuk dicentang). */
+function OrgTableBody({ grup }: { grup: MenuGrup[] }) {
+  const pakai = grup.filter((g) => (g.judul && g.judul.trim()) || g.items.some((i) => i.trim()));
+  const cell = "border border-black px-2 py-1";
+  if (pakai.length === 0) {
+    // Template kosong: 6 baris untuk diisi tangan.
+    return (
+      <tbody>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <tr key={i}>
+            <td className={cell + " text-center"}>{i + 1}</td>
+            <td className={cell}></td>
+            {Array.from({ length: 8 }).map((_, j) => <td key={j} className={cell}></td>)}
+          </tr>
+        ))}
+      </tbody>
+    );
+  }
+  return (
+    <tbody>
+      {pakai.map((g, gi) => (
+        <Fragment key={gi}>
+          <tr>
+            <td className={cell}></td>
+            <td className={cell + " text-left font-bold"}>{g.judul}</td>
+            {Array.from({ length: 8 }).map((_, j) => <td key={j} className={cell}></td>)}
+          </tr>
+          {g.items.filter((it) => it.trim()).map((it, ii) => (
+            <tr key={ii}>
+              <td className={cell + " text-center"}>{ii + 1}</td>
+              <td className={cell + " text-left"}>{it}</td>
+              {Array.from({ length: 8 }).map((_, j) => <td key={j} className={cell}></td>)}
+            </tr>
+          ))}
+        </Fragment>
+      ))}
+    </tbody>
+  );
+}
+
 function Inner() {
   const sp = useSearchParams();
   const tanggal = /^\d{4}-\d{2}-\d{2}$/.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : jakartaToday();
   const dok = sp.get("dok") || "semua";
   const [data, setData] = useState<DistData | null>(null);
   const [err, setErr] = useState(false);
+  const [paper, setPaper] = useState("A4");
 
   useEffect(() => {
     fetch(`/api/admin/distribusi?tanggal=${tanggal}`, { cache: "no-store" })
@@ -74,17 +139,25 @@ function Inner() {
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
-  const menu = data.distribusi.menu || "________________";
   const sppgLine = ("SPPG " + (sppg.nama || "").replace(/^SPPG\s+/i, "")).toUpperCase();
 
   return (
     <div className="min-h-screen bg-white py-6 text-black">
-      <style>{`@media print{@page{size:A4;margin:15mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
-      <div className="no-print mx-auto mb-4 flex max-w-[760px] items-center justify-between px-4">
+      <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
+      <div className="no-print mx-auto mb-4 flex max-w-[760px] flex-wrap items-center justify-between gap-3 px-4">
         <p className="text-sm text-gray-600">{serdik.length} sekolah · {b3.length} posyandu · {tglLong(tanggal)}</p>
-        <button onClick={() => window.print()} className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white">
-          🖨️ Cetak / Simpan PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">Ukuran kertas</label>
+          <select value={paper} onChange={(e) => setPaper(e.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
+            {Object.entries(PAPERS).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
+          </select>
+          <button onClick={() => window.print()} className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white">
+            🖨️ Cetak / Simpan PDF
+          </button>
+        </div>
       </div>
 
       {/* ===== BAST per sekolah ===== */}
@@ -206,46 +279,74 @@ function Inner() {
         );
       })}
 
-      {/* ===== Uji Organoleptik per penerima ===== */}
-      {showOrg && [...serdik, ...b3].map((s) => (
-        <div key={"org-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] border border-gray-300 p-8 font-serif shadow-sm">
-          <h2 className="mb-4 text-center text-base font-bold uppercase">Form Uji Organoleptik</h2>
-          <table className="mb-3 text-sm">
-            <tbody>
-              <tr><td className="pr-3">Hari/Tanggal</td><td>: {hari(tanggal)} {tglLong(tanggal)}</td></tr>
-              <tr><td className="pr-3">Nama {s.jenis === "b3" ? "Posyandu" : "Sekolah"}</td><td>: {s.nama}</td></tr>
-              <tr><td className="pr-3">Asal Sampel</td><td>: SPPG {sppg.nama}</td></tr>
-              <tr><td className="pr-3">Menu</td><td>: {menu}</td></tr>
-              <tr><td className="pr-3">Petugas Sampel</td><td>: ({s.jenis === "b3" ? "pihak Posyandu" : "pihak sekolah"})</td></tr>
-            </tbody>
-          </table>
-          <p className="mb-2 text-sm">Instruksi: Isilah dengan memberi tanda centang (✓) pada indikator penilaian.</p>
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                {["No", "Indikator", "Baik", "Cukup", "Kurang"].map((h) => (
-                  <th key={h} className="border border-black px-2 py-1 text-center">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {["Warna", "Aroma", "Rasa", "Tekstur", "Kematangan", "Kebersihan", "Suhu"].map((ind, i) => (
-                <tr key={ind}>
-                  <td className="border border-black px-2 py-1 text-center">{i + 1}</td>
-                  <td className="border border-black px-2 py-1">{ind}</td>
-                  <td className="border border-black px-2 py-1"></td>
-                  <td className="border border-black px-2 py-1"></td>
-                  <td className="border border-black px-2 py-1"></td>
-                </tr>
+      {/* ===== Uji Organoleptik per penerima (sekolah & posyandu) ===== */}
+      {showOrg && [...serdik, ...b3].map((s) => {
+        const isB3 = s.jenis === "b3";
+        const grup = isB3 ? data.distribusi.menu_posyandu || [] : data.distribusi.menu_sekolah || [];
+        return (
+          <div key={"org-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+            <KopBGN />
+            <h2 className="mt-6 text-center text-base font-bold">FORM UJI ORGANOLEPTIK</h2>
+
+            <div className="mt-6 text-sm leading-relaxed">
+              {[
+                { l: <>Hari/Tanggal</>, v: <>{(hari(tanggal) + " " + tglLong(tanggal)).toUpperCase()}</> },
+                { l: <>Nama Sekolah</>, v: <b>{s.nama}</b> },
+                { l: <>Asal Sampel</>, v: <b>SPPG {sppg.nama}</b> },
+                { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isB3 ? "Posyandu" : "sekolah"})</span></>, v: null },
+                { l: <>Menu</>, v: data.distribusi.menu ? <>{data.distribusi.menu}</> : null },
+                { l: <>Instruksi</>, v: <>Isilah dengan memberi tanda centang (✓) pada Indikator Penilaian Uji Organoleptik</> },
+              ].map((row, i) => (
+                <div key={i} className="flex items-end py-0.5">
+                  <div className="w-36 shrink-0">{row.l}</div>
+                  <div className="shrink-0 pr-1">:</div>
+                  {row.v !== null ? (
+                    <div className="flex-1 self-center">{row.v}</div>
+                  ) : (
+                    <div className="mb-1 flex-1 self-end border-b border-dotted border-black" />
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
-          <Ttd
-            kiri={<>Petugas Sampel,<br /><br /><br />(________________)</>}
-            kanan={<>Mengetahui,<br /><br /><br /><b>{sppg.kepala_sppg || "____________"}</b><br />Kepala SPPG {sppg.nama}</>}
-          />
-        </div>
-      ))}
+            </div>
+
+            <table className="mt-5 w-full border-collapse text-center text-sm">
+              <thead className="font-bold">
+                <tr>
+                  <th rowSpan={3} className="border border-black px-2 py-1">No</th>
+                  <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "Balita" : "Sampel"})</th>
+                  <th colSpan={8} className="border border-black px-2 py-1">Indikator Penilaian</th>
+                </tr>
+                <tr>
+                  <th colSpan={2} className="border border-black px-2 py-1">Rasa</th>
+                  <th colSpan={2} className="border border-black px-2 py-1">Aroma</th>
+                  <th colSpan={2} className="border border-black px-2 py-1">Warna</th>
+                  <th colSpan={2} className="border border-black px-2 py-1">Tekstur</th>
+                </tr>
+                <tr className="text-xs font-normal">
+                  {["Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik"].map((h, i) => (
+                    <th key={i} className="border border-black px-1 py-1">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <OrgTableBody grup={grup} />
+            </table>
+
+            <div className="mt-4 text-sm">
+              <div className="flex items-end"><span className="shrink-0 pr-1">Catatan :</span><span className="mb-1 flex-1 self-end border-b border-dotted border-black" /></div>
+              <div className="mb-1 mt-2 border-b border-dotted border-black" />
+              <div className="mb-1 mt-2 border-b border-dotted border-black" />
+            </div>
+
+            <div className="mt-8 flex justify-end text-center text-sm">
+              <div className="w-64">
+                <p>Diperiksa oleh,</p>
+                <p>Pihak {isB3 ? "Posyandu" : "Sekolah"}</p>
+                <div className="mx-auto mt-20 w-56 border-b border-black" />
+              </div>
+            </div>
+          </div>
+        );
+      })}
 
       {serdik.length === 0 && b3.length === 0 && (
         <p className="p-8 text-center text-gray-600">
