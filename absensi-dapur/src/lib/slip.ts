@@ -1,5 +1,4 @@
 import { query } from "./db";
-import { AMBANG_LEMBUR_DEFAULT_MENIT } from "./gaji";
 
 export interface SlipUser {
   id: number;
@@ -11,6 +10,8 @@ export interface SlipUser {
   lembur_per_hari: number;
   potongan_per_telat: number;
   bpjs_tk: boolean;
+  slip_show: boolean;
+  lembur_min_jam: number; // ambang jam kerja harian untuk mulai dihitung lembur
 }
 
 export interface HariMasuk {
@@ -69,18 +70,20 @@ export async function computeSlip(
   userId: number,
   from: string,
   to: string,
-  ambangMenit = AMBANG_LEMBUR_DEFAULT_MENIT,
 ): Promise<Slip | null> {
   const u = (
     await query<SlipUser>(
       `SELECT u.id, u.nama, u.jabatan, u.nip, d.nama AS divisi_nama,
-              u.gaji_harian, u.lembur_per_hari, u.potongan_per_telat, u.bpjs_tk
+              u.gaji_harian, u.lembur_per_hari, u.potongan_per_telat, u.bpjs_tk, u.slip_show,
+              COALESCE(d.lembur_min_jam, 10) AS lembur_min_jam
          FROM users u LEFT JOIN divisi d ON d.id = u.divisi_id
         WHERE u.id = $1 AND u.sppg_id = $2`,
       [userId, sppgId],
     )
   )[0];
   if (!u) return null;
+  // Ambang lembur mengikuti divisi (mis. 10 atau 12 jam).
+  const ambangMenit = Math.max(1, (u.lembur_min_jam || 10) * 60);
 
   const rows = await query<AbsRow>(
     `SELECT COALESCE(shift_tanggal, tanggal)::text AS d, check_in, check_out, status_masuk

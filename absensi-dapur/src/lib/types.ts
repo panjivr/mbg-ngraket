@@ -6,6 +6,8 @@ export interface Divisi {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  /** Ambang jam kerja harian untuk mulai dihitung lembur (mis. 10 atau 12). */
+  lembur_min_jam?: number;
   warna: string | null;
   jobdesk: string | null;
   aktif: boolean;

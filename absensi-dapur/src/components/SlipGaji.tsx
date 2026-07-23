@@ -69,9 +69,16 @@ export default function SlipGaji({
   );
 
   return (
-    <div className="min-h-screen bg-white py-4 text-black sm:py-6">
+    <div className="slip-print-root min-h-screen bg-white py-4 text-black sm:py-6">
       {canPrint ? (
-        <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}}`}</style>
+        // Cetak HANYA slip: sembunyikan sisa halaman (nav/tab/kontrol) agar 1 halaman rapi.
+        <style>{`@media print{
+          @page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:12mm}
+          body{visibility:hidden!important}
+          .slip-print-root{visibility:visible!important;position:absolute!important;left:0;top:0;width:100%;min-height:0!important;padding-top:0!important;padding-bottom:0!important}
+          .slip-print-root *{visibility:visible!important}
+          .no-print{display:none!important}
+        }`}</style>
       ) : (
         // Karyawan: dokumen hanya untuk dilihat, tidak untuk dicetak/diunduh.
         <style>{`@media print{.slip-doc{display:none!important}.slip-noprint{display:block!important}}`}</style>

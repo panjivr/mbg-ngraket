@@ -14,13 +14,14 @@ interface Row {
   lembur_per_hari: number;
   potongan_per_telat: number;
   bpjs_tk: boolean;
+  slip_show: boolean;
 }
 
 export const GET = route(async () => {
   const hr = await requireHr();
   const rows = await query<Row>(
     `SELECT u.id, u.nama, d.nama AS divisi_nama,
-            u.gaji_harian, u.lembur_per_hari, u.potongan_per_telat, u.bpjs_tk
+            u.gaji_harian, u.lembur_per_hari, u.potongan_per_telat, u.bpjs_tk, u.slip_show
        FROM users u LEFT JOIN divisi d ON d.id = u.divisi_id
       WHERE u.sppg_id = $1 AND u.aktif = TRUE
       ORDER BY d.nama ASC NULLS LAST, u.nama ASC`,
@@ -40,9 +41,10 @@ export const POST = route(async (req: NextRequest) => {
     return Number.isFinite(n) && n >= 0 ? n : 0;
   };
   const r = await query<{ id: number }>(
-    `UPDATE users SET gaji_harian = $1, lembur_per_hari = $2, potongan_per_telat = $3, bpjs_tk = $4
-      WHERE id = $5 AND sppg_id = $6 RETURNING id`,
-    [num(b.gaji_harian), num(b.lembur_per_hari), num(b.potongan_per_telat), Boolean(b.bpjs_tk), id, hr.sppg_id],
+    `UPDATE users SET gaji_harian = $1, lembur_per_hari = $2, potongan_per_telat = $3,
+            bpjs_tk = $4, slip_show = $5
+      WHERE id = $6 AND sppg_id = $7 RETURNING id`,
+    [num(b.gaji_harian), num(b.lembur_per_hari), num(b.potongan_per_telat), Boolean(b.bpjs_tk), Boolean(b.slip_show), id, hr.sppg_id],
   );
   if (!r.length) return fail(404, "Pegawai tidak ditemukan.");
   return ok({ id });
