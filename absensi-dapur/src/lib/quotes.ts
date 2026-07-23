@@ -6,10 +6,17 @@ import { FILSUF } from "./quotes/filsuf";
 import { ISLAM } from "./quotes/islam";
 import { PENGUSAHA } from "./quotes/pengusaha";
 import { NUSANTARA } from "./quotes/nusantara";
+import { KERJA } from "./quotes/kerja";
 
 export type { Quote };
 
-export const QUOTES: Quote[] = [...FILSUF, ...ISLAM, ...PENGUSAHA, ...NUSANTARA];
+export const QUOTES: Quote[] = [
+  ...FILSUF,
+  ...ISLAM,
+  ...PENGUSAHA,
+  ...NUSANTARA,
+  ...KERJA,
+];
 
 /** Ambil satu kutipan acak. */
 export function quoteAcak(): Quote {

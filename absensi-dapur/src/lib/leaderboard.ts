@@ -1,10 +1,25 @@
 import { query } from "./db";
 
-// Bobot komponen skor kinerja (0–100). Berbasis rasio agar adil untuk pegawai
-// dengan jumlah hari kerja berbeda (mis. keamanan yang harinya lebih banyak).
-const W_KETEPATAN = 0.55; // ketepatan waktu masuk (tepat / hadir)
-const W_KEAKTIFAN = 0.25; // keaktifan hadir (hadir / hari operasional, maks 1)
-const W_KELENGKAPAN = 0.2; // kelengkapan presensi (clock-out / hadir)
+// Bobot komponen skor kinerja (poin dari total 100). Berbasis rasio agar adil
+// untuk pegawai dengan jumlah hari kerja berbeda (mis. keamanan yang harinya
+// lebih banyak). Jumlah bobot = 100.
+export const BOBOT = {
+  ketepatan: 55, // ketepatan waktu masuk (tepat / hadir)
+  keaktifan: 25, // keaktifan hadir (hadir / hari operasional, maks 1)
+  kelengkapan: 20, // kelengkapan presensi (clock-out / hadir)
+} as const;
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/** Rincian satu komponen penilaian: persentase capaian & poin ke skor akhir. */
+export interface Komponen {
+  pct: number; // 0..100 (1 desimal) — capaian rasio komponen
+  poin: number; // kontribusi ke skor akhir (0..bobot, 1 desimal)
+  a: number; // pembilang (mis. jumlah tepat waktu)
+  b: number; // penyebut (mis. jumlah hadir / hari operasional)
+}
 
 export interface BoardRow {
   user_id: number;
@@ -15,9 +30,12 @@ export interface BoardRow {
   tepat: number;
   terlambat: number;
   selesai: number;
-  ketepatan: number; // %
-  jam_rata: number; // jam/hari
-  skor: number; // 0..100
+  op_days: number;
+  jam_rata: number; // jam/hari (1 desimal)
+  ketepatan: Komponen;
+  keaktifan: Komponen;
+  kelengkapan: Komponen;
+  skor: number; // 0..100 (1 desimal) = jumlah poin ketiga komponen
 }
 
 interface RawRow {
@@ -33,17 +51,45 @@ interface RawRow {
   op_days: number;
 }
 
+function komponen(a: number, b: number, bobot: number): Komponen {
+  const ratio = b > 0 ? Math.min(a / b, 1) : 0;
+  return {
+    pct: round1(ratio * 100),
+    poin: round1(ratio * bobot),
+    a,
+    b,
+  };
+}
+
+// Cache singkat hasil papan per (dapur, rentang). Papan ini kini dibuka oleh
+// setiap karyawan di layar absen, jadi cache 30 detik memangkas beban DB.
+const BOARD_TTL_MS = 30_000;
+const boardCache = new Map<
+  string,
+  { at: number; val: { board: BoardRow[]; op_days: number } }
+>();
+
+/** Hapus cache papan sebuah dapur (panggil setelah data peringkat berubah). */
+export function invalidateBoard(sppgId: number): void {
+  const prefix = `${sppgId}|`;
+  for (const k of boardCache.keys()) if (k.startsWith(prefix)) boardCache.delete(k);
+}
+
 /**
  * Hitung papan peringkat kinerja satu dapur pada rentang tanggal.
- * Skor berbasis rasio (adil untuk jumlah hari kerja berbeda) dan sudah terurut
- * dari skor tertinggi. Baris berjadwal-khusus tetap disertakan dengan flag
- * `hidden` = true agar pemanggil bisa memisahkannya.
+ * Skor berbasis rasio (adil untuk jumlah hari kerja berbeda), dengan rincian
+ * poin per komponen yang dijumlahkan persis = skor akhir (transparan). Terurut
+ * dari skor tertinggi. Baris berjadwal-khusus tetap disertakan (`hidden`=true).
  */
 export async function computeBoard(
   sppgId: number,
   from: string,
   to: string,
 ): Promise<{ board: BoardRow[]; op_days: number }> {
+  const key = `${sppgId}|${from}|${to}`;
+  const hit = boardCache.get(key);
+  if (hit && Date.now() - hit.at < BOARD_TTL_MS) return hit.val;
+
   const rows = await query<RawRow>(
     `WITH op AS (
        SELECT COUNT(DISTINCT COALESCE(a.shift_tanggal, a.tanggal)) AS n
@@ -75,17 +121,13 @@ export async function computeBoard(
       const hadir = r.hadir;
       const opDays = r.op_days || 0;
       const menit = Number(r.menit) || 0;
-      const ketepatan = hadir > 0 ? r.tepat / hadir : 0;
-      const keaktifan = opDays > 0 ? Math.min(hadir / opDays, 1) : 0;
-      const kelengkapan = hadir > 0 ? r.selesai / hadir : 0;
+      const ketepatan = komponen(r.tepat, hadir, BOBOT.ketepatan);
+      const keaktifan = komponen(hadir, opDays, BOBOT.keaktifan);
+      const kelengkapan = komponen(r.selesai, hadir, BOBOT.kelengkapan);
+      // Skor = jumlah poin yang ditampilkan → rincian selalu klop (anti-iri).
       const skor =
         hadir > 0
-          ? Math.round(
-              100 *
-                (W_KETEPATAN * ketepatan +
-                  W_KEAKTIFAN * keaktifan +
-                  W_KELENGKAPAN * kelengkapan),
-            )
+          ? round1(ketepatan.poin + keaktifan.poin + kelengkapan.poin)
           : 0;
       const jamRata = r.selesai > 0 ? menit / r.selesai / 60 : 0;
       return {
@@ -97,18 +139,23 @@ export async function computeBoard(
         tepat: r.tepat,
         terlambat: r.terlambat,
         selesai: r.selesai,
-        ketepatan: Math.round(ketepatan * 100),
-        jam_rata: Math.round(jamRata * 10) / 10,
+        op_days: opDays,
+        jam_rata: round1(jamRata),
+        ketepatan,
+        keaktifan,
+        kelengkapan,
         skor,
       };
     })
     .sort(
       (a, b) =>
         b.skor - a.skor ||
-        b.ketepatan - a.ketepatan ||
+        b.ketepatan.pct - a.ketepatan.pct ||
         b.hadir - a.hadir ||
         a.nama.localeCompare(b.nama, "id"),
     );
 
-  return { board, op_days: rows[0]?.op_days || 0 };
+  const val = { board, op_days: rows[0]?.op_days || 0 };
+  boardCache.set(key, { at: Date.now(), val });
+  return val;
 }
