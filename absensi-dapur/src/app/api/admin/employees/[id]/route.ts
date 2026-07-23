@@ -101,10 +101,21 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const akses_gudang_keluar =
     body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
 
+  const toRupiah = (v: unknown, fallback: number) => {
+    if (v === undefined) return fallback;
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+  };
+  const gaji_harian = toRupiah(body.gaji_harian, existing.gaji_harian ?? 0);
+  const tunjangan = toRupiah(body.tunjangan, existing.tunjangan ?? 0);
+  const lembur_per_jam = toRupiah(body.lembur_per_jam, existing.lembur_per_jam ?? 0);
+  const potongan_per_telat = toRupiah(body.potongan_per_telat, existing.potongan_per_telat ?? 0);
+
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
     jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar,
+    gaji_harian, tunjangan, lembur_per_jam, potongan_per_telat,
   ];
   if (body.password) {
     if (String(body.password).length < 6) {
@@ -119,10 +130,12 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const rows = await query<User>(
     `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
             divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
-            akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14${passwordClause}
+            akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14,
+            gaji_harian=$15, tunjangan=$16, lembur_per_jam=$17, potongan_per_telat=$18${passwordClause}
        WHERE id = $${paramsArr.length}
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar`,
+               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar,
+               gaji_harian, tunjangan, lembur_per_jam, potongan_per_telat`,
     paramsArr,
   );
   void admin;

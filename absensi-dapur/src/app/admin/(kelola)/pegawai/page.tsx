@@ -22,6 +22,10 @@ interface Employee {
   akses_distribusi: boolean;
   akses_laporan: boolean;
   akses_gudang_keluar: boolean;
+  gaji_harian: number;
+  tunjangan: number;
+  lembur_per_jam: number;
+  potongan_per_telat: number;
 }
 
 interface DivisiLite {
@@ -48,6 +52,10 @@ interface FormState {
   akses_distribusi: boolean;
   akses_laporan: boolean;
   akses_gudang_keluar: boolean;
+  gaji_harian: string;
+  tunjangan: string;
+  lembur_per_jam: string;
+  potongan_per_telat: string;
 }
 
 const emptyForm: FormState = {
@@ -67,6 +75,10 @@ const emptyForm: FormState = {
   akses_distribusi: false,
   akses_laporan: false,
   akses_gudang_keluar: false,
+  gaji_harian: "",
+  tunjangan: "",
+  lembur_per_jam: "",
+  potongan_per_telat: "",
 };
 
 export default function PegawaiPage() {
@@ -177,6 +189,10 @@ export default function PegawaiPage() {
       akses_distribusi: !!e.akses_distribusi,
       akses_laporan: !!e.akses_laporan,
       akses_gudang_keluar: !!e.akses_gudang_keluar,
+      gaji_harian: e.gaji_harian ? String(e.gaji_harian) : "",
+      tunjangan: e.tunjangan ? String(e.tunjangan) : "",
+      lembur_per_jam: e.lembur_per_jam ? String(e.lembur_per_jam) : "",
+      potongan_per_telat: e.potongan_per_telat ? String(e.potongan_per_telat) : "",
     });
   }
 
@@ -204,6 +220,10 @@ export default function PegawaiPage() {
         akses_distribusi: form.akses_distribusi,
         akses_laporan: form.akses_laporan,
         akses_gudang_keluar: form.akses_gudang_keluar,
+        gaji_harian: Number(form.gaji_harian) || 0,
+        tunjangan: Number(form.tunjangan) || 0,
+        lembur_per_jam: Number(form.lembur_per_jam) || 0,
+        potongan_per_telat: Number(form.potongan_per_telat) || 0,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -550,6 +570,34 @@ export default function PegawaiPage() {
                 </label>
                 <p className="text-[11px] text-slate-500">Setelah diubah, pegawai perlu logout &amp; login ulang agar akses aktif.</p>
               </div>
+
+              {/* Komponen gaji untuk slip gaji otomatis. */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <p className="mb-2 text-xs font-semibold text-slate-300">💰 Komponen Gaji (untuk slip gaji)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Upah / Hari (Rp)</label>
+                    <input type="number" min={0} className="input" value={form.gaji_harian}
+                      placeholder="0" onChange={(e) => setForm({ ...form, gaji_harian: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label">Tunjangan (Rp)</label>
+                    <input type="number" min={0} className="input" value={form.tunjangan}
+                      placeholder="0" onChange={(e) => setForm({ ...form, tunjangan: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label">Lembur / Jam (Rp)</label>
+                    <input type="number" min={0} className="input" value={form.lembur_per_jam}
+                      placeholder="0" onChange={(e) => setForm({ ...form, lembur_per_jam: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label">Potongan / Telat (Rp)</label>
+                    <input type="number" min={0} className="input" value={form.potongan_per_telat}
+                      placeholder="0" onChange={(e) => setForm({ ...form, potongan_per_telat: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="label">
                   {form.id ? "Password Baru (opsional)" : "Password"}

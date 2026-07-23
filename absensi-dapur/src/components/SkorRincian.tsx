@@ -21,7 +21,10 @@ export default function SkorRincian({ r }: { r: BoardRow }) {
         label="Keaktifan"
         bobot={25}
         k={r.keaktifan}
-        rumus={`${r.hadir} hadir ÷ ${r.op_days} hari operasional`}
+        rumus={
+          `${r.hadir} hadir ÷ ${r.keaktifan.b} hari efektif` +
+          (r.izin_days > 0 ? ` (−${r.izin_days} hari izin)` : "")
+        }
       />
       <KomponenBar
         label="Kelengkapan Presensi"

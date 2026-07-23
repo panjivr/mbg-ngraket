@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-25.leaderboard-periode";
+const SCHEMA_VERSION = "2026-07-26.hr-izin-pengumuman-jadwal-slip";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -529,6 +529,75 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mutasi_barang ON stok_mutasi (barang_id, created_at DESC)`);
+
+    // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===
+
+    // Izin & Cuti: pengajuan karyawan → persetujuan admin.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS izin (
+        id              SERIAL PRIMARY KEY,
+        sppg_id         INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        jenis           TEXT NOT NULL DEFAULT 'izin',
+        tanggal_mulai   DATE NOT NULL,
+        tanggal_selesai DATE NOT NULL,
+        alasan          TEXT NOT NULL DEFAULT '',
+        lampiran        TEXT,
+        status          TEXT NOT NULL DEFAULT 'pending',
+        catatan_admin   TEXT,
+        reviewed_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        reviewed_at     TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_izin_sppg ON izin (sppg_id, status)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_izin_user ON izin (user_id, tanggal_mulai)`);
+
+    // Pengumuman ke karyawan + jejak "sudah dibaca".
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pengumuman (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        judul       TEXT NOT NULL,
+        isi         TEXT NOT NULL DEFAULT '',
+        pinned      BOOLEAN NOT NULL DEFAULT FALSE,
+        aktif       BOOLEAN NOT NULL DEFAULT TRUE,
+        created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pengumuman_sppg ON pengumuman (sppg_id, aktif)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pengumuman_baca (
+        pengumuman_id INTEGER NOT NULL REFERENCES pengumuman(id) ON DELETE CASCADE,
+        user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        read_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (pengumuman_id, user_id)
+      );
+    `);
+
+    // Jadwal kerja/shift per karyawan per tanggal (roster).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS jadwal_kerja (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tanggal     DATE NOT NULL,
+        jam_masuk   TEXT,
+        jam_pulang  TEXT,
+        keterangan  TEXT,
+        libur       BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (user_id, tanggal)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_jadwal_sppg ON jadwal_kerja (sppg_id, tanggal)`);
+
+    // Komponen gaji per karyawan (untuk slip gaji otomatis).
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gaji_harian INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tunjangan INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS lembur_per_jam INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS potongan_per_telat INTEGER NOT NULL DEFAULT 0`);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,

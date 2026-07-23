@@ -40,6 +40,7 @@ export const GET = route(async () => {
     `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
             u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin,
             u.is_driver, u.akses_distribusi, u.akses_laporan, u.akses_gudang_keluar,
+            u.gaji_harian, u.tunjangan, u.lembur_per_jam, u.potongan_per_telat,
             d.nama AS divisi_nama
        FROM users u
        LEFT JOIN divisi d ON d.id = u.divisi_id
