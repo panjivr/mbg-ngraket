@@ -17,6 +17,7 @@ interface Divisi {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  lembur_min_jam?: number;
   jobdesk: string | null;
   aktif: boolean;
   lintas_hari?: boolean;
@@ -30,6 +31,7 @@ interface FormState {
   jam_masuk: string;
   jam_pulang: string;
   toleransi_menit: number;
+  lembur_min_jam: number;
   jobdesk: string;
   aktif: boolean;
 }
@@ -40,6 +42,7 @@ const emptyForm: FormState = {
   jam_masuk: "07:00",
   jam_pulang: "15:00",
   toleransi_menit: 10,
+  lembur_min_jam: 10,
   jobdesk: "",
   aktif: true,
 };
@@ -130,6 +133,7 @@ export default function DivisiPage() {
       jam_masuk: d.jam_masuk,
       jam_pulang: d.jam_pulang,
       toleransi_menit: d.toleransi_menit,
+      lembur_min_jam: d.lembur_min_jam ?? 10,
       jobdesk: d.jobdesk ?? "",
       aktif: d.aktif,
     });
@@ -150,6 +154,7 @@ export default function DivisiPage() {
           jam_masuk: form.jam_masuk,
           jam_pulang: form.jam_pulang,
           toleransi_menit: form.toleransi_menit,
+          lembur_min_jam: form.lembur_min_jam,
           jobdesk: form.jobdesk,
           aktif: form.aktif,
         }),
@@ -459,6 +464,19 @@ export default function DivisiPage() {
                     value={form.toleransi_menit}
                     onChange={(e) =>
                       setForm({ ...form, toleransi_menit: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="label">Lembur mulai &gt; (jam)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    className="input"
+                    value={form.lembur_min_jam}
+                    onChange={(e) =>
+                      setForm({ ...form, lembur_min_jam: Number(e.target.value) })
                     }
                   />
                 </div>

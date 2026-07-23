@@ -63,6 +63,10 @@ export const GET = route(async () => {
 
   const slip = await computeSlip(s.sppg_id as number, s.uid, w.from!, w.to!);
   if (!slip) return fail(404, "Data tidak ditemukan.");
+  // HR bisa menonaktifkan tampilan slip untuk pegawai tertentu.
+  if (!slip.user.slip_show) {
+    return ok({ visible: false, pesan: "Slip Anda belum diterbitkan oleh HR." });
+  }
   return ok({ visible: true, slip, dapur: sppg.nama || "" });
 });
 

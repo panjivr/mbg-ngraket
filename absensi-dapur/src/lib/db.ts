@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-27.hr-role-slip-visibility";
+const SCHEMA_VERSION = "2026-07-28.slip-per-employee-lembur-divisi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -605,6 +605,10 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`UPDATE users SET lembur_per_hari = lembur_per_jam WHERE lembur_per_hari = 0 AND lembur_per_jam > 0`);
     // BPJS Ketenagakerjaan: ditampilkan sebagai status "Terbayar" (bukan nominal).
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bpjs_tk BOOLEAN NOT NULL DEFAULT TRUE`);
+    // Slip ditampilkan ke karyawan ini? (HR bisa mematikan per pegawai.)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS slip_show BOOLEAN NOT NULL DEFAULT TRUE`);
+    // Ambang lembur per divisi (jam kerja > nilai ini dihitung lembur). Default 10 jam.
+    await client.query(`ALTER TABLE divisi ADD COLUMN IF NOT EXISTS lembur_min_jam INTEGER NOT NULL DEFAULT 10`);
 
     // Pengaturan slip gaji per dapur (dikelola HR): periode & jendela tampil.
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_period_from DATE`);

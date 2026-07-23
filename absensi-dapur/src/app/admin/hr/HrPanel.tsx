@@ -12,6 +12,7 @@ interface GajiRow {
   lembur_per_hari: number;
   potongan_per_telat: number;
   bpjs_tk: boolean;
+  slip_show: boolean;
 }
 interface Config {
   period_from: string | null;
@@ -185,6 +186,7 @@ function DataGaji() {
           lembur_per_hari: r.lembur_per_hari,
           potongan_per_telat: r.potongan_per_telat,
           bpjs_tk: r.bpjs_tk,
+          slip_show: r.slip_show,
         }),
       });
     } finally {
@@ -204,6 +206,7 @@ function DataGaji() {
             <th className="px-3 py-2.5">Lembur/Hari</th>
             <th className="px-3 py-2.5">Potongan/Telat</th>
             <th className="px-3 py-2.5 text-center">BPJS TK</th>
+            <th className="px-3 py-2.5 text-center">Tampilkan Slip</th>
             <th className="px-3 py-2.5"></th>
           </tr>
         </thead>
@@ -229,6 +232,10 @@ function DataGaji() {
               <td className="px-3 py-2 text-center">
                 <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={r.bpjs_tk}
                   onChange={(e) => upd(r.id, { bpjs_tk: e.target.checked })} />
+              </td>
+              <td className="px-3 py-2 text-center">
+                <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={r.slip_show}
+                  onChange={(e) => upd(r.id, { slip_show: e.target.checked })} />
               </td>
               <td className="px-3 py-2">
                 <button onClick={() => save(r)} disabled={savingId === r.id}

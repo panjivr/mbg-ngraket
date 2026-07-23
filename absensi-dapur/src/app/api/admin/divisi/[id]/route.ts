@@ -33,6 +33,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
       ? Math.round(Number(b.toleransi_menit))
       : cur.toleransi_menit;
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : cur.aktif;
+  const lembur_min_jam =
+    b.lembur_min_jam !== undefined
+      ? Math.max(1, Math.min(24, Math.round(Number(b.lembur_min_jam)) || 10))
+      : (cur.lembur_min_jam ?? 10);
   const jobdesk =
     b.jobdesk !== undefined
       ? String(b.jobdesk ?? "").trim() || null
@@ -54,9 +58,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const rows = await query<Divisi>(
     `UPDATE divisi SET nama=$1, jam_masuk=$2, jam_pulang=$3, toleransi_menit=$4,
-            aktif=$5, jobdesk=$6
-       WHERE id = $7 AND sppg_id = $8 RETURNING *`,
-    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, id, admin.sppg_id],
+            aktif=$5, jobdesk=$6, lembur_min_jam=$7
+       WHERE id = $8 AND sppg_id = $9 RETURNING *`,
+    [nama, jam_masuk, jam_pulang, toleransi_menit, aktif, jobdesk, lembur_min_jam, id, admin.sppg_id],
   );
   return ok({ divisi: { ...rows[0], lintas_hari: isOvernight(jam_masuk, jam_pulang) } });
 });
