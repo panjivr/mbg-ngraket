@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { compressImage } from "@/lib/image";
 import type { ChangeEvent } from "react";
 
-const FOTO_MAX = 9;
+const FOTO_MAX = 30;
 const KEGIATAN_UMUM = [
   "PENERIMAAN BARANG", "PERSIAPAN", "PENGOLAHAN", "PEMORSIAN",
   "DISTRIBUSI", "CUCI OMPRENG", "PENYIMPANAN", "KEBERSIHAN",
@@ -39,7 +39,8 @@ export default function DokumentasiPage() {
     if (!file) return;
     if (foto.length >= FOTO_MAX) { setMsg(`Maksimal ${FOTO_MAX} foto.`); return; }
     try {
-      const dataUrl = await compressImage(file);
+      // Kompres lebih ketat karena bisa sampai 30 foto (jaga ukuran unggah).
+      const dataUrl = await compressImage(file, 900, 0.62);
       setFoto((prev) => [...prev, dataUrl].slice(0, FOTO_MAX));
     } catch { setMsg("Gagal memproses foto."); }
   }
@@ -94,7 +95,7 @@ export default function DokumentasiPage() {
         <div className="card space-y-3 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gold-400">Foto / Dokumentasi <span className="font-normal text-slate-500">({foto.length}/{FOTO_MAX})</span></h2>
-            <p className="text-xs text-slate-500">Semua foto rasio seragam (3:4) &amp; dikompres otomatis.</p>
+            <p className="text-xs text-slate-500">Hingga 30 foto · rasio seragam 3:4 · saat cetak otomatis 9 foto per halaman.</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {foto.map((src, i) => (

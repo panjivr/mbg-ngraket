@@ -41,12 +41,16 @@ function Inner() {
   if (!data) return <p className="p-8 text-center">Memuat…</p>;
 
   const foto = data.foto || [];
+  // 9 foto per halaman (grid 3x3).
+  const pages: string[][] = [];
+  for (let i = 0; i < foto.length; i += 9) pages.push(foto.slice(i, i + 9));
+  if (pages.length === 0) pages.push([]);
 
   return (
     <div className="min-h-screen bg-white py-6 text-black">
-      <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}}`}</style>
+      <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:12mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
       <div className="no-print mx-auto mb-4 flex max-w-[800px] flex-wrap items-center justify-between gap-3 px-4">
-        <p className="text-sm text-gray-600">{foto.length} foto · {kegiatan || "—"}</p>
+        <p className="text-sm text-gray-600">{foto.length} foto · {pages.length} halaman · {kegiatan || "—"}</p>
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">Ukuran kertas</label>
           <select value={paper} onChange={(e) => setPaper(e.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
@@ -56,26 +60,40 @@ function Inner() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[760px] bg-white p-8 font-serif text-black">
-        <h1 className="text-center text-xl font-bold">DOKUMENTASI FOTO KEGIATAN</h1>
-        <p className="mt-3 text-center text-sm italic">Kegiatan: {kegiatan || "________________"}</p>
-        <p className="text-center text-sm italic">Tanggal: {tglUpper(tanggal)}</p>
-
-        <div className="mt-4 py-2 text-center text-sm font-bold text-white" style={{ backgroundColor: "#5b7a99" }}>
-          Foto / Dokumentasi
-        </div>
-
-        {foto.length === 0 ? (
-          <p className="py-10 text-center text-gray-500">Belum ada foto. Unggah di halaman Dokumentasi Foto Kegiatan.</p>
-        ) : (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {foto.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt={`Foto ${i + 1}`} className="aspect-[3/4] w-full border border-gray-300 object-cover" />
-            ))}
+      {pages.map((pageFotos, pi) => (
+        <div key={pi} className="doc mx-auto mb-6 max-w-[760px] bg-white p-8 font-serif text-black">
+          <h1 className="text-center text-xl font-bold">DOKUMENTASI FOTO KEGIATAN</h1>
+          <p className="mt-3 text-center text-sm italic">Kegiatan: {kegiatan || "________________"}</p>
+          <p className="text-center text-sm italic">Tanggal: {tglUpper(tanggal)}</p>
+          <div className="mt-4 py-2 text-center text-sm font-bold text-white" style={{ backgroundColor: "#5b7a99" }}>
+            Foto / Dokumentasi{pages.length > 1 ? ` (Halaman ${pi + 1}/${pages.length})` : ""}
           </div>
-        )}
-      </div>
+          {foto.length === 0 ? (
+            <p className="py-10 text-center text-gray-500">Belum ada foto. Unggah di halaman Dokumentasi Foto Kegiatan.</p>
+          ) : (
+            <GridRightLast fotos={pageFotos} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Grid 3 kolom; baris terakhir yang belum penuh dibuat rata kanan. */
+function GridRightLast({ fotos }: { fotos: string[] }) {
+  const rem = fotos.length % 3;
+  const fullCount = fotos.length - rem;
+  const full = fotos.slice(0, fullCount);
+  const last = rem ? fotos.slice(fullCount) : [];
+  const pad = rem ? 3 - rem : 0;
+  const cls = "aspect-[3/4] w-full border border-gray-300 object-cover";
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      {/* eslint-disable @next/next/no-img-element */}
+      {full.map((src, i) => <img key={i} src={src} alt={`Foto ${i + 1}`} className={cls} />)}
+      {Array.from({ length: pad }).map((_, i) => <div key={"pad" + i} />)}
+      {last.map((src, i) => <img key={"l" + i} src={src} alt={`Foto ${fullCount + i + 1}`} className={cls} />)}
+      {/* eslint-enable @next/next/no-img-element */}
     </div>
   );
 }
