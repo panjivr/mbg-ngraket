@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-24.gudang-keluar-role";
+const SCHEMA_VERSION = "2026-07-25.leaderboard-hidden";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -246,6 +246,10 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_attendance_user ON attendance (user_id)`,
     );
+    // Rekap/peringkat: gabung presensi per pegawai pada rentang tanggal shift.
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_attendance_user_shift ON attendance (user_id, shift_tanggal)`,
+    );
 
     // --- Sub-shift per divisi (mis. Keamanan: pagi/siang/malam) ---
     await client.query(`
@@ -462,6 +466,8 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_laporan BOOLEAN NOT NULL DEFAULT FALSE`);
     // Petugas gudang keluar (persiapan/pengolahan/pemorsian): hanya boleh barang keluar.
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_gudang_keluar BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Peringkat: sembunyikan pegawai berjadwal khusus (keamanan/admin) dari papan.
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS leaderboard_hidden BOOLEAN NOT NULL DEFAULT FALSE`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS kendaraan (
         id        SERIAL PRIMARY KEY,
@@ -524,6 +530,8 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
+    // Hampir setiap query admin memfilter users per dapur (sppg_id).
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_sppg ON users (sppg_id)`);
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_super BOOLEAN NOT NULL DEFAULT FALSE`,
     );
