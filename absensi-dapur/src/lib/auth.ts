@@ -14,6 +14,10 @@ export interface SessionData {
   sppg_id?: number;
   /** Super admin pusat — bisa mengelola semua dapur. */
   is_super?: boolean;
+  /** Sub-admin scoped: akses ke fitur Distribusi. */
+  akses_distribusi?: boolean;
+  /** Sub-admin scoped: akses ke fitur Laporan Harian. */
+  akses_laporan?: boolean;
 }
 
 function secretKey(): Uint8Array {
@@ -62,6 +66,8 @@ export async function verifySession(
         role: payload.role,
         sppg_id: typeof payload.sppg_id === "number" ? payload.sppg_id : undefined,
         is_super: payload.is_super === true,
+        akses_distribusi: payload.akses_distribusi === true,
+        akses_laporan: payload.akses_laporan === true,
       };
     }
     return null;

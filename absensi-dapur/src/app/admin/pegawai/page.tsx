@@ -19,6 +19,8 @@ interface Employee {
   tanggal_lahir: string | null;
   jenis_kelamin: string | null;
   is_driver: boolean;
+  akses_distribusi: boolean;
+  akses_laporan: boolean;
 }
 
 interface DivisiLite {
@@ -42,6 +44,8 @@ interface FormState {
   tanggal_lahir: string;
   jenis_kelamin: string;
   is_driver: boolean;
+  akses_distribusi: boolean;
+  akses_laporan: boolean;
 }
 
 const emptyForm: FormState = {
@@ -58,6 +62,8 @@ const emptyForm: FormState = {
   tanggal_lahir: "",
   jenis_kelamin: "",
   is_driver: false,
+  akses_distribusi: false,
+  akses_laporan: false,
 };
 
 export default function PegawaiPage() {
@@ -165,6 +171,8 @@ export default function PegawaiPage() {
       tanggal_lahir: e.tanggal_lahir || "",
       jenis_kelamin: e.jenis_kelamin || "",
       is_driver: !!e.is_driver,
+      akses_distribusi: !!e.akses_distribusi,
+      akses_laporan: !!e.akses_laporan,
     });
   }
 
@@ -189,6 +197,8 @@ export default function PegawaiPage() {
         tanggal_lahir: form.tanggal_lahir || null,
         jenis_kelamin: form.jenis_kelamin || null,
         is_driver: form.is_driver,
+        akses_distribusi: form.akses_distribusi,
+        akses_laporan: form.akses_laporan,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -511,15 +521,25 @@ export default function PegawaiPage() {
                   </select>
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-gold-500"
-                  checked={form.is_driver}
-                  onChange={(e) => setForm({ ...form, is_driver: e.target.checked })}
-                />
-                🚗 Driver (dapat mengisi Data Kilometer Kendaraan di menu staf)
-              </label>
+              <div className="space-y-1.5 rounded-lg border border-white/10 p-3">
+                <p className="text-xs font-semibold text-slate-400">Akses Khusus (opsional)</p>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_driver}
+                    onChange={(e) => setForm({ ...form, is_driver: e.target.checked })} />
+                  🚗 Driver — mengisi Data Kilometer di menu staf
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_distribusi}
+                    onChange={(e) => setForm({ ...form, akses_distribusi: e.target.checked })} />
+                  🚚 Admin Distribusi — akses semua fitur Distribusi
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_laporan}
+                    onChange={(e) => setForm({ ...form, akses_laporan: e.target.checked })} />
+                  📋 Admin Penerimaan — akses semua fitur Laporan Harian
+                </label>
+                <p className="text-[11px] text-slate-500">Setelah diubah, pegawai perlu logout &amp; login ulang agar akses aktif.</p>
+              </div>
               <div>
                 <label className="label">
                   {form.id ? "Password Baru (opsional)" : "Password"}

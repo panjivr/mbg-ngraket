@@ -17,9 +17,15 @@ export default async function DapurLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const isDriver = !!(
-    await query<{ is_driver: boolean }>(`SELECT is_driver FROM users WHERE id = $1`, [session.uid])
-  )[0]?.is_driver;
+  const me = (
+    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean }>(
+      `SELECT is_driver, akses_distribusi, akses_laporan FROM users WHERE id = $1`,
+      [session.uid],
+    )
+  )[0];
+  const isDriver = !!me?.is_driver;
+  const aksesDistribusi = !!me?.akses_distribusi;
+  const aksesLaporan = !!me?.akses_laporan;
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-12">
@@ -40,13 +46,23 @@ export default async function DapurLayout({
           <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />
           {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
-          {session.role === "admin" && (
-            <Link
-              href="/admin"
-              className="ml-auto rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5"
-            >
+          {session.role === "admin" ? (
+            <Link href="/admin" className="ml-auto rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
               Panel Admin →
             </Link>
+          ) : (
+            <span className="ml-auto flex items-center gap-1">
+              {aksesDistribusi && (
+                <Link href="/admin/distribusi" className="rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                  🚚 Distribusi →
+                </Link>
+              )}
+              {aksesLaporan && (
+                <Link href="/admin/laporan" className="rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                  📋 Laporan →
+                </Link>
+              )}
+            </span>
           )}
         </nav>
       </header>

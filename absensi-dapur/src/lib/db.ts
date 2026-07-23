@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-24.kilometer";
+const SCHEMA_VERSION = "2026-07-24.subadmin-roles";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -457,6 +457,9 @@ async function doEnsureSchema(): Promise<void> {
 
     // Data Kilometer Kendaraan: master kendaraan + entri KM harian (foto + angka).
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_driver BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Sub-admin scoped: akses khusus Distribusi / Laporan Harian (mirip driver).
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_distribusi BOOLEAN NOT NULL DEFAULT FALSE`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_laporan BOOLEAN NOT NULL DEFAULT FALSE`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS kendaraan (
         id        SERIAL PRIMARY KEY,

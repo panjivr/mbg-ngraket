@@ -38,7 +38,8 @@ export const GET = route(async () => {
   const admin = await requireAdmin();
   const rows = await query<User>(
     `SELECT u.id, u.nama, u.username, u.role, u.jabatan, u.nip, u.aktif,
-            u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.is_driver,
+            u.created_at, u.divisi_id, u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin,
+            u.is_driver, u.akses_distribusi, u.akses_laporan,
             d.nama AS divisi_nama
        FROM users u
        LEFT JOIN divisi d ON d.id = u.divisi_id
