@@ -1,20 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-interface BoardRow {
-  user_id: number;
-  nama: string;
-  divisi_nama: string | null;
-  hidden: boolean;
-  hadir: number;
-  tepat: number;
-  terlambat: number;
-  selesai: number;
-  ketepatan: number; // %
-  jam_rata: number; // jam/hari
-  skor: number; // 0..100
-}
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { BoardRow } from "@/lib/leaderboard";
+import SkorRincian from "@/components/SkorRincian";
 
 interface LeaderboardResponse {
   from: string;
@@ -310,27 +298,29 @@ export default function LeaderboardPage() {
 
       <div className="card space-y-1.5 p-4 text-xs text-slate-400">
         <p className="font-semibold text-slate-300">
-          Skor Kinerja (0–100) — gabungan tiga penilaian berbasis rasio, jadi
-          adil untuk pegawai dengan jumlah hari kerja berbeda:
+          Skor Kinerja (0–100, presisi 1 desimal) — jumlah poin dari tiga
+          penilaian berbasis rasio, jadi adil untuk beda jumlah hari kerja:
         </p>
         <ul className="ml-4 list-disc space-y-0.5">
           <li>
-            <b className="text-slate-300">Ketepatan Waktu 55%</b> — porsi masuk
-            tepat waktu dari total kehadiran.
+            <b className="text-slate-300">Ketepatan Waktu — 55 poin</b>: tepat
+            waktu ÷ hadir.
           </li>
           <li>
-            <b className="text-slate-300">Keaktifan 25%</b> — kehadiran dibanding
-            hari operasional dapur (maks 100%).
+            <b className="text-slate-300">Keaktifan — 25 poin</b>: hadir ÷ hari
+            operasional dapur (maks 100%).
           </li>
           <li>
-            <b className="text-slate-300">Kelengkapan Presensi 20%</b> — porsi
-            hari yang lengkap sampai clock-out.
+            <b className="text-slate-300">Kelengkapan Presensi — 20 poin</b>:
+            hari lengkap sampai clock-out ÷ hadir.
           </li>
         </ul>
         <p className="pt-1">
-          Pegawai berjadwal khusus (mis. keamanan/admin dengan jam & hari kerja
-          berbeda) bisa disembunyikan dari papan lewat tombol 🚫 agar
-          perbandingan tetap setara.
+          Klik baris untuk melihat <b className="text-slate-300">rincian angka
+          &amp; persen tiap komponen</b> — poinnya selalu dijumlahkan persis
+          sama dengan skor, jadi transparan dan tidak ada yang perlu iri.
+          Pegawai berjadwal khusus (keamanan/admin) bisa disembunyikan lewat
+          tombol 🚫 agar perbandingan setara.
         </p>
       </div>
 
@@ -373,11 +363,20 @@ function BoardTable({
   busy: number | null;
   onToggle: (r: BoardRow) => void;
 }) {
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggleOpen = (id: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <div className="card overflow-hidden">
       {ranked && (
         <div className="border-b border-white/5 px-4 py-3 text-sm text-slate-400">
-          {rows.length} pegawai dinilai
+          {rows.length} pegawai dinilai · klik baris untuk rincian
         </div>
       )}
       {loading ? (
@@ -388,7 +387,7 @@ function BoardTable({
         </p>
       ) : (
         <div className="scroll-x overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="text-left text-xs uppercase text-slate-400">
               <tr className="border-b border-white/5">
                 <th className="px-3 py-2.5 text-center">#</th>
@@ -405,71 +404,92 @@ function BoardTable({
             <tbody className="divide-y divide-white/5">
               {rows.map((r, i) => {
                 const top3 = ranked && i < 3;
+                const isOpen = open.has(r.user_id);
                 return (
-                  <tr
-                    key={r.user_id}
-                    className={top3 ? "bg-gold-400/10" : undefined}
-                  >
-                    <td className="px-3 py-2.5 text-center text-base">
-                      {ranked ? (
-                        top3 ? (
-                          <span title={`Peringkat ${i + 1}`}>{MEDALS[i]}</span>
+                  <Fragment key={r.user_id}>
+                    <tr
+                      onClick={() => toggleOpen(r.user_id)}
+                      className={
+                        "cursor-pointer transition hover:bg-white/[0.03] " +
+                        (top3 ? "bg-gold-400/10" : "")
+                      }
+                    >
+                      <td className="px-3 py-2.5 text-center text-base">
+                        {ranked ? (
+                          top3 ? (
+                            <span title={`Peringkat ${i + 1}`}>{MEDALS[i]}</span>
+                          ) : (
+                            <span className="text-slate-400">{i + 1}</span>
+                          )
                         ) : (
-                          <span className="text-slate-400">{i + 1}</span>
-                        )
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="font-medium">{r.nama}</div>
-                      <div className="text-xs text-slate-400">
-                        {r.divisi_nama || "Tanpa divisi"}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-right">{r.hadir}</td>
-                    <td className="px-3 py-2.5 text-right text-emerald-300">
-                      {r.tepat}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-amber-300">
-                      {r.terlambat}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-slate-300">
-                      {r.ketepatan}%
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-slate-300">
-                      {r.jam_rata > 0 ? `${r.jam_rata.toFixed(1)}j` : "—"}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-white/10">
-                          <div
-                            className={`h-full rounded-full ${barColor(r.skor)}`}
-                            style={{ width: `${r.skor}%` }}
-                          />
+                          <span className="text-slate-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          <span className="text-[10px] text-slate-500">
+                            {isOpen ? "▾" : "▸"}
+                          </span>
+                          {r.nama}
                         </div>
-                        <span
-                          className={`w-8 text-right text-base font-bold ${skorColor(r.skor)}`}
+                        <div className="pl-3.5 text-xs text-slate-400">
+                          {r.divisi_nama || "Tanpa divisi"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">{r.hadir}</td>
+                      <td className="px-3 py-2.5 text-right text-emerald-300">
+                        {r.tepat}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-amber-300">
+                        {r.terlambat}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-slate-300">
+                        {r.ketepatan.pct}%
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-slate-300">
+                        {r.jam_rata > 0 ? `${r.jam_rata.toFixed(1)}j` : "—"}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className={`h-full rounded-full ${barColor(r.skor)}`}
+                              style={{ width: `${r.skor}%` }}
+                            />
+                          </div>
+                          <span
+                            className={`w-10 text-right text-base font-bold ${skorColor(r.skor)}`}
+                          >
+                            {r.skor.toFixed(1)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggle(r);
+                          }}
+                          disabled={busy === r.user_id}
+                          title={
+                            r.hidden
+                              ? "Tampilkan di peringkat"
+                              : "Sembunyikan dari peringkat"
+                          }
+                          className="rounded-md border border-white/10 px-2 py-1 text-xs transition hover:bg-white/5 disabled:opacity-50"
                         >
-                          {r.skor}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <button
-                        onClick={() => onToggle(r)}
-                        disabled={busy === r.user_id}
-                        title={
-                          r.hidden
-                            ? "Tampilkan di peringkat"
-                            : "Sembunyikan dari peringkat"
-                        }
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs transition hover:bg-white/5 disabled:opacity-50"
-                      >
-                        {r.hidden ? "👁 Tampilkan" : "🚫 Sembunyikan"}
-                      </button>
-                    </td>
-                  </tr>
+                          {r.hidden ? "👁 Tampilkan" : "🚫 Sembunyikan"}
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-ink-900/40">
+                        <td colSpan={9} className="px-4 py-3">
+                          <SkorRincian r={r} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>

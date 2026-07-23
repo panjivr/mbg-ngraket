@@ -1,25 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-interface Row {
-  user_id: number;
-  nama: string;
-  divisi_nama: string | null;
-  hadir: number;
-  tepat: number;
-  terlambat: number;
-  ketepatan: number;
-  jam_rata: number;
-  skor: number;
-}
+import { Fragment, useEffect, useState } from "react";
+import type { BoardRow } from "@/lib/leaderboard";
+import SkorRincian from "@/components/SkorRincian";
 
 interface Resp {
   from: string | null;
   to: string | null;
   me: number;
-  board: Row[];
+  board: BoardRow[];
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -49,6 +39,7 @@ function skorColor(s: number): string {
 export default function StaffLeaderboard({ compact = false }: { compact?: boolean }) {
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -65,6 +56,14 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
       alive = false;
     };
   }, []);
+
+  const toggleOpen = (id: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   if (loading) {
     return (
@@ -89,6 +88,7 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
   const rows = compact ? full.slice(0, 5) : full;
   const myIndex = full.findIndex((r) => r.user_id === me);
   const meInList = rows.some((r) => r.user_id === me);
+  const colSpan = compact ? 3 : 6;
 
   return (
     <div className="card overflow-hidden">
@@ -101,7 +101,7 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
         </div>
         {myIndex >= 0 && (
           <span className="rounded-lg bg-gold-500/15 px-2.5 py-1 text-xs font-semibold text-gold-400">
-            Peringkat kamu: #{myIndex + 1} · skor {full[myIndex].skor}
+            Peringkat kamu: #{myIndex + 1} · skor {full[myIndex].skor.toFixed(1)}
           </span>
         )}
       </div>
@@ -120,7 +120,16 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
           </thead>
           <tbody className="divide-y divide-white/5">
             {rows.map((r, i) => (
-              <BoardTr key={r.user_id} r={r} i={i} me={me} compact={compact} />
+              <BoardTr
+                key={r.user_id}
+                r={r}
+                i={i}
+                me={me}
+                compact={compact}
+                colSpan={colSpan}
+                isOpen={open.has(r.user_id)}
+                onToggle={() => toggleOpen(r.user_id)}
+              />
             ))}
             {/* Jika pengguna tak masuk daftar ringkas, tampilkan barisnya di bawah. */}
             {compact && !meInList && myIndex >= 0 && (
@@ -129,6 +138,9 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
                 i={myIndex}
                 me={me}
                 compact={compact}
+                colSpan={colSpan}
+                isOpen={open.has(full[myIndex].user_id)}
+                onToggle={() => toggleOpen(full[myIndex].user_id)}
                 divider
               />
             )}
@@ -153,48 +165,68 @@ function BoardTr({
   i,
   me,
   compact,
+  colSpan,
+  isOpen,
+  onToggle,
   divider,
 }: {
-  r: Row;
+  r: BoardRow;
   i: number;
   me: number;
   compact: boolean;
+  colSpan: number;
+  isOpen: boolean;
+  onToggle: () => void;
   divider?: boolean;
 }) {
   const isMe = r.user_id === me;
   const top3 = i < 3;
   return (
-    <tr
-      className={
-        (isMe ? "bg-gold-500/15 " : top3 ? "bg-gold-400/5 " : "") +
-        (divider ? "border-t-2 border-white/10" : "")
-      }
-    >
-      <td className="px-3 py-2.5 text-center text-base">
-        {top3 ? <span>{MEDALS[i]}</span> : <span className="text-slate-400">{i + 1}</span>}
-      </td>
-      <td className="px-3 py-2.5">
-        <div className="font-medium">
-          {r.nama}
-          {isMe && <span className="ml-1 text-xs text-gold-400">(kamu)</span>}
-        </div>
-        <div className="text-xs text-slate-400">{r.divisi_nama || "Tanpa divisi"}</div>
-      </td>
-      {!compact && <td className="px-3 py-2.5 text-right">{r.hadir}</td>}
-      {!compact && <td className="px-3 py-2.5 text-right text-slate-300">{r.ketepatan}%</td>}
-      {!compact && (
-        <td className="px-3 py-2.5 text-right text-slate-300">
-          {r.jam_rata > 0 ? `${r.jam_rata.toFixed(1)}j` : "—"}
+    <Fragment>
+      <tr
+        onClick={onToggle}
+        className={
+          "cursor-pointer transition hover:bg-white/[0.03] " +
+          (isMe ? "bg-gold-500/15 " : top3 ? "bg-gold-400/5 " : "") +
+          (divider ? "border-t-2 border-white/10" : "")
+        }
+      >
+        <td className="px-3 py-2.5 text-center text-base">
+          {top3 ? <span>{MEDALS[i]}</span> : <span className="text-slate-400">{i + 1}</span>}
         </td>
-      )}
-      <td className="px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-white/10">
-            <div className={`h-full rounded-full ${barColor(r.skor)}`} style={{ width: `${r.skor}%` }} />
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span className="text-[10px] text-slate-500">{isOpen ? "▾" : "▸"}</span>
+            {r.nama}
+            {isMe && <span className="text-xs text-gold-400">(kamu)</span>}
           </div>
-          <span className={`w-7 text-right text-base font-bold ${skorColor(r.skor)}`}>{r.skor}</span>
-        </div>
-      </td>
-    </tr>
+          <div className="pl-3.5 text-xs text-slate-400">{r.divisi_nama || "Tanpa divisi"}</div>
+        </td>
+        {!compact && <td className="px-3 py-2.5 text-right">{r.hadir}</td>}
+        {!compact && <td className="px-3 py-2.5 text-right text-slate-300">{r.ketepatan.pct}%</td>}
+        {!compact && (
+          <td className="px-3 py-2.5 text-right text-slate-300">
+            {r.jam_rata > 0 ? `${r.jam_rata.toFixed(1)}j` : "—"}
+          </td>
+        )}
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-white/10">
+              <div className={`h-full rounded-full ${barColor(r.skor)}`} style={{ width: `${r.skor}%` }} />
+            </div>
+            <span className={`w-9 text-right text-base font-bold ${skorColor(r.skor)}`}>
+              {r.skor.toFixed(1)}
+            </span>
+          </div>
+        </td>
+      </tr>
+      {isOpen && (
+        <tr className="bg-ink-900/40">
+          <td colSpan={colSpan} className="px-4 py-3">
+            <SkorRincian r={r} />
+          </td>
+        </tr>
+      )}
+    </Fragment>
   );
 }

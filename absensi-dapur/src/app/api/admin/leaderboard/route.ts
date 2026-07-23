@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { getSppg, invalidateSppg } from "@/lib/sppg";
-import { computeBoard } from "@/lib/leaderboard";
+import { computeBoard, invalidateBoard } from "@/lib/leaderboard";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
 
@@ -50,6 +50,7 @@ export const PATCH = route(async (req: NextRequest) => {
     [hidden, id, admin.sppg_id],
   );
   if (!res.length) return fail(404, "Pegawai tidak ditemukan.");
+  invalidateBoard(admin.sppg_id as number);
   return ok({ user_id: id, hidden });
 });
 
