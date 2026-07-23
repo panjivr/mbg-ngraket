@@ -64,6 +64,11 @@ export interface User {
   akses_distribusi?: boolean;
   akses_laporan?: boolean;
   akses_gudang_keluar?: boolean;
+  // Komponen gaji (untuk slip gaji).
+  gaji_harian?: number;
+  tunjangan?: number;
+  lembur_per_jam?: number;
+  potongan_per_telat?: number;
 }
 
 /** Data kartu pegawai (gaya kartu koleksi) untuk dibagikan. */

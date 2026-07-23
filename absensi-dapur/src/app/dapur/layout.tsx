@@ -44,6 +44,9 @@ export default async function DapurLayout({
         <nav className="mt-3 flex items-center gap-1">
           <NavLink href="/dapur" label="Absen" exact />
           <NavLink href="/dapur/peringkat" label="🏆 Peringkat" />
+          <NavLink href="/dapur/jadwal" label="🗓️ Jadwal" />
+          <NavLink href="/dapur/izin" label="📝 Izin" />
+          <NavLink href="/dapur/slip" label="🧾 Slip Gaji" />
           <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
           <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />

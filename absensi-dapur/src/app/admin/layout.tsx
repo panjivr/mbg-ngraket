@@ -67,9 +67,9 @@ export default async function AdminLayout({
           {fullAdmin && <NavLink href="/admin" label="Dashboard" exact />}
           {fullAdmin && (
             <NavLink href="/admin/pegawai" label="👥 Pegawai"
-              also={["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop"]} />
+              also={["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"]} />
           )}
-          {fullAdmin && <NavLink href="/admin/rekap" label="📊 Rekap" also={["/admin/gaji"]} />}
+          {fullAdmin && <NavLink href="/admin/rekap" label="📊 Rekap" also={["/admin/gaji", "/admin/slip"]} />}
           {aksesDistribusi && <NavLink href="/admin/distribusi" label="🚚 Distribusi" />}
           {aksesLaporan && <NavLink href="/admin/laporan" label="📋 Laporan Harian" />}
           {(fullAdmin || aksesLaporan) && <NavLink href="/admin/gudang" label="📦 Gudang" />}

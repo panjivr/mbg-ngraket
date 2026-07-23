@@ -31,6 +31,7 @@ export interface BoardRow {
   terlambat: number;
   selesai: number;
   op_days: number;
+  izin_days: number; // hari operasional dengan izin disetujui (tak menghukum keaktifan)
   jam_rata: number; // jam/hari (1 desimal)
   ketepatan: Komponen;
   keaktifan: Komponen;
@@ -49,6 +50,7 @@ interface RawRow {
   selesai: number;
   menit: string;
   op_days: number;
+  izin_days: number;
 }
 
 function komponen(a: number, b: number, bobot: number): Komponen {
@@ -91,12 +93,19 @@ export async function computeBoard(
   if (hit && Date.now() - hit.at < BOARD_TTL_MS) return hit.val;
 
   const rows = await query<RawRow>(
-    `WITH op AS (
-       SELECT COUNT(DISTINCT COALESCE(a.shift_tanggal, a.tanggal)) AS n
+    `WITH opdates AS (
+       SELECT DISTINCT COALESCE(a.shift_tanggal, a.tanggal) AS d
          FROM attendance a
          JOIN users u2 ON u2.id = a.user_id AND u2.sppg_id = $3
         WHERE COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2
           AND a.check_in IS NOT NULL
+     ),
+     izin_days AS (
+       SELECT i.user_id, COUNT(DISTINCT od.d) AS n
+         FROM izin i
+         JOIN opdates od ON od.d BETWEEN i.tanggal_mulai AND i.tanggal_selesai
+        WHERE i.sppg_id = $3 AND i.status = 'disetujui'
+        GROUP BY i.user_id
      )
      SELECT u.id AS user_id, u.nama, d.nama AS divisi_nama,
             u.leaderboard_hidden AS hidden,
@@ -106,13 +115,15 @@ export async function computeBoard(
             COUNT(a.check_out)::int AS selesai,
             COALESCE(SUM(EXTRACT(EPOCH FROM (a.check_out - a.check_in)) / 60.0)
                      FILTER (WHERE a.check_in IS NOT NULL AND a.check_out IS NOT NULL), 0)::text AS menit,
-            (SELECT n FROM op)::int AS op_days
+            (SELECT COUNT(*) FROM opdates)::int AS op_days,
+            COALESCE(idz.n, 0)::int AS izin_days
        FROM users u
        LEFT JOIN attendance a ON a.user_id = u.id
         AND COALESCE(a.shift_tanggal, a.tanggal) BETWEEN $1 AND $2
        LEFT JOIN divisi d ON d.id = u.divisi_id
+       LEFT JOIN izin_days idz ON idz.user_id = u.id
       WHERE u.sppg_id = $3 AND u.aktif = TRUE
-      GROUP BY u.id, u.nama, d.nama, u.leaderboard_hidden`,
+      GROUP BY u.id, u.nama, d.nama, u.leaderboard_hidden, idz.n`,
     [from, to, sppgId],
   );
 
@@ -120,9 +131,20 @@ export async function computeBoard(
     .map((r) => {
       const hadir = r.hadir;
       const opDays = r.op_days || 0;
+      const izinDays = r.izin_days || 0;
       const menit = Number(r.menit) || 0;
       const ketepatan = komponen(r.tepat, hadir, BOBOT.ketepatan);
-      const keaktifan = komponen(hadir, opDays, BOBOT.keaktifan);
+      // Keaktifan: hari operasional dikurangi hari izin yang disetujui, agar
+      // izin resmi tidak menurunkan skor. Penyebut minimal = jumlah kehadiran.
+      const effDen = Math.max(opDays - izinDays, 0);
+      const aktifRatio =
+        hadir <= 0 ? 0 : effDen <= 0 ? 1 : Math.min(hadir / effDen, 1);
+      const keaktifan: Komponen = {
+        pct: round1(aktifRatio * 100),
+        poin: round1(aktifRatio * BOBOT.keaktifan),
+        a: hadir,
+        b: effDen,
+      };
       const kelengkapan = komponen(r.selesai, hadir, BOBOT.kelengkapan);
       // Skor = jumlah poin yang ditampilkan → rincian selalu klop (anti-iri).
       const skor =
@@ -140,6 +162,7 @@ export async function computeBoard(
         terlambat: r.terlambat,
         selesai: r.selesai,
         op_days: opDays,
+        izin_days: izinDays,
         jam_rata: round1(jamRata),
         ketepatan,
         keaktifan,
