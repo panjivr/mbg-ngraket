@@ -427,6 +427,19 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
 
+    // Dokumentasi Foto Kegiatan (9 foto per kegiatan), per tanggal + nama kegiatan.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dokumentasi (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL,
+        kegiatan   TEXT NOT NULL DEFAULT '',
+        foto       JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, tanggal, kegiatan)
+      );
+    `);
+
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
