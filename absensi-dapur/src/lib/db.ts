@@ -7,6 +7,11 @@ import { PENERIMA_SEED } from "./distribusi-seed";
 // bukan objek Date (yang akan terserialisasi jadi ISO timestamp dengan TZ).
 types.setTypeParser(types.builtins.DATE, (v) => v);
 
+// Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
+// sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
+// WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
+const SCHEMA_VERSION = "2026-07-24.laporan-dokumentasi";
+
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
  * hot-reload in dev and is reused across serverless invocations on Vercel.
@@ -105,6 +110,16 @@ async function doEnsureSchema(): Promise<void> {
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(7263011)");
+
+    // Fast-path: lewati seluruh migrasi bila skema sudah pada versi terkini.
+    await client.query(`CREATE TABLE IF NOT EXISTS app_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
+    const verNow = (
+      await client.query<{ v: string }>(`SELECT v FROM app_meta WHERE k = 'schema_version'`)
+    ).rows[0]?.v;
+    if (verNow === SCHEMA_VERSION) {
+      await client.query("COMMIT");
+      return;
+    }
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -653,6 +668,13 @@ async function doEnsureSchema(): Promise<void> {
         );
       }
     }
+
+    // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
+    await client.query(
+      `INSERT INTO app_meta (k, v) VALUES ('schema_version', $1)
+       ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v`,
+      [SCHEMA_VERSION],
+    );
 
     await client.query("COMMIT");
   } catch (err) {
