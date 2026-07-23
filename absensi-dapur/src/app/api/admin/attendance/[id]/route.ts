@@ -28,6 +28,23 @@ export const GET = route(async (_req: NextRequest, ctx: Ctx) => {
   return ok({ detail: rows[0] });
 });
 
+// Hapus satu catatan absensi (mis. relawan absen tapi tidak bekerja).
+export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
+  const admin = await requireAdmin();
+  const id = parseInt((await ctx.params).id, 10);
+  if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
+
+  const rows = await query<{ id: number }>(
+    `DELETE FROM attendance
+      WHERE id = $1
+        AND user_id IN (SELECT id FROM users WHERE sppg_id = $2)
+      RETURNING id`,
+    [id, admin.sppg_id],
+  );
+  if (!rows.length) return fail(404, "Data absensi tidak ditemukan.");
+  return ok({ deleted: id });
+});
+
 // Offset zona waktu Indonesia (tanpa DST) untuk mengubah jam lokal -> UTC.
 const TZ_OFFSET: Record<string, number> = {
   "Asia/Jakarta": 7,

@@ -18,6 +18,7 @@ interface Employee {
   tempat_lahir: string | null;
   tanggal_lahir: string | null;
   jenis_kelamin: string | null;
+  is_driver: boolean;
 }
 
 interface DivisiLite {
@@ -40,6 +41,7 @@ interface FormState {
   tempat_lahir: string;
   tanggal_lahir: string;
   jenis_kelamin: string;
+  is_driver: boolean;
 }
 
 const emptyForm: FormState = {
@@ -55,6 +57,7 @@ const emptyForm: FormState = {
   tempat_lahir: "",
   tanggal_lahir: "",
   jenis_kelamin: "",
+  is_driver: false,
 };
 
 export default function PegawaiPage() {
@@ -161,6 +164,7 @@ export default function PegawaiPage() {
       tempat_lahir: e.tempat_lahir || "",
       tanggal_lahir: e.tanggal_lahir || "",
       jenis_kelamin: e.jenis_kelamin || "",
+      is_driver: !!e.is_driver,
     });
   }
 
@@ -184,6 +188,7 @@ export default function PegawaiPage() {
         tempat_lahir: form.tempat_lahir,
         tanggal_lahir: form.tanggal_lahir || null,
         jenis_kelamin: form.jenis_kelamin || null,
+        is_driver: form.is_driver,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -506,6 +511,15 @@ export default function PegawaiPage() {
                   </select>
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-gold-500"
+                  checked={form.is_driver}
+                  onChange={(e) => setForm({ ...form, is_driver: e.target.checked })}
+                />
+                🚗 Driver (dapat mengisi Data Kilometer Kendaraan di menu staf)
+              </label>
               <div>
                 <label className="label">
                   {form.id ? "Password Baru (opsional)" : "Password"}
