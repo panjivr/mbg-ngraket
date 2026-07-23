@@ -760,6 +760,11 @@ async function doEnsureSchema(): Promise<void> {
         ["Telur", "bahan_baku", "kg", 10],
         ["Bawang Merah", "bahan_baku", "kg", 5],
         ["Bawang Putih", "bahan_baku", "kg", 5],
+        ["Ompreng / Food Tray", "packaging", "pcs", 50],
+        ["Kotak Nasi", "packaging", "pack", 10],
+        ["Kertas Nasi", "packaging", "pack", 10],
+        ["Sendok Plastik", "packaging", "pack", 10],
+        ["Kantong Plastik", "packaging", "pack", 10],
       ];
       let urutB = 1;
       for (const [nama, kategori, satuan, stokMin] of seed) {

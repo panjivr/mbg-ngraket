@@ -169,8 +169,16 @@ const cards: CardDef[] = [
   { key: "belum", label: "Belum Absen", icon: "minus", text: "text-red-300", chip: "bg-red-500/15 text-red-300", bar: "bg-red-400" },
 ];
 
+interface Ringkasan {
+  menu: string;
+  distribusi: { besar: number; kecil: number; b3: number; porsi: number; pagu: number; ikut: number; total: number };
+  gudang: { total: number; habis: number; menipis: number; aman: number };
+}
+const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(n);
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [ring, setRing] = useState<Ringkasan | null>(null);
   const [rows, setRows] = useState<RekapRow[]>([]);
   const [weekRows, setWeekRows] = useState<TrendRow[]>([]);
   const [tanggal, setTanggal] = useState("");
@@ -183,17 +191,19 @@ export default function AdminDashboard() {
     const today = jakartaToday();
     const weekFrom = addDays(today, -6);
     try {
-      const [s, a, w] = await Promise.all([
+      const [s, a, w, r] = await Promise.all([
         fetch("/api/admin/stats", { cache: "no-store" }).then((r) => r.json()),
         fetch("/api/admin/attendance", { cache: "no-store" }).then((r) => r.json()),
         fetch(`/api/admin/attendance?from=${weekFrom}&to=${today}`, {
           cache: "no-store",
         }).then((r) => r.json()),
+        fetch("/api/admin/dashboard", { cache: "no-store" }).then((r) => r.json()).catch(() => null),
       ]);
       setStats(s.stats);
       setTanggal(s.tanggal);
       setRows(a.rekap || []);
       setWeekRows(w.rekap || []);
+      if (r && r.distribusi) setRing(r);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -366,6 +376,27 @@ export default function AdminDashboard() {
           {refreshing ? "Menyegarkan…" : "Segarkan"}
         </button>
       </div>
+
+      {/* Ringkasan operasional: distribusi (porsi & pagu) + stok gudang */}
+      {ring && (
+        <div className="space-y-3">
+          {ring.menu && (
+            <p className="text-sm text-slate-400">🍽️ Menu hari ini: <span className="text-slate-200">{ring.menu}</span></p>
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Besar (+PJ)</p><p className="mt-0.5 text-2xl font-bold text-emerald-300">{ring.distribusi.besar}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Kecil</p><p className="mt-0.5 text-2xl font-bold text-sky-300">{ring.distribusi.kecil}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi B3</p><p className="mt-0.5 text-2xl font-bold text-amber-300">{ring.distribusi.b3}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Total Porsi</p><p className="mt-0.5 text-2xl font-bold">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
+            <div className="card p-4 sm:col-span-1"><p className="text-xs text-slate-400">Pagu Hari Ini</p><p className="mt-0.5 text-lg font-bold text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
+            <div className="card p-4">
+              <p className="text-xs text-slate-400">Stok Gudang</p>
+              <p className="mt-0.5 text-sm"><b className="text-emerald-300">{ring.gudang.aman}</b> aman · <b className="text-amber-300">{ring.gudang.menipis}</b> menipis · <b className="text-red-300">{ring.gudang.habis}</b> habis</p>
+              <p className="text-[11px] text-slate-500">{ring.gudang.total} jenis barang</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Kartu statistik */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

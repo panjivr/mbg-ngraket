@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import type { Barang } from "@/lib/gudang";
+import { normalizeKategori, type Barang } from "@/lib/gudang";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   if (!cur) return fail(404, "Barang tidak ditemukan.");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nama = b.nama !== undefined ? String(b.nama).trim().slice(0, 120) : cur.nama;
-  const kategori = b.kategori !== undefined ? (b.kategori === "bahan_baku" ? "bahan_baku" : "operasional") : cur.kategori;
+  const kategori = b.kategori !== undefined ? normalizeKategori(b.kategori) : cur.kategori;
   const satuan = b.satuan !== undefined ? (String(b.satuan).trim().slice(0, 20) || "pcs") : cur.satuan;
   const stok_min = b.stok_min !== undefined ? Math.max(0, Number(b.stok_min) || 0) : cur.stok_min;
   const catatan = b.catatan !== undefined ? String(b.catatan).trim().slice(0, 300) : cur.catatan;

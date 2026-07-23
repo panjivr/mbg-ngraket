@@ -26,16 +26,16 @@ const hari = (t: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long" }
 const tglLong = (t: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(D(t));
 
 /** Satu foto dengan rasio seragam (4:3) apapun ukuran aslinya. */
-function FotoImg({ src, alt }: { src: string; alt: string }) {
+function FotoImg({ src, alt, ratio = "4/3" }: { src: string; alt: string; ratio?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className="aspect-[4/3] w-full rounded-sm border border-gray-300 object-cover" />;
+  return <img src={src} alt={alt} className="w-full rounded-sm border border-gray-300 object-cover" style={{ aspectRatio: ratio }} />;
 }
 /** Deret foto (semua rasio sama); kolom tetap agar rapi walau jumlah foto berbeda. */
-function FotoRow({ srcs, cols, alt }: { srcs: string[]; cols: number; alt: string }) {
+function FotoRow({ srcs, cols, alt, ratio = "4/3" }: { srcs: string[]; cols: number; alt: string; ratio?: string }) {
   if (!srcs.length) return <div className="flex h-24 items-center justify-center text-xs text-gray-400">(belum ada foto)</div>;
   return (
     <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-      {srcs.map((s, i) => <FotoImg key={i} src={s} alt={`${alt} ${i + 1}`} />)}
+      {srcs.map((s, i) => <FotoImg key={i} src={s} alt={`${alt} ${i + 1}`} ratio={ratio} />)}
     </div>
   );
 }
@@ -109,7 +109,7 @@ function Inner() {
         {foto.menu.length > 0 && (
           <div className="mt-3">
             <p className="mb-1 text-sm font-bold">Foto Menu</p>
-            <FotoRow srcs={foto.menu} cols={2} alt="Foto Menu" />
+            <FotoRow srcs={foto.menu} cols={2} alt="Foto Menu" ratio="4/5" />
           </div>
         )}
 
