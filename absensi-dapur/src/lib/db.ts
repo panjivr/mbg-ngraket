@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-26.hr-izin-pengumuman-jadwal-slip";
+const SCHEMA_VERSION = "2026-07-27.hr-role-slip-visibility";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -598,6 +598,31 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tunjangan INTEGER NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS lembur_per_jam INTEGER NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS potongan_per_telat INTEGER NOT NULL DEFAULT 0`);
+    // Peran HR: satu-satunya yang boleh mengisi data gaji & mengatur slip.
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_hr BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Lembur kini per HARI (bukan per jam); salin tarif lama sekali.
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS lembur_per_hari INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`UPDATE users SET lembur_per_hari = lembur_per_jam WHERE lembur_per_hari = 0 AND lembur_per_jam > 0`);
+    // BPJS Ketenagakerjaan: ditampilkan sebagai status "Terbayar" (bukan nominal).
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bpjs_tk BOOLEAN NOT NULL DEFAULT TRUE`);
+
+    // Pengaturan slip gaji per dapur (dikelola HR): periode & jendela tampil.
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_period_from DATE`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_period_to DATE`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_show_from TEXT`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_show_until TEXT`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_aktif BOOLEAN NOT NULL DEFAULT FALSE`);
+
+    // Konfirmasi "diterima" oleh karyawan per periode slip.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS slip_konfirmasi (
+        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        periode_from DATE NOT NULL,
+        periode_to   DATE NOT NULL,
+        confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (user_id, periode_from, periode_to)
+      );
+    `);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,

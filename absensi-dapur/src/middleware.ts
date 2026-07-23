@@ -15,8 +15,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Area HR: WAJIB flag HR untuk siapa pun — admin biasa pun tidak cukup.
+  if (pathname.startsWith("/admin/hr") && session.is_hr !== true) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/dapur";
+    return NextResponse.redirect(url);
+  }
+
   if (isAdminArea && session.role !== "admin") {
-    // Sub-admin scoped: distribusi → area distribusi; laporan → area laporan.
+    // Sub-admin/HR scoped: hanya area yang sesuai aksesnya.
     const isDistribusi =
       pathname.startsWith("/admin/distribusi") ||
       pathname.startsWith("/cetak/distribusi") ||
@@ -27,9 +34,11 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/cetak/laporan") ||
       pathname.startsWith("/cetak/dokumentasi") ||
       pathname.startsWith("/cetak/kilometer");
+    const isHrArea = pathname.startsWith("/admin/hr");
     const allowed =
       (session.akses_distribusi === true && isDistribusi) ||
-      (session.akses_laporan === true && isLaporan);
+      (session.akses_laporan === true && isLaporan) ||
+      (session.is_hr === true && isHrArea);
     if (!allowed) {
       const url = req.nextUrl.clone();
       url.pathname = "/dapur";

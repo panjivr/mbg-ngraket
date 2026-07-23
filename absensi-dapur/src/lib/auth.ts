@@ -20,6 +20,8 @@ export interface SessionData {
   akses_laporan?: boolean;
   /** Petugas gudang keluar (hanya boleh barang keluar). */
   akses_gudang_keluar?: boolean;
+  /** Peran HR: satu-satunya yang boleh kelola data gaji & slip. */
+  is_hr?: boolean;
 }
 
 function secretKey(): Uint8Array {
@@ -70,6 +72,7 @@ export async function verifySession(
         is_super: payload.is_super === true,
         akses_distribusi: payload.akses_distribusi === true,
         akses_laporan: payload.akses_laporan === true,
+        is_hr: payload.is_hr === true,
       };
     }
     return null;

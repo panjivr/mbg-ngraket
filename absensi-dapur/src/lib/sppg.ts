@@ -25,6 +25,12 @@ export interface Sppg {
   // Periode papan peringkat yang ditampilkan ke karyawan (YYYY-MM-DD atau null).
   leaderboard_from: string | null;
   leaderboard_to: string | null;
+  // Slip gaji (dikelola HR): periode & jendela tampil untuk karyawan.
+  slip_period_from: string | null;
+  slip_period_to: string | null;
+  slip_show_from: string | null;
+  slip_show_until: string | null;
+  slip_aktif: boolean;
 }
 
 // Cache singkat konfigurasi dapur (jarang berubah) untuk memangkas query

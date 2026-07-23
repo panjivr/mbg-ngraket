@@ -41,7 +41,7 @@ export default async function DapurLayout({
           </div>
           <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
         </div>
-        <nav className="mt-3 flex items-center gap-1">
+        <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
           <NavLink href="/dapur" label="Absen" exact />
           <NavLink href="/dapur/peringkat" label="🏆 Peringkat" />
           <NavLink href="/dapur/jadwal" label="🗓️ Jadwal" />
@@ -53,18 +53,18 @@ export default async function DapurLayout({
           {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
           {gudangKeluar && <NavLink href="/dapur/gudang" label="🗄️ Kartu Stok" />}
           {session.role === "admin" ? (
-            <Link href="/admin" className="ml-auto rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
+            <Link href="/admin" className="ml-auto shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
               Panel Admin →
             </Link>
           ) : (
-            <span className="ml-auto flex items-center gap-1">
+            <span className="ml-auto flex shrink-0 items-center gap-1">
               {aksesDistribusi && (
-                <Link href="/admin/distribusi" className="rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                <Link href="/admin/distribusi" className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
                   🚚 Distribusi →
                 </Link>
               )}
               {aksesLaporan && (
-                <Link href="/admin/laporan" className="rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                <Link href="/admin/laporan" className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
                   📋 Laporan →
                 </Link>
               )}

@@ -18,8 +18,8 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
 
   const me = (
-    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean }>(
-      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, s.nama AS sppg_nama
+    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; is_hr: boolean }>(
+      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.is_hr, s.nama AS sppg_nama
          FROM users u LEFT JOIN sppg s ON s.id = u.sppg_id
         WHERE u.id = $1`,
       [session.uid],
@@ -28,8 +28,9 @@ export default async function AdminLayout({
   const fullAdmin = session.role === "admin";
   const aksesDistribusi = fullAdmin || !!me?.akses_distribusi;
   const aksesLaporan = fullAdmin || !!me?.akses_laporan;
-  // Sub-admin scoped harus punya minimal satu akses; selain itu tolak.
-  if (!fullAdmin && !aksesDistribusi && !aksesLaporan) redirect("/dapur");
+  const isHr = !!me?.is_hr;
+  // Sub-admin/HR scoped harus punya minimal satu akses; selain itu tolak.
+  if (!fullAdmin && !aksesDistribusi && !aksesLaporan && !isHr) redirect("/dapur");
   const isSuper = fullAdmin && !!me?.is_super;
   const dapurNama = me?.sppg_nama || "Dapur";
 
@@ -50,7 +51,11 @@ export default async function AdminLayout({
                 )}
                 {!fullAdmin && (
                   <span className="ml-1.5 rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
-                    {aksesDistribusi ? "Admin Distribusi" : "Admin Penerimaan"}
+                    {me?.akses_distribusi
+                      ? "Admin Distribusi"
+                      : me?.akses_laporan
+                        ? "Admin Penerimaan"
+                        : "HR"}
                   </span>
                 )}
               </p>
@@ -73,6 +78,7 @@ export default async function AdminLayout({
           {aksesDistribusi && <NavLink href="/admin/distribusi" label="🚚 Distribusi" />}
           {aksesLaporan && <NavLink href="/admin/laporan" label="📋 Laporan Harian" />}
           {(fullAdmin || aksesLaporan) && <NavLink href="/admin/gudang" label="📦 Gudang" />}
+          {isHr && <NavLink href="/admin/hr" label="🧾 HR / Gaji" />}
           {fullAdmin && <NavLink href="/admin/pengaturan" label="Pengaturan" />}
           {isSuper && <NavLink href="/admin/pusat" label="🌐 Semua Dapur" />}
           {isSuper && <NavLink href="/admin/sppg" label="🏢 Kelola Dapur" />}

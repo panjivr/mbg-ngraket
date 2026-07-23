@@ -23,7 +23,7 @@ export default function NavLink({
     <Link
       href={href}
       className={
-        "rounded-lg px-3 py-2 text-sm font-medium transition " +
+        "shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
         (active
           ? "bg-gold-500/15 text-gold-400"
           : "text-slate-400 hover:bg-white/5 hover:text-slate-100")
