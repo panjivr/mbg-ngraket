@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface BoardRow {
   user_id: number;
@@ -21,6 +21,7 @@ interface LeaderboardResponse {
   to: string;
   board: BoardRow[];
   op_days: number;
+  periode: { from: string | null; to: string | null };
 }
 
 function jakartaToday(): string {
@@ -30,6 +31,38 @@ function jakartaToday(): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+function parseISO(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function toISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function addDays(iso: string, n: number): string {
+  const d = parseISO(iso);
+  d.setDate(d.getDate() + n);
+  return toISO(d);
+}
+function dow(iso: string): number {
+  return parseISO(iso).getDay();
+}
+// Minggu (awal pekan) dari sebuah tanggal.
+function sundayOf(iso: string): string {
+  return addDays(iso, -dow(iso));
+}
+function fmtTgl(iso: string): string {
+  return parseISO(iso).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -56,6 +89,16 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
 
+  // Periode papan yang dipublikasikan ke karyawan.
+  const [pFrom, setPFrom] = useState("");
+  const [pTo, setPTo] = useState("");
+  const [savedP, setSavedP] = useState<{ from: string | null; to: string | null }>({
+    from: null,
+    to: null,
+  });
+  const [savingP, setSavingP] = useState(false);
+  const pInit = useRef(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -65,10 +108,61 @@ export default function LeaderboardPage() {
       const data: LeaderboardResponse = await res.json();
       setBoard(data.board || []);
       setOpDays(data.op_days || 0);
+      if (data.periode) {
+        setSavedP(data.periode);
+        // Prefill input periode sekali saja agar edit admin tidak tertimpa.
+        if (!pInit.current) {
+          pInit.current = true;
+          setPFrom(data.periode.from || "");
+          setPTo(data.periode.to || "");
+        }
+      }
     } finally {
       setLoading(false);
     }
   }, [from, to]);
+
+  // Set Mulai (disnap ke Minggu) & otomatis isi Selesai = +13 hari (Sabtu pekan ke-2).
+  const setMulai = useCallback((iso: string) => {
+    if (!iso) {
+      setPFrom("");
+      return;
+    }
+    const minggu = sundayOf(iso);
+    setPFrom(minggu);
+    setPTo(addDays(minggu, 13));
+  }, []);
+
+  const periodeBerjalan = useCallback(() => {
+    setMulai(jakartaToday());
+  }, [setMulai]);
+
+  const simpanPeriode = useCallback(
+    async (clear = false) => {
+      setSavingP(true);
+      try {
+        const body = clear ? { from: "", to: "" } : { from: pFrom, to: pTo };
+        const res = await fetch("/api/admin/leaderboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data?.error || "Gagal menyimpan periode.");
+          return;
+        }
+        setSavedP({ from: data.from, to: data.to });
+        if (clear) {
+          setPFrom("");
+          setPTo("");
+        }
+      } finally {
+        setSavingP(false);
+      }
+    },
+    [pFrom, pTo],
+  );
 
   useEffect(() => {
     load();
@@ -109,7 +203,81 @@ export default function LeaderboardPage() {
         <h1 className="text-xl font-bold">🏆 Peringkat Kinerja Pegawai</h1>
       </div>
 
+      {/* Periode yang dipublikasikan ke karyawan (papan di layar absen). */}
+      <div className="card space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-200">
+            📢 Periode yang ditampilkan ke karyawan
+          </p>
+          {savedP.from && savedP.to ? (
+            <span className="rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+              Aktif: {fmtTgl(savedP.from)} – {fmtTgl(savedP.to)}
+            </span>
+          ) : (
+            <span className="rounded-lg bg-white/5 px-2.5 py-1 text-xs text-slate-400">
+              Belum ditampilkan
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400">
+          Satu periode = 2 minggu (Minggu–Sabtu pekan ke-2). Pilih tanggal Mulai
+          (otomatis disnap ke hari Minggu); Selesai terisi otomatis +13 hari.
+          Ganti kapan saja saat pindah periode.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label">Mulai (Minggu)</label>
+            <input
+              type="date"
+              className="input"
+              value={pFrom}
+              onChange={(e) => setMulai(e.target.value)}
+            />
+            {pFrom && (
+              <p className="mt-1 text-[11px] text-slate-500">{HARI[dow(pFrom)]}</p>
+            )}
+          </div>
+          <div>
+            <label className="label">Selesai (Sabtu)</label>
+            <input
+              type="date"
+              className="input"
+              value={pTo}
+              min={pFrom}
+              onChange={(e) => setPTo(e.target.value)}
+            />
+            {pTo && (
+              <p className="mt-1 text-[11px] text-slate-500">{HARI[dow(pTo)]}</p>
+            )}
+          </div>
+          <button onClick={periodeBerjalan} type="button" className="btn-ghost">
+            Periode Berjalan
+          </button>
+          <button
+            onClick={() => simpanPeriode(false)}
+            type="button"
+            className="btn-primary"
+            disabled={savingP || !pFrom || !pTo}
+          >
+            {savingP ? "Menyimpan…" : "Simpan & Tampilkan"}
+          </button>
+          {savedP.from && (
+            <button
+              onClick={() => simpanPeriode(true)}
+              type="button"
+              className="btn-ghost text-rose-300"
+              disabled={savingP}
+            >
+              Kosongkan
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="card flex flex-wrap items-end gap-3 p-4">
+        <p className="w-full text-xs font-medium text-slate-400">
+          🔎 Lihat data (khusus admin — tidak memengaruhi papan karyawan)
+        </p>
         <div>
           <label className="label">Dari Tanggal</label>
           <input
