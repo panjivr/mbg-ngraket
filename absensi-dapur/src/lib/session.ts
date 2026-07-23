@@ -74,6 +74,23 @@ export async function requireAkses(area: "distribusi" | "laporan"): Promise<Sess
 }
 
 /**
+ * Peran HR — satu-satunya yang boleh mengelola data gaji & pengaturan slip.
+ * Admin biasa TIDAK cukup; wajib flag is_hr. Backfill dari DB bila perlu.
+ */
+export async function requireHr(): Promise<SessionData> {
+  const s = await requireSession();
+  if (s.is_hr === undefined) {
+    const r = await query<{ is_hr: boolean }>(
+      `SELECT is_hr FROM users WHERE id = $1`,
+      [s.uid],
+    );
+    s.is_hr = !!r[0]?.is_hr;
+  }
+  if (!s.is_hr) throw new HttpError(403, "Khusus HR.");
+  return s;
+}
+
+/**
  * Akses gudang. "full" = admin atau admin penerimaan (akses_laporan) —
  * kelola barang, masuk, keluar, opname. "keluar" = full ATAU petugas gudang
  * keluar (persiapan/pengolahan/pemorsian). "read" = boleh melihat daftar stok.

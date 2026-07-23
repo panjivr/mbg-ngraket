@@ -4,63 +4,62 @@ import { useCallback, useEffect, useState } from "react";
 import type { Slip } from "@/lib/slip";
 import SlipGaji from "@/components/SlipGaji";
 
-function jakartaToday(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-function monthStart(): string {
-  return jakartaToday().slice(0, 8) + "01";
-}
-
 export default function SlipSayaPage() {
-  const [from, setFrom] = useState(monthStart());
-  const [to, setTo] = useState(jakartaToday());
   const [slip, setSlip] = useState<Slip | null>(null);
   const [dapur, setDapur] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [pesan, setPesan] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/slip?from=${from}&to=${to}`, { cache: "no-store" });
+      const res = await fetch("/api/slip", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) {
+      if (data.visible) {
         setSlip(data.slip);
         setDapur(data.dapur || "");
+        setPesan("");
+      } else {
+        setSlip(null);
+        setPesan(data.pesan || "Slip gaji belum tersedia.");
       }
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const konfirmasi = async () => {
+    setConfirming(true);
+    try {
+      const res = await fetch("/api/slip", { method: "POST" });
+      if (res.ok) await load();
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold">🧾 Slip Gaji Saya</h1>
-      <div className="card flex flex-wrap items-end gap-3 p-4">
-        <div>
-          <label className="label">Dari</label>
-          <input type="date" className="input" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div>
-          <label className="label">Sampai</label>
-          <input type="date" className="input" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-        </div>
-        <button onClick={load} disabled={loading} className="btn-ghost">
-          {loading ? "Memuat…" : "Tampilkan"}
-        </button>
-      </div>
 
-      {slip && (
+      {loading ? (
+        <div className="card p-6 text-center text-slate-400">Memuat…</div>
+      ) : slip ? (
         <div className="overflow-hidden rounded-2xl border border-white/10">
-          <SlipGaji slip={slip} dapur={dapur} />
+          <SlipGaji slip={slip} dapur={dapur} onConfirm={konfirmasi} confirming={confirming} />
+        </div>
+      ) : (
+        <div className="card p-8 text-center">
+          <p className="text-3xl">🗓️</p>
+          <p className="mt-2 text-sm text-slate-300">{pesan}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Slip hanya bisa dilihat pada waktu yang ditentukan HR.
+          </p>
         </div>
       )}
     </div>
