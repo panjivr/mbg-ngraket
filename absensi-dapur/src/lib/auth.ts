@@ -18,6 +18,8 @@ export interface SessionData {
   akses_distribusi?: boolean;
   /** Sub-admin scoped: akses ke fitur Laporan Harian. */
   akses_laporan?: boolean;
+  /** Petugas gudang keluar (hanya boleh barang keluar). */
+  akses_gudang_keluar?: boolean;
 }
 
 function secretKey(): Uint8Array {

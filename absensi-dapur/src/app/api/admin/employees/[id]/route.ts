@@ -98,11 +98,13 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     body.akses_distribusi !== undefined ? Boolean(body.akses_distribusi) : (existing.akses_distribusi ?? false);
   const akses_laporan =
     body.akses_laporan !== undefined ? Boolean(body.akses_laporan) : (existing.akses_laporan ?? false);
+  const akses_gudang_keluar =
+    body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
 
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
-    jenis_kelamin, is_driver, akses_distribusi, akses_laporan,
+    jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar,
   ];
   if (body.password) {
     if (String(body.password).length < 6) {
@@ -117,10 +119,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const rows = await query<User>(
     `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
             divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
-            akses_distribusi=$12, akses_laporan=$13${passwordClause}
+            akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14${passwordClause}
        WHERE id = $${paramsArr.length}
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan`,
+               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar`,
     paramsArr,
   );
   void admin;

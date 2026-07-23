@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query, withClient } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireGudang } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
@@ -13,7 +13,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Riwayat mutasi: ?barang_id= (satu barang) atau semua (terbaru).
 export const GET = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireGudang("read");
   const bid = req.nextUrl.searchParams.get("barang_id");
   const params: unknown[] = [admin.sppg_id];
   let extra = "";
@@ -27,11 +27,12 @@ export const GET = route(async (req: NextRequest) => {
 });
 
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const barang_id = parseInt(String(b.barang_id), 10);
   if (!Number.isFinite(barang_id)) return fail(400, "Barang tidak valid.");
   const tipe = (["masuk", "keluar", "opname"].includes(String(b.tipe)) ? b.tipe : "masuk") as TipeMutasi;
+  // Petugas gudang keluar hanya boleh tipe "keluar"; masuk/opname butuh akses penuh.
+  const admin = await requireGudang(tipe === "keluar" ? "keluar" : "full");
   const jumlah = Math.max(0, Number(b.jumlah) || 0);
   if (jumlah <= 0 && tipe !== "opname") return fail(400, "Jumlah harus lebih dari 0.");
   const keteranganIn = String(b.keterangan ?? "").trim().slice(0, 300);

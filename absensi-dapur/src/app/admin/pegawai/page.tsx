@@ -21,6 +21,7 @@ interface Employee {
   is_driver: boolean;
   akses_distribusi: boolean;
   akses_laporan: boolean;
+  akses_gudang_keluar: boolean;
 }
 
 interface DivisiLite {
@@ -46,6 +47,7 @@ interface FormState {
   is_driver: boolean;
   akses_distribusi: boolean;
   akses_laporan: boolean;
+  akses_gudang_keluar: boolean;
 }
 
 const emptyForm: FormState = {
@@ -64,6 +66,7 @@ const emptyForm: FormState = {
   is_driver: false,
   akses_distribusi: false,
   akses_laporan: false,
+  akses_gudang_keluar: false,
 };
 
 export default function PegawaiPage() {
@@ -173,6 +176,7 @@ export default function PegawaiPage() {
       is_driver: !!e.is_driver,
       akses_distribusi: !!e.akses_distribusi,
       akses_laporan: !!e.akses_laporan,
+      akses_gudang_keluar: !!e.akses_gudang_keluar,
     });
   }
 
@@ -199,6 +203,7 @@ export default function PegawaiPage() {
         is_driver: form.is_driver,
         akses_distribusi: form.akses_distribusi,
         akses_laporan: form.akses_laporan,
+        akses_gudang_keluar: form.akses_gudang_keluar,
       };
       if (form.password) payload.password = form.password;
       const res = await fetch(url, {
@@ -536,7 +541,12 @@ export default function PegawaiPage() {
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_laporan}
                     onChange={(e) => setForm({ ...form, akses_laporan: e.target.checked })} />
-                  📋 Admin Penerimaan — akses semua fitur Laporan Harian
+                  📋 Admin Penerimaan — akses Laporan Harian &amp; kelola Gudang
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_gudang_keluar}
+                    onChange={(e) => setForm({ ...form, akses_gudang_keluar: e.target.checked })} />
+                  🗄️ Petugas Gudang Keluar (persiapan/pengolahan/pemorsian) — hanya catat barang keluar
                 </label>
                 <p className="text-[11px] text-slate-500">Setelah diubah, pegawai perlu logout &amp; login ulang agar akses aktif.</p>
               </div>

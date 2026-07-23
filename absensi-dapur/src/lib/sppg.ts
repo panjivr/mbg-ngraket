@@ -24,10 +24,25 @@ export interface Sppg {
   koordinator: string;
 }
 
-/** Ambil konfigurasi dapur tertentu (null bila tak ada). */
+// Cache singkat konfigurasi dapur (jarang berubah) untuk memangkas query
+// berulang di banyak route pada instance yang sama. Di-invalidate saat update.
+const SPPG_TTL_MS = 30_000;
+const sppgCache = new Map<number, { at: number; val: Sppg | null }>();
+
+/** Ambil konfigurasi dapur tertentu (null bila tak ada). Di-cache 30 detik. */
 export async function getSppg(id: number): Promise<Sppg | null> {
+  const hit = sppgCache.get(id);
+  if (hit && Date.now() - hit.at < SPPG_TTL_MS) return hit.val;
   const r = await query<Sppg>(`SELECT * FROM sppg WHERE id = $1`, [id]);
-  return r[0] ?? null;
+  const val = r[0] ?? null;
+  sppgCache.set(id, { at: Date.now(), val });
+  return val;
+}
+
+/** Hapus cache konfigurasi dapur (panggil setelah update sppg). */
+export function invalidateSppg(id?: number): void {
+  if (id === undefined) sppgCache.clear();
+  else sppgCache.delete(id);
 }
 
 /**

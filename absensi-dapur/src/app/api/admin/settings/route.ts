@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { getSppg, type Sppg } from "@/lib/sppg";
+import { getSppg, invalidateSppg, type Sppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -73,5 +73,6 @@ export const PUT = route(async (req: NextRequest) => {
      WHERE id = $11 RETURNING *`,
     [nama, alamat, lat, lng, radius_m, geofence_aktif, selfie_wajib, jam_masuk, jam_pulang, tz, cur.id],
   );
+  invalidateSppg(cur.id);
   return ok({ settings: asSettings(rows[0]) });
 });

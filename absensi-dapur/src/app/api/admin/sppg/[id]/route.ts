@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireSuper } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import type { Sppg } from "@/lib/sppg";
+import { invalidateSppg, type Sppg } from "@/lib/sppg";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     `UPDATE sppg SET nama=$1, alamat=$2, aktif=$3 WHERE id=$4 RETURNING *`,
     [nama, alamat, aktif, id],
   );
+  invalidateSppg(id);
   return ok({ sppg: rows[0] });
 });
 

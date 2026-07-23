@@ -23,6 +23,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/cetak/penerima");
     const isLaporan =
       pathname.startsWith("/admin/laporan") ||
+      pathname.startsWith("/admin/gudang") ||
       pathname.startsWith("/cetak/laporan") ||
       pathname.startsWith("/cetak/dokumentasi") ||
       pathname.startsWith("/cetak/kilometer");
