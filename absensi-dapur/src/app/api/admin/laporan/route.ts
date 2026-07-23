@@ -5,7 +5,7 @@ import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
 import {
-  mergeIsi, mergeFoto, LAPORAN_FOTO_KOSONG,
+  mergeIsi, mergeFoto, LAPORAN_FOTO_KOSONG, FOTO_MAX,
   type LaporanIsi, type LaporanFoto, type Personel,
 } from "@/lib/laporan";
 
@@ -39,17 +39,24 @@ function cleanIsi(v: unknown): LaporanIsi {
   });
 }
 
-// Foto: hanya terima data URL gambar; batasi ukuran per foto (~3MB base64).
+// Foto: daftar data URL gambar per slot; batasi jumlah per slot & ukuran per foto (~3MB).
 function cleanFoto(v: unknown): LaporanFoto {
   const o = (v ?? {}) as Record<string, unknown>;
-  const one = (x: unknown) => {
-    const s = String(x ?? "");
-    return s.startsWith("data:image/") && s.length < 3_500_000 ? s : "";
+  const list = (x: unknown, max: number): string[] => {
+    const arr = Array.isArray(x) ? x : typeof x === "string" && x ? [x] : [];
+    return arr
+      .map((i) => String(i ?? ""))
+      .filter((s) => s.startsWith("data:image/") && s.length < 3_500_000)
+      .slice(0, max);
   };
   return {
-    menu: one(o.menu), penerimaan: one(o.penerimaan), persiapan: one(o.persiapan),
-    pengolahan: one(o.pengolahan), pemorsian: one(o.pemorsian),
-    distribusi: one(o.distribusi), cuci: one(o.cuci),
+    menu: list(o.menu, FOTO_MAX.menu),
+    penerimaan: list(o.penerimaan, FOTO_MAX.penerimaan),
+    persiapan: list(o.persiapan, FOTO_MAX.persiapan),
+    pengolahan: list(o.pengolahan, FOTO_MAX.pengolahan),
+    pemorsian: list(o.pemorsian, FOTO_MAX.pemorsian),
+    distribusi: list(o.distribusi, FOTO_MAX.distribusi),
+    cuci: list(o.cuci, FOTO_MAX.cuci),
   };
 }
 

@@ -25,10 +25,19 @@ const D = (t: string) => new Date(t + "T00:00:00");
 const hari = (t: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(D(t));
 const tglLong = (t: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(D(t));
 
-function Foto({ src, alt }: { src: string; alt: string }) {
-  if (!src) return <div className="flex h-40 items-center justify-center text-xs text-gray-400">(belum ada foto)</div>;
+/** Satu foto dengan rasio seragam (4:3) apapun ukuran aslinya. */
+function FotoImg({ src, alt }: { src: string; alt: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className="mx-auto max-h-64 w-auto object-contain" />;
+  return <img src={src} alt={alt} className="aspect-[4/3] w-full rounded-sm border border-gray-300 object-cover" />;
+}
+/** Deret foto (semua rasio sama); kolom tetap agar rapi walau jumlah foto berbeda. */
+function FotoRow({ srcs, cols, alt }: { srcs: string[]; cols: number; alt: string }) {
+  if (!srcs.length) return <div className="flex h-24 items-center justify-center text-xs text-gray-400">(belum ada foto)</div>;
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      {srcs.map((s, i) => <FotoImg key={i} src={s} alt={`${alt} ${i + 1}`} />)}
+    </div>
+  );
 }
 
 function Inner() {
@@ -96,6 +105,14 @@ function Inner() {
           </tbody>
         </table>
 
+        {/* Foto menu (2 foto) — di atas rincian menu */}
+        {foto.menu.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-1 text-sm font-bold">Foto Menu</p>
+            <FotoRow srcs={foto.menu} cols={2} alt="Foto Menu" />
+          </div>
+        )}
+
         {/* Menu tabel per penerima */}
         <table className="mt-3 w-full border-collapse text-sm">
           <thead>
@@ -119,14 +136,6 @@ function Inner() {
             ))}
           </tbody>
         </table>
-
-        {/* Foto menu */}
-        {foto.menu && (
-          <div className="mt-3">
-            <p className="text-sm font-bold">Foto Menu</p>
-            <Foto src={foto.menu} alt="Foto Menu" />
-          </div>
-        )}
 
         {/* Kehadiran personel */}
         <p className="mt-5 text-sm font-bold">Kehadiran Personel:</p>
@@ -182,8 +191,8 @@ function Inner() {
           <tbody>
             {FOTO_SLOTS.filter((s) => s.key !== "menu").map((s) => (
               <tr key={s.key}>
-                <td className={cell + " w-48 font-bold"}>{s.label}</td>
-                <td className={cell}><Foto src={foto[s.key]} alt={s.label} /></td>
+                <td className={cell + " w-40 font-bold"}>{s.label}</td>
+                <td className={cell}><FotoRow srcs={foto[s.key]} cols={3} alt={s.label} /></td>
               </tr>
             ))}
           </tbody>
