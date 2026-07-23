@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-24.laporan-dokumentasi";
+const SCHEMA_VERSION = "2026-07-24.kilometer";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -454,6 +454,35 @@ async function doEnsureSchema(): Promise<void> {
         UNIQUE (sppg_id, tanggal, kegiatan)
       );
     `);
+
+    // Data Kilometer Kendaraan: master kendaraan + entri KM harian (foto + angka).
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_driver BOOLEAN NOT NULL DEFAULT FALSE`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kendaraan (
+        id        SERIAL PRIMARY KEY,
+        sppg_id   INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        nopol     TEXT NOT NULL DEFAULT '',
+        nama      TEXT NOT NULL DEFAULT '',
+        konsumsi  NUMERIC NOT NULL DEFAULT 0,
+        aktif     BOOLEAN NOT NULL DEFAULT TRUE,
+        urutan    INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kilometer (
+        id             SERIAL PRIMARY KEY,
+        sppg_id        INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        kendaraan_id   INTEGER NOT NULL REFERENCES kendaraan(id) ON DELETE CASCADE,
+        tanggal        DATE NOT NULL,
+        km_berangkat   INTEGER NOT NULL DEFAULT 0,
+        km_pulang      INTEGER NOT NULL DEFAULT 0,
+        foto_berangkat TEXT NOT NULL DEFAULT '',
+        foto_pulang    TEXT NOT NULL DEFAULT '',
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (kendaraan_id, tanggal)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_kilometer_sppg_tgl ON kilometer (sppg_id, tanggal)`);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,

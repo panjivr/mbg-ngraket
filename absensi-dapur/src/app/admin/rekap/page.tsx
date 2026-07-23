@@ -166,6 +166,18 @@ export default function RekapPage() {
     await load();
   }
 
+  // Hapus catatan absensi (mis. relawan absen tapi tidak bekerja).
+  async function hapusAbsen(id: number, nama: string, tgl: string) {
+    if (!confirm(`Hapus catatan absensi "${nama}" (${tgl})?\nCatatan ini akan hilang permanen.`)) return;
+    const res = await fetch(`/api/admin/attendance/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || "Gagal menghapus catatan.");
+      return;
+    }
+    await load();
+  }
+
   // Buka modal absen manual (default tanggal = filter "Dari" atau hari ini).
   function openManual() {
     setManualError(null);
@@ -565,13 +577,20 @@ export default function RekapPage() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={() => openEdit(r)}
                           className="btn-ghost px-2.5 py-1 text-xs"
                           title="Edit jam masuk / pulang"
                         >
                           ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => hapusAbsen(r.id, r.nama, r.tanggal)}
+                          className="btn-danger px-2.5 py-1 text-xs"
+                          title="Hapus catatan absensi"
+                        >
+                          🗑 Hapus
                         </button>
                       </div>
                     </td>

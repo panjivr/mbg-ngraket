@@ -60,6 +60,7 @@ export interface User {
   tempat_lahir?: string | null;
   tanggal_lahir?: string | null;
   jenis_kelamin?: string | null;
+  is_driver?: boolean;
 }
 
 /** Data kartu pegawai (gaya kartu koleksi) untuk dibagikan. */

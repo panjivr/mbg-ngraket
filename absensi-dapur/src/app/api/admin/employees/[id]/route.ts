@@ -92,10 +92,13 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     }
   }
 
+  const is_driver =
+    body.is_driver !== undefined ? Boolean(body.is_driver) : (existing.is_driver ?? false);
+
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
-    jenis_kelamin,
+    jenis_kelamin, is_driver,
   ];
   if (body.password) {
     if (String(body.password).length < 6) {
@@ -109,10 +112,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const rows = await query<User>(
     `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
-            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10${passwordClause}
+            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11${passwordClause}
        WHERE id = $${paramsArr.length}
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-               tempat_lahir, tanggal_lahir, jenis_kelamin`,
+               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver`,
     paramsArr,
   );
   void admin;

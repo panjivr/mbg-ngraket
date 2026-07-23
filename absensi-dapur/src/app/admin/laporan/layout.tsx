@@ -6,6 +6,7 @@ export default function LaporanLayout({ children }: { children: React.ReactNode 
       <nav className="scroll-x flex items-center gap-1 overflow-x-auto border-b border-white/5 pb-2">
         <NavLink href="/admin/laporan" label="📋 Laporan Kegiatan Harian" exact />
         <NavLink href="/admin/laporan/dokumentasi" label="📷 Dokumentasi Foto Kegiatan" />
+        <NavLink href="/admin/laporan/kilometer" label="🚗 Data Kilometer" />
       </nav>
       {children}
     </div>

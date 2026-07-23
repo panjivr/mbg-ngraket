@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { query } from "@/lib/db";
 import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
@@ -15,6 +16,10 @@ export default async function DapurLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  const isDriver = !!(
+    await query<{ is_driver: boolean }>(`SELECT is_driver FROM users WHERE id = $1`, [session.uid])
+  )[0]?.is_driver;
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-12">
@@ -34,6 +39,7 @@ export default async function DapurLayout({
           <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
           <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />
+          {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
           {session.role === "admin" && (
             <Link
               href="/admin"
