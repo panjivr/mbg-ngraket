@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAkses } from "@/lib/session";
-import { getSppg } from "@/lib/sppg";
+import { getSppg, invalidateSppg } from "@/lib/sppg";
 import { ok, route } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -45,6 +45,7 @@ export const PUT = route(async (req: NextRequest) => {
     `UPDATE sppg SET nama=$1, kepala_sppg=$2, harga_besar=$3, harga_kecil=$4, harga_b3=$5, ahli_gizi=$6, koordinator=$7 WHERE id=$8`,
     [nama, kepala, hb, hk, h3, ahliGizi, koordinator, admin.sppg_id],
   );
+  invalidateSppg(admin.sppg_id as number);
   return ok({
     pengaturan: {
       nama_sppg: nama, kepala_sppg: kepala, harga_besar: hb, harga_kecil: hk, harga_b3: h3,

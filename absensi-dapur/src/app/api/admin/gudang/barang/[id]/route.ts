@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import type { Barang } from "@/lib/gudang";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
-  const admin = await requireAdmin();
+  const admin = await requireGudang("full");
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   const cur = (await query<Barang>(
@@ -35,7 +35,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 });
 
 export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
-  const admin = await requireAdmin();
+  const admin = await requireGudang("full");
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   const rows = await query<{ id: number }>(

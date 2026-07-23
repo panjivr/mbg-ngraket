@@ -73,6 +73,29 @@ export async function requireAkses(area: "distribusi" | "laporan"): Promise<Sess
   return s;
 }
 
+/**
+ * Akses gudang. "full" = admin atau admin penerimaan (akses_laporan) —
+ * kelola barang, masuk, keluar, opname. "keluar" = full ATAU petugas gudang
+ * keluar (persiapan/pengolahan/pemorsian). "read" = boleh melihat daftar stok.
+ */
+export async function requireGudang(mode: "full" | "keluar" | "read"): Promise<SessionData> {
+  const s = await requireSession();
+  if (s.role === "admin") return s;
+  if (s.akses_laporan === undefined || s.akses_gudang_keluar === undefined) {
+    const r = await query<{ akses_laporan: boolean; akses_gudang_keluar: boolean }>(
+      `SELECT akses_laporan, akses_gudang_keluar FROM users WHERE id = $1`,
+      [s.uid],
+    );
+    s.akses_laporan = !!r[0]?.akses_laporan;
+    s.akses_gudang_keluar = !!r[0]?.akses_gudang_keluar;
+  }
+  const full = !!s.akses_laporan;
+  const keluar = full || !!s.akses_gudang_keluar;
+  const ok = mode === "full" ? full : keluar;
+  if (!ok) throw new HttpError(403, "Tidak punya akses gudang.");
+  return s;
+}
+
 /** Hanya super admin pusat. */
 export async function requireSuper(): Promise<SessionData> {
   const s = await requireAdmin();

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import type { Barang } from "@/lib/gudang";
 
@@ -11,7 +11,7 @@ const SELECT = `SELECT id, sppg_id, nama, kategori, satuan,
   stok::float8 AS stok, stok_min::float8 AS stok_min, catatan, aktif, urutan FROM barang`;
 
 export const GET = route(async () => {
-  const admin = await requireAdmin();
+  const admin = await requireGudang("read");
   const rows = await query<Barang>(
     `${SELECT} WHERE sppg_id = $1 ORDER BY kategori ASC, nama ASC`,
     [admin.sppg_id],
@@ -20,7 +20,7 @@ export const GET = route(async () => {
 });
 
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireGudang("full");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nama = String(b.nama ?? "").trim().slice(0, 120);
   if (!nama) return fail(400, "Nama barang wajib diisi.");

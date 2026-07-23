@@ -18,14 +18,15 @@ export default async function DapurLayout({
   if (!session) redirect("/login");
 
   const me = (
-    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean }>(
-      `SELECT is_driver, akses_distribusi, akses_laporan FROM users WHERE id = $1`,
+    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean; akses_gudang_keluar: boolean }>(
+      `SELECT is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar FROM users WHERE id = $1`,
       [session.uid],
     )
   )[0];
   const isDriver = !!me?.is_driver;
   const aksesDistribusi = !!me?.akses_distribusi;
   const aksesLaporan = !!me?.akses_laporan;
+  const gudangKeluar = !!me?.akses_gudang_keluar;
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-12">
@@ -46,6 +47,7 @@ export default async function DapurLayout({
           <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />
           {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
+          {gudangKeluar && <NavLink href="/dapur/gudang" label="🗄️ Kartu Stok" />}
           {session.role === "admin" ? (
             <Link href="/admin" className="ml-auto rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
               Panel Admin →
