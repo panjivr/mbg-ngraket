@@ -87,7 +87,8 @@ export const GET = route(async (req: NextRequest) => {
     tB3 = 0;
   for (const r of baris) {
     if (!r.ikut) continue;
-    tBesar += r.besar;
+    // PJ (penanggung jawab) dihitung sebagai porsi besar (harga besar 10.000).
+    tBesar += r.besar + r.pj;
     tKecil += r.kecil;
     tB3 += r.b3;
   }

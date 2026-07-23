@@ -108,7 +108,8 @@ export default function DistribusiPage() {
     let besar = 0, kecil = 0, b3 = 0;
     for (const b of baris) {
       if (!b.ikut) continue;
-      besar += b.besar || 0;
+      // PJ (penanggung jawab) masuk hitungan porsi besar (harga besar).
+      besar += (b.besar || 0) + (b.pj || 0);
       kecil += b.kecil || 0;
       b3 += b.b3 || 0;
     }
@@ -188,7 +189,7 @@ export default function DistribusiPage() {
       {/* Ringkasan porsi & pagu */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
-          { l: "Porsi Besar", v: total.besar, c: "text-emerald-300" },
+          { l: "Porsi Besar (+PJ)", v: total.besar, c: "text-emerald-300" },
           { l: "Porsi Kecil", v: total.kecil, c: "text-sky-300" },
           { l: "Porsi B3", v: total.b3, c: "text-amber-300" },
           { l: "Total Porsi", v: total.porsi, c: "text-slate-100" },
