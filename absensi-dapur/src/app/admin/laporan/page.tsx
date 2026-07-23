@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { FOTO_SLOTS, type LaporanIsi, type LaporanFoto, type Personel } from "@/lib/laporan";
+import type { ChangeEvent } from "react";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -60,12 +61,16 @@ export default function LaporanPage() {
   }
   function setPersonel(next: Personel[]) { patchIsi({ personel: next }); }
 
-  async function onFoto(key: keyof LaporanFoto, file: File | undefined) {
+  async function addFoto(key: keyof LaporanFoto, file: File | undefined, max: number) {
     if (!file || !foto) return;
+    if (foto[key].length >= max) { setMsg(`Maksimal ${max} foto untuk slot ini.`); return; }
     try {
       const dataUrl = await compressImage(file);
-      setFoto({ ...foto, [key]: dataUrl });
+      setFoto((prev) => (prev ? { ...prev, [key]: [...prev[key], dataUrl].slice(0, max) } : prev));
     } catch { setMsg("Gagal memproses foto."); }
+  }
+  function removeFoto(key: keyof LaporanFoto, idx: number) {
+    setFoto((prev) => (prev ? { ...prev, [key]: prev[key].filter((_, i) => i !== idx) } : prev));
   }
 
   async function simpan() {
@@ -173,22 +178,33 @@ export default function LaporanPage() {
           {/* Foto */}
           <div className="card space-y-3 p-4">
             <h2 className="text-sm font-semibold text-gold-400">📷 Foto (menu &amp; dokumentasi)</h2>
-            <p className="text-xs text-slate-500">Foto otomatis dikompres agar file PDF tetap ringan.</p>
+            <p className="text-xs text-slate-500">
+              Menu 2 foto (tampil di atas rincian menu). Dokumentasi 3 foto per kegiatan. Semua rasio disamakan (4:3) &amp; dikompres otomatis.
+            </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {FOTO_SLOTS.map((s) => (
                 <div key={s.key} className="rounded-lg border border-white/10 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">{s.label}</span>
-                    {foto[s.key] && <button onClick={() => setFoto({ ...foto, [s.key]: "" })} className="btn-ghost px-2 py-0.5 text-xs">Hapus</button>}
+                    <span className="text-xs text-slate-500">{foto[s.key].length}/{s.max}</span>
                   </div>
-                  <div className="mt-2 grid h-40 place-items-center overflow-hidden rounded bg-black/20">
-                    {foto[s.key]
-                      ? // eslint-disable-next-line @next/next/no-img-element
-                        <img src={foto[s.key]} alt={s.label} className="max-h-40 w-auto object-contain" />
-                      : <span className="text-xs text-slate-500">Belum ada foto</span>}
+                  <div className="mt-2 grid grid-cols-3 gap-1.5">
+                    {foto[s.key].map((src, i) => (
+                      <div key={i} className="group relative aspect-[4/3] overflow-hidden rounded bg-black/20">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`${s.label} ${i + 1}`} className="h-full w-full object-cover" />
+                        <button onClick={() => removeFoto(s.key, i)}
+                          className="absolute right-0.5 top-0.5 rounded bg-black/70 px-1 text-xs text-white">✕</button>
+                      </div>
+                    ))}
+                    {foto[s.key].length < s.max && (
+                      <label className="grid aspect-[4/3] cursor-pointer place-items-center rounded border border-dashed border-white/20 bg-black/10 text-xl text-slate-500 hover:bg-black/20">
+                        +
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => { addFoto(s.key, e.target.files?.[0], s.max); e.target.value = ""; }} />
+                      </label>
+                    )}
                   </div>
-                  <input type="file" accept="image/*" className="mt-2 block w-full text-xs text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-gold-500/20 file:px-2 file:py-1 file:text-gold-300"
-                    onChange={(e) => onFoto(s.key, e.target.files?.[0])} />
                 </div>
               ))}
             </div>

@@ -22,26 +22,29 @@ export interface LaporanIsi {
   solusi: string;
 }
 
-/** Slot foto dokumentasi (nilai = data URL base64 atau ""). */
+/** Slot foto: tiap slot = daftar data URL base64 (menu 2 foto, dokumentasi 3 foto). */
 export interface LaporanFoto {
-  menu: string;
-  penerimaan: string;
-  persiapan: string;
-  pengolahan: string;
-  pemorsian: string;
-  distribusi: string;
-  cuci: string;
+  menu: string[];
+  penerimaan: string[];
+  persiapan: string[];
+  pengolahan: string[];
+  pemorsian: string[];
+  distribusi: string[];
+  cuci: string[];
 }
 
-export const FOTO_SLOTS: { key: keyof LaporanFoto; label: string }[] = [
-  { key: "menu", label: "Foto Menu" },
-  { key: "penerimaan", label: "Foto Penerimaan Barang" },
-  { key: "persiapan", label: "Foto Persiapan" },
-  { key: "pengolahan", label: "Foto Pengolahan" },
-  { key: "pemorsian", label: "Foto Pemorsian" },
-  { key: "distribusi", label: "Foto Distribusi" },
-  { key: "cuci", label: "Foto Cuci Ompreng" },
+export const FOTO_SLOTS: { key: keyof LaporanFoto; label: string; max: number }[] = [
+  { key: "menu", label: "Foto Menu", max: 2 },
+  { key: "penerimaan", label: "Foto Penerimaan Barang", max: 3 },
+  { key: "persiapan", label: "Foto Persiapan", max: 3 },
+  { key: "pengolahan", label: "Foto Pengolahan", max: 3 },
+  { key: "pemorsian", label: "Foto Pemorsian", max: 3 },
+  { key: "distribusi", label: "Foto Distribusi", max: 3 },
+  { key: "cuci", label: "Foto Cuci Ompreng", max: 3 },
 ];
+export const FOTO_MAX: Record<keyof LaporanFoto, number> = {
+  menu: 2, penerimaan: 3, persiapan: 3, pengolahan: 3, pemorsian: 3, distribusi: 3, cuci: 3,
+};
 
 const MENU_DEFAULT = ["Nasi Putih", "Ayam Bawang", "Sayur Lodeh", "Susu UHT", "Kerupuk Finna", "Buah Pear"];
 
@@ -82,7 +85,7 @@ export const LAPORAN_ISI_DEFAULT: LaporanIsi = {
 };
 
 export const LAPORAN_FOTO_KOSONG: LaporanFoto = {
-  menu: "", penerimaan: "", persiapan: "", pengolahan: "", pemorsian: "", distribusi: "", cuci: "",
+  menu: [], penerimaan: [], persiapan: [], pengolahan: [], pemorsian: [], distribusi: [], cuci: [],
 };
 
 /** Gabungkan isi tersimpan di atas default agar field baru selalu terisi. */
@@ -104,9 +107,14 @@ export function mergeIsi(saved: Partial<LaporanIsi> | null | undefined): Laporan
   };
 }
 
-export function mergeFoto(saved: Partial<LaporanFoto> | null | undefined): LaporanFoto {
-  const s = saved || {};
-  const pick = (k: keyof LaporanFoto) => (typeof s[k] === "string" ? (s[k] as string) : "");
+/** Ambil daftar foto per slot; toleran ke format lama (string tunggal). */
+export function mergeFoto(saved: Partial<Record<keyof LaporanFoto, unknown>> | null | undefined): LaporanFoto {
+  const s = (saved || {}) as Record<keyof LaporanFoto, unknown>;
+  const pick = (k: keyof LaporanFoto): string[] => {
+    const v = s[k];
+    const arr = Array.isArray(v) ? v : typeof v === "string" && v ? [v] : [];
+    return arr.filter((x): x is string => typeof x === "string" && x.startsWith("data:image/")).slice(0, FOTO_MAX[k]);
+  };
   return {
     menu: pick("menu"), penerimaan: pick("penerimaan"), persiapan: pick("persiapan"),
     pengolahan: pick("pengolahan"), pemorsian: pick("pemorsian"), distribusi: pick("distribusi"), cuci: pick("cuci"),
