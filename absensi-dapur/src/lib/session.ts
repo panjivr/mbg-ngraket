@@ -53,6 +53,26 @@ export async function requireAdmin(): Promise<SessionData> {
   return s;
 }
 
+/**
+ * Izinkan admin penuh ATAU sub-admin dengan akses area tertentu
+ * ("distribusi" | "laporan"). Backfill flag dari DB bila token lama.
+ */
+export async function requireAkses(area: "distribusi" | "laporan"): Promise<SessionData> {
+  const s = await requireSession();
+  if (s.role === "admin") return s;
+  if (s.akses_distribusi === undefined || s.akses_laporan === undefined) {
+    const r = await query<{ akses_distribusi: boolean; akses_laporan: boolean }>(
+      `SELECT akses_distribusi, akses_laporan FROM users WHERE id = $1`,
+      [s.uid],
+    );
+    s.akses_distribusi = !!r[0]?.akses_distribusi;
+    s.akses_laporan = !!r[0]?.akses_laporan;
+  }
+  const ok = area === "distribusi" ? s.akses_distribusi : s.akses_laporan;
+  if (!ok) throw new HttpError(403, "Tidak punya akses ke fitur ini.");
+  return s;
+}
+
 /** Hanya super admin pusat. */
 export async function requireSuper(): Promise<SessionData> {
   const s = await requireAdmin();

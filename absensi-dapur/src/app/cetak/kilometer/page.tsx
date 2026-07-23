@@ -29,14 +29,12 @@ function Inner() {
     if (from) q.set("from", from);
     if (to) q.set("to", to);
     if (kidParam) q.set("kendaraan_id", kidParam);
-    Promise.all([
-      fetch(`/api/kilometer?${q.toString()}`, { cache: "no-store" }).then((r) => (r.ok ? r.json() : Promise.reject())),
-      fetch("/api/admin/distribusi/pengaturan", { cache: "no-store" }).then((r) => (r.ok ? r.json() : { pengaturan: {} })),
-    ])
-      .then(([a, b]) => {
+    fetch(`/api/kilometer?${q.toString()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((a) => {
         setKendaraan(a.kendaraan || []);
         setEntri(a.entri || []);
-        setNama((b.pengaturan?.nama_sppg || "").replace(/^SPPG\s+/i, ""));
+        setNama((a.sppg?.nama || "").replace(/^SPPG\s+/i, ""));
         setState("ok");
       })
       .catch(() => setState("err"));

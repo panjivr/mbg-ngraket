@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireAkses } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import type { Kendaraan } from "@/lib/kilometer";
 
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = route(async () => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("laporan");
   const rows = await query<Kendaraan>(
     `SELECT * FROM kendaraan WHERE sppg_id = $1 ORDER BY urutan ASC, id ASC`,
     [admin.sppg_id],
@@ -17,7 +17,7 @@ export const GET = route(async () => {
 });
 
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("laporan");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nopol = String(b.nopol ?? "").trim().slice(0, 40);
   const nama = String(b.nama ?? "").trim().slice(0, 60);

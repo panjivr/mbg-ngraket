@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireAkses } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { ok, route } from "@/lib/api";
 
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = route(async () => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("distribusi");
   const s = await getSppg(admin.sppg_id as number);
   return ok({
     pengaturan: {
@@ -24,7 +24,7 @@ export const GET = route(async () => {
 });
 
 export const PUT = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("distribusi");
   const s = await getSppg(admin.sppg_id as number);
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const num = (v: unknown, d: number) =>

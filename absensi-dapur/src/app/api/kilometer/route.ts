@@ -43,7 +43,7 @@ export const GET = route(async (req: NextRequest) => {
         ORDER BY tanggal ASC, kendaraan_id ASC`,
       params,
     );
-    return ok({ kendaraan, entri, from, to });
+    return ok({ kendaraan, entri, from, to, sppg: { nama: sppg?.nama ?? "" } });
   }
 
   const tanggal = DATE_RE.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : localDate(tz);
@@ -52,7 +52,7 @@ export const GET = route(async (req: NextRequest) => {
        FROM kilometer WHERE sppg_id = $1 AND tanggal = $2`,
     [sppgId, tanggal],
   );
-  return ok({ tanggal, kendaraan, entri });
+  return ok({ tanggal, kendaraan, entri, sppg: { nama: sppg?.nama ?? "" } });
 });
 
 export const POST = route(async (req: NextRequest) => {

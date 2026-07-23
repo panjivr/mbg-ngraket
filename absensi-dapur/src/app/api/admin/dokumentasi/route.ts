@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireAkses } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
@@ -20,7 +20,7 @@ function cleanFoto(v: unknown): string[] {
 }
 
 export const GET = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("laporan");
   const s = await getSppg(admin.sppg_id as number);
   const tz = s?.tz || "Asia/Jakarta";
   const sp = req.nextUrl.searchParams;
@@ -44,7 +44,7 @@ export const GET = route(async (req: NextRequest) => {
 });
 
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("laporan");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const tanggal = String(b.tanggal ?? "");
   if (!DATE_RE.test(tanggal)) return fail(400, "Tanggal tidak valid.");
