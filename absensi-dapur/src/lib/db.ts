@@ -414,6 +414,19 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_sekolah JSONB NOT NULL DEFAULT '[]'::jsonb`);
     await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_posyandu JSONB NOT NULL DEFAULT '[]'::jsonb`);
 
+    // Laporan Kegiatan Harian (isi terstruktur + foto dokumentasi), per tanggal.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS laporan (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL,
+        isi        JSONB NOT NULL DEFAULT '{}'::jsonb,
+        foto       JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, tanggal)
+      );
+    `);
+
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
