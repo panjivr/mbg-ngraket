@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-24.subadmin-roles";
+const SCHEMA_VERSION = "2026-07-24.gudang";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -487,6 +487,38 @@ async function doEnsureSchema(): Promise<void> {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_kilometer_sppg_tgl ON kilometer (sppg_id, tanggal)`);
 
+    // Gudang / Stok Opname: master barang + riwayat mutasi (masuk/keluar/opname).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS barang (
+        id        SERIAL PRIMARY KEY,
+        sppg_id   INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        nama      TEXT NOT NULL DEFAULT '',
+        kategori  TEXT NOT NULL DEFAULT 'operasional',
+        satuan    TEXT NOT NULL DEFAULT 'pcs',
+        stok      NUMERIC NOT NULL DEFAULT 0,
+        stok_min  NUMERIC NOT NULL DEFAULT 0,
+        catatan   TEXT NOT NULL DEFAULT '',
+        aktif     BOOLEAN NOT NULL DEFAULT TRUE,
+        urutan    INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_barang_sppg ON barang (sppg_id)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS stok_mutasi (
+        id           SERIAL PRIMARY KEY,
+        sppg_id      INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        barang_id    INTEGER NOT NULL REFERENCES barang(id) ON DELETE CASCADE,
+        tanggal      DATE NOT NULL,
+        tipe         TEXT NOT NULL DEFAULT 'masuk',
+        jumlah       NUMERIC NOT NULL DEFAULT 0,
+        stok_sesudah NUMERIC NOT NULL DEFAULT 0,
+        keterangan   TEXT NOT NULL DEFAULT '',
+        oleh         TEXT NOT NULL DEFAULT '',
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mutasi_barang ON stok_mutasi (barang_id, created_at DESC)`);
+
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
     );
@@ -697,6 +729,42 @@ async function doEnsureSchema(): Promise<void> {
           `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, besar, kecil, b3, pj, jam_kirim, urutan)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [sppgId2, p.jenis, p.nama, p.jenjang, p.besar, p.kecil, p.b3, p.pj, p.jam_kirim, urut2++],
+        );
+      }
+    }
+
+    // Seed contoh barang gudang (operasional & bahan baku) bila kosong.
+    const barangCount = await client.query<{ c: string }>(`SELECT COUNT(*)::text AS c FROM barang`);
+    if (Number(barangCount.rows[0].c) === 0) {
+      const firstSppgB = await client.query<{ id: number }>(`SELECT id FROM sppg ORDER BY id ASC LIMIT 1`);
+      const sppgIdB = firstSppgB.rows[0]?.id ?? 1;
+      const seed: [string, string, string, number][] = [
+        // nama, kategori, satuan, stok_min
+        ["Plastik Klip", "operasional", "pack", 5],
+        ["Plastik Ompreng", "operasional", "pack", 5],
+        ["Hair Net", "operasional", "pack", 3],
+        ["Sarung Tangan Plastik", "operasional", "pack", 5],
+        ["Masker", "operasional", "box", 3],
+        ["Celemek", "operasional", "pcs", 2],
+        ["Tisu", "operasional", "pack", 3],
+        ["Sabun Cuci Piring", "operasional", "botol", 3],
+        ["Label Menu", "operasional", "pack", 3],
+        ["Beras", "bahan_baku", "kg", 25],
+        ["Tepung Terigu", "bahan_baku", "kg", 10],
+        ["Minyak Goreng", "bahan_baku", "liter", 10],
+        ["Kecap Manis", "bahan_baku", "botol", 5],
+        ["Gula Pasir", "bahan_baku", "kg", 5],
+        ["Garam", "bahan_baku", "kg", 3],
+        ["Telur", "bahan_baku", "kg", 10],
+        ["Bawang Merah", "bahan_baku", "kg", 5],
+        ["Bawang Putih", "bahan_baku", "kg", 5],
+      ];
+      let urutB = 1;
+      for (const [nama, kategori, satuan, stokMin] of seed) {
+        await client.query(
+          `INSERT INTO barang (sppg_id, nama, kategori, satuan, stok, stok_min, aktif, urutan)
+           VALUES ($1,$2,$3,$4,0,$5,TRUE,$6)`,
+          [sppgIdB, nama, kategori, satuan, stokMin, urutB++],
         );
       }
     }
