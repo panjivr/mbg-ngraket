@@ -86,7 +86,10 @@ export default function PenerimaPage() {
           <h1 className="text-xl font-bold">🏫 Data Penerima (Sekolah &amp; B3)</h1>
           <Link href="/admin/distribusi" className="text-sm text-gold-400 hover:underline">← Distribusi Harian</Link>
         </div>
-        <button onClick={() => { setError(null); setForm({ ...empty }); }} className="btn-gold">+ Tambah Penerima</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => window.open("/cetak/penerima", "_blank")} className="btn-ghost">🖨️ Cetak</button>
+          <button onClick={() => { setError(null); setForm({ ...empty }); }} className="btn-gold">+ Tambah Penerima</button>
+        </div>
       </div>
       <p className="text-sm text-slate-400">
         Master jumlah porsi Besar/Kecil/B3 per penerima — jadi nilai default saat mengatur distribusi harian.

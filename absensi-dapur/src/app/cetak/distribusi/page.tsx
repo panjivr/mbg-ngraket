@@ -310,7 +310,7 @@ function Inner() {
                 <div className="w-1/3 text-center">Koordinator Lapangan</div>
                 <div className="w-1/3" />
               </div>
-              <div className="mt-16 flex items-end">
+              <div className="mt-28 flex items-end">
                 <div className="w-1/3 text-center font-bold">{sppg.ahli_gizi || "____________"}</div>
                 <div className="w-1/3 text-center font-bold">{sppg.koordinator || "____________"}</div>
                 <div className="w-1/3 px-2"><div className="border-b border-black" /></div>
