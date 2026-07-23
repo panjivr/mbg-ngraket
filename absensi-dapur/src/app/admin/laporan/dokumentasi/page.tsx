@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { compressImage } from "@/lib/image";
 import type { ChangeEvent } from "react";
 
-const FOTO_MAX = 30;
+const FOTO_MAX = 60;
 const KEGIATAN_UMUM = [
   "PENERIMAAN BARANG", "PERSIAPAN", "PENGOLAHAN", "PEMORSIAN",
   "DISTRIBUSI", "CUCI OMPRENG", "PENYIMPANAN", "KEBERSIHAN",
@@ -95,7 +95,7 @@ export default function DokumentasiPage() {
         <div className="card space-y-3 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gold-400">Foto / Dokumentasi <span className="font-normal text-slate-500">({foto.length}/{FOTO_MAX})</span></h2>
-            <p className="text-xs text-slate-500">Hingga 30 foto · rasio seragam 3:4 · saat cetak otomatis 9 foto per halaman.</p>
+            <p className="text-xs text-slate-500">Hingga 60 foto · rasio seragam 3:4 · saat cetak otomatis 12 foto per halaman (A4/F4).</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {foto.map((src, i) => (

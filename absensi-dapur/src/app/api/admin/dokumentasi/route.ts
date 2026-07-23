@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const FOTO_MAX = 30;
+const FOTO_MAX = 60;
 
 function cleanFoto(v: unknown): string[] {
   const arr = Array.isArray(v) ? v : [];

@@ -41,9 +41,9 @@ function Inner() {
   if (!data) return <p className="p-8 text-center">Memuat…</p>;
 
   const foto = data.foto || [];
-  // 9 foto per halaman (grid 3x3).
+  // 12 foto per halaman (grid 4 kolom × 3 baris) — aman untuk A4 & F4.
   const pages: string[][] = [];
-  for (let i = 0; i < foto.length; i += 9) pages.push(foto.slice(i, i + 9));
+  for (let i = 0; i < foto.length; i += 12) pages.push(foto.slice(i, i + 12));
   if (pages.length === 0) pages.push([]);
 
   return (
@@ -79,16 +79,16 @@ function Inner() {
   );
 }
 
-/** Grid 3 kolom; baris terakhir yang belum penuh dibuat rata kanan. */
+/** Grid 4 kolom; baris terakhir yang belum penuh dibuat rata kanan. */
 function GridRightLast({ fotos }: { fotos: string[] }) {
-  const rem = fotos.length % 3;
+  const rem = fotos.length % 4;
   const fullCount = fotos.length - rem;
   const full = fotos.slice(0, fullCount);
   const last = rem ? fotos.slice(fullCount) : [];
-  const pad = rem ? 3 - rem : 0;
+  const pad = rem ? 4 - rem : 0;
   const cls = "aspect-[3/4] w-full border border-gray-300 object-cover";
   return (
-    <div className="mt-3 grid grid-cols-3 gap-2">
+    <div className="mt-3 grid grid-cols-4 gap-2">
       {/* eslint-disable @next/next/no-img-element */}
       {full.map((src, i) => <img key={i} src={src} alt={`Foto ${i + 1}`} className={cls} />)}
       {Array.from({ length: pad }).map((_, i) => <div key={"pad" + i} />)}

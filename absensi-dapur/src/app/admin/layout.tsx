@@ -65,13 +65,11 @@ export default async function AdminLayout({
         </div>
         <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
           {fullAdmin && <NavLink href="/admin" label="Dashboard" exact />}
-          {fullAdmin && <NavLink href="/admin/rekap" label="Rekap Absensi" />}
-          {fullAdmin && <NavLink href="/admin/leaderboard" label="🏆 Leaderboard" />}
-          {fullAdmin && <NavLink href="/admin/gaji" label="Rekap Gaji" />}
-          {fullAdmin && <NavLink href="/admin/pegawai" label="Pegawai" />}
-          {fullAdmin && <NavLink href="/admin/divisi" label="Divisi" />}
-          {fullAdmin && <NavLink href="/admin/event" label="Event" />}
-          {fullAdmin && <NavLink href="/admin/sop" label="📋 SOP" />}
+          {fullAdmin && (
+            <NavLink href="/admin/pegawai" label="👥 Pegawai"
+              also={["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop"]} />
+          )}
+          {fullAdmin && <NavLink href="/admin/rekap" label="📊 Rekap" also={["/admin/gaji"]} />}
           {aksesDistribusi && <NavLink href="/admin/distribusi" label="🚚 Distribusi" />}
           {aksesLaporan && <NavLink href="/admin/laporan" label="📋 Laporan Harian" />}
           {(fullAdmin || aksesLaporan) && <NavLink href="/admin/gudang" label="📦 Gudang" />}

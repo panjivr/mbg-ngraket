@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  KATEGORI_LABEL, TIPE_LABEL, statusStok,
+  KATEGORI_LABEL, KATEGORI_LIST, TIPE_LABEL, statusStok,
   type Barang, type Kategori, type Mutasi, type TipeMutasi,
 } from "@/lib/gudang";
 
@@ -113,7 +113,7 @@ export default function GudangPage() {
 
       <div className="flex items-center gap-2 text-sm">
         <span className="text-slate-400">Kategori:</span>
-        {(["all", "operasional", "bahan_baku"] as const).map((k) => (
+        {(["all", ...KATEGORI_LIST] as const).map((k) => (
           <button key={k} onClick={() => setFilter(k)}
             className={"rounded-lg px-3 py-1.5 " + (filter === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
             {k === "all" ? "Semua" : KATEGORI_LABEL[k]}
@@ -178,8 +178,8 @@ export default function GudangPage() {
               <div><label className="label">Nama Barang</label><input className="input" value={bForm.nama} onChange={(e) => setBForm({ ...bForm, nama: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Kategori</label>
-                  <select className="input" value={bForm.kategori} onChange={(e) => setBForm({ ...bForm, kategori: e.target.value === "bahan_baku" ? "bahan_baku" : "operasional" })}>
-                    <option value="operasional">Operasional</option><option value="bahan_baku">Bahan Baku</option>
+                  <select className="input" value={bForm.kategori} onChange={(e) => setBForm({ ...bForm, kategori: e.target.value as Kategori })}>
+                    {KATEGORI_LIST.map((k) => <option key={k} value={k}>{KATEGORI_LABEL[k]}</option>)}
                   </select>
                 </div>
                 <div><label className="label">Satuan</label><input className="input" value={bForm.satuan} onChange={(e) => setBForm({ ...bForm, satuan: e.target.value })} placeholder="pcs, kg, liter, pack" /></div>

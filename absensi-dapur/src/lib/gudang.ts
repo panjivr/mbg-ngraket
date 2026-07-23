@@ -1,6 +1,6 @@
 // Tipe untuk fitur Gudang / Stok Opname.
 
-export type Kategori = "operasional" | "bahan_baku";
+export type Kategori = "operasional" | "bahan_baku" | "packaging";
 export type TipeMutasi = "masuk" | "keluar" | "opname";
 
 export interface Barang {
@@ -31,7 +31,13 @@ export interface Mutasi {
 export const KATEGORI_LABEL: Record<Kategori, string> = {
   operasional: "Operasional",
   bahan_baku: "Bahan Baku",
+  packaging: "Packaging",
 };
+export const KATEGORI_LIST: Kategori[] = ["operasional", "bahan_baku", "packaging"];
+/** Normalkan input kategori ke nilai valid (default operasional). */
+export function normalizeKategori(v: unknown): Kategori {
+  return v === "bahan_baku" || v === "packaging" ? v : "operasional";
+}
 export const TIPE_LABEL: Record<TipeMutasi, string> = {
   masuk: "Masuk (pembelian)",
   keluar: "Keluar (pemakaian)",

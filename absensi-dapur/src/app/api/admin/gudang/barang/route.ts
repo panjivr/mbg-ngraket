@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import type { Barang } from "@/lib/gudang";
+import { normalizeKategori, type Barang } from "@/lib/gudang";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export const POST = route(async (req: NextRequest) => {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nama = String(b.nama ?? "").trim().slice(0, 120);
   if (!nama) return fail(400, "Nama barang wajib diisi.");
-  const kategori = b.kategori === "bahan_baku" ? "bahan_baku" : "operasional";
+  const kategori = normalizeKategori(b.kategori);
   const satuan = String(b.satuan ?? "pcs").trim().slice(0, 20) || "pcs";
   const stok = Math.max(0, Number(b.stok) || 0);
   const stok_min = Math.max(0, Number(b.stok_min) || 0);

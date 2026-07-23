@@ -164,9 +164,9 @@ export default function LaporanPage() {
                     <span className="text-sm font-medium">{s.label}</span>
                     <span className="text-xs text-slate-500">{foto[s.key].length}/{s.max}</span>
                   </div>
-                  <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  <div className={"mt-2 grid gap-1.5 " + (s.key === "menu" ? "grid-cols-2" : "grid-cols-3")}>
                     {foto[s.key].map((src, i) => (
-                      <div key={i} className="group relative aspect-[4/3] overflow-hidden rounded bg-black/20">
+                      <div key={i} className="group relative overflow-hidden rounded bg-black/20" style={{ aspectRatio: s.key === "menu" ? "4/5" : "4/3" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={src} alt={`${s.label} ${i + 1}`} className="h-full w-full object-cover" />
                         <button onClick={() => removeFoto(s.key, i)}
@@ -174,7 +174,7 @@ export default function LaporanPage() {
                       </div>
                     ))}
                     {foto[s.key].length < s.max && (
-                      <label className="grid aspect-[4/3] cursor-pointer place-items-center rounded border border-dashed border-white/20 bg-black/10 text-xl text-slate-500 hover:bg-black/20">
+                      <label className="grid cursor-pointer place-items-center rounded border border-dashed border-white/20 bg-black/10 text-xl text-slate-500 hover:bg-black/20" style={{ aspectRatio: s.key === "menu" ? "4/5" : "4/3" }}>
                         +
                         <input type="file" accept="image/*" className="hidden"
                           onChange={(e: ChangeEvent<HTMLInputElement>) => { addFoto(s.key, e.target.files?.[0], s.max); e.target.value = ""; }} />

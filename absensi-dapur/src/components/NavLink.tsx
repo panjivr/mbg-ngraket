@@ -7,13 +7,18 @@ export default function NavLink({
   href,
   label,
   exact = false,
+  also,
 }: {
   href: string;
   label: string;
   exact?: boolean;
+  /** Prefix path tambahan yang membuat tautan ini ikut aktif (untuk nav grup). */
+  also?: string[];
 }) {
   const pathname = usePathname();
-  const active = exact ? pathname === href : pathname.startsWith(href);
+  const active =
+    (exact ? pathname === href : pathname.startsWith(href)) ||
+    (also?.some((p) => pathname.startsWith(p)) ?? false);
   return (
     <Link
       href={href}
