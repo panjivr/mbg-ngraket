@@ -108,7 +108,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
     jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr,
   ];
-  if (body.password) {
+  // Ganti password HANYA bila diminta eksplisit (change_password) — mencegah
+  // autofill browser diam-diam menimpa password saat mengedit data lain.
+  if (body.change_password === true && body.password) {
     if (String(body.password).length < 6) {
       return fail(400, "Password minimal 6 karakter.");
     }
