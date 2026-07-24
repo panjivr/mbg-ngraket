@@ -79,6 +79,9 @@ export default function PegawaiPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ganti password hanya bila admin membukanya secara sengaja — cegah autofill
+  // browser diam-diam menimpa password pegawai saat mengedit data lain.
+  const [changePw, setChangePw] = useState(false);
   const [kartu, setKartu] = useState<Kartu | null>(null);
   const [kartuOpen, setKartuOpen] = useState(false);
   const [kartuLoading, setKartuLoading] = useState(false);
@@ -159,10 +162,12 @@ export default function PegawaiPage() {
 
   function openNew() {
     setError(null);
+    setChangePw(true); // akun baru wajib set password
     setForm({ ...emptyForm });
   }
   function openEdit(e: Employee) {
     setError(null);
+    setChangePw(false); // password lama dipertahankan kecuali admin memilih ganti
     setForm({
       id: e.id,
       nama: e.nama,
@@ -210,7 +215,11 @@ export default function PegawaiPage() {
         akses_gudang_keluar: form.akses_gudang_keluar,
         is_hr: form.is_hr,
       };
-      if (form.password) payload.password = form.password;
+      // Kirim password HANYA bila admin sengaja mengganti (atau akun baru).
+      if (changePw && form.password) {
+        payload.password = form.password;
+        payload.change_password = true;
+      }
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -563,15 +572,36 @@ export default function PegawaiPage() {
 
               <div>
                 <label className="label">
-                  {form.id ? "Password Baru (opsional)" : "Password"}
+                  {form.id ? "Password" : "Password"}
                 </label>
-                <input
-                  type="password"
-                  className="input"
-                  value={form.password}
-                  placeholder={form.id ? "Kosongkan jika tidak diubah" : "min. 6 karakter"}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
+                {form.id && !changePw ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangePw(true);
+                      setForm({ ...form, password: "" });
+                    }}
+                    className="btn-ghost w-full text-sm"
+                  >
+                    🔑 Ganti Password
+                  </button>
+                ) : (
+                  <input
+                    // name acak + new-password → cegah autofill browser menimpa password.
+                    name={`new-pass-${form.id ?? "baru"}`}
+                    type="password"
+                    autoComplete="new-password"
+                    className="input"
+                    value={form.password}
+                    placeholder="min. 6 karakter"
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  />
+                )}
+                {form.id && changePw && (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Kosongkan lalu tekan Simpan untuk membatalkan penggantian password.
+                  </p>
+                )}
               </div>
 
               {error && (
