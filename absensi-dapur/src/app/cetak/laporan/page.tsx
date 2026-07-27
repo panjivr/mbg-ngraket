@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FOTO_SLOTS, type LaporanIsi, type LaporanFoto } from "@/lib/laporan";
+import CetakFooter from "@/components/CetakFooter";
 
 interface LaporanData {
   tanggal: string;
@@ -198,6 +199,8 @@ function Inner() {
           </tbody>
         </table>
         <p className="mt-2 text-xs italic">*Foto kegiatan dikirim dari Koordinator masing-masing divisi beserta kendala dan solusi.</p>
+
+        <CetakFooter dapur={namaSppg} />
       </div>
     </div>
   );

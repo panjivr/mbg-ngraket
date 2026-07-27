@@ -3,6 +3,7 @@
 import { Fragment, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MenuGrup } from "@/lib/distribusi-types";
+import CetakFooter from "@/components/CetakFooter";
 
 interface Baris {
   penerima_id: number;
@@ -318,6 +319,8 @@ function Inner() {
             <div className="mx-auto mt-20 w-56 border-b border-black" />
           </div>
         </div>
+
+        <CetakFooter dapur={namaSppg} />
       </div>
     );
   };
