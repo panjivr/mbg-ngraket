@@ -9,7 +9,7 @@ interface Baris {
   jenis: "serdik" | "b3";
   nama: string;
   jenjang: string;
-  kategori: "balita" | "b2" | "";
+  kategori: "balita" | "bumil" | "busui" | "";
   jam_kirim: string;
   besar: number;
   kecil: number;
@@ -23,7 +23,7 @@ interface DistData {
   sppg: { nama: string; kepala_sppg: string; harga_besar: number; harga_kecil: number; harga_b3: number };
   distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[] };
   baris: Baris[];
-  total: { besar: number; kecil: number; balita: number; b2: number; b3: number; porsi: number; pagu: number };
+  total: { besar: number; kecil: number; balita: number; bumil: number; busui: number; b3: number; porsi: number; pagu: number };
 }
 interface Pengaturan {
   nama_sppg: string;
@@ -106,21 +106,22 @@ export default function DistribusiPage() {
 
   const harga = data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" };
   const total = useMemo(() => {
-    let besar = 0, kecil = 0, balita = 0, b2 = 0;
+    let besar = 0, kecil = 0, balita = 0, bumil = 0, busui = 0;
     for (const b of baris) {
       if (!b.ikut) continue;
       // PJ (penanggung jawab) masuk hitungan porsi besar (harga besar).
       besar += (b.besar || 0) + (b.pj || 0);
       kecil += b.kecil || 0;
       if (b.jenis === "b3") {
-        // Balita vs B2 (Bumil+Busui) dipisah agar tidak tercampur.
+        // Balita / Bumil / Busui dipisah agar tidak tercampur.
         if (b.kategori === "balita") balita += b.b3 || 0;
-        else b2 += b.b3 || 0;
+        else if (b.kategori === "busui") busui += b.b3 || 0;
+        else bumil += b.b3 || 0;
       }
     }
-    const b3 = balita + b2;
+    const b3 = balita + bumil + busui;
     return {
-      besar, kecil, balita, b2, b3,
+      besar, kecil, balita, bumil, busui, b3,
       porsi: besar + kecil + b3,
       pagu: besar * harga.harga_besar + kecil * harga.harga_kecil + b3 * harga.harga_b3,
     };
@@ -193,12 +194,13 @@ export default function DistribusiPage() {
       </div>
 
       {/* Ringkasan porsi & pagu */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         {[
           { l: "Porsi Besar (+PJ)", v: total.besar, c: "text-emerald-300" },
           { l: "Porsi Kecil", v: total.kecil, c: "text-sky-300" },
           { l: "Porsi Balita", v: total.balita, c: "text-amber-300" },
-          { l: "Porsi B2 (Bumil/Busui)", v: total.b2, c: "text-orange-300" },
+          { l: "Porsi Bumil", v: total.bumil, c: "text-orange-300" },
+          { l: "Porsi Busui", v: total.busui, c: "text-pink-300" },
           { l: "Total Porsi", v: total.porsi, c: "text-slate-100" },
         ].map((s) => (
           <div key={s.l} className="card p-3">

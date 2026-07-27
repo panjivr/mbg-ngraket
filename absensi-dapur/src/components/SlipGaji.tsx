@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { Slip } from "@/lib/slip";
+import type { Slip, StatusHari } from "@/lib/slip";
+
+// Tampilan ringkas status hari pada checklist kehadiran.
+const STATUS_TAMPIL: Record<StatusHari, { sym: string; cls: string }> = {
+  penuh: { sym: "✓", cls: "border-green-600 bg-green-50 text-green-700" },
+  setengah: { sym: "½", cls: "border-blue-600 bg-blue-50 text-blue-700" },
+  sakit: { sym: "S", cls: "border-amber-500 bg-amber-50 text-amber-700" },
+  izin: { sym: "I", cls: "border-sky-500 bg-sky-50 text-sky-700" },
+  alpha: { sym: "–", cls: "border-gray-300 bg-gray-50 text-gray-400" },
+  libur: { sym: "L", cls: "border-gray-300 bg-gray-100 text-gray-500" },
+};
 
 const PAPERS: Record<string, { label: string; size: string }> = {
   A4: { label: "A4 (210×297)", size: "210mm 297mm" },
@@ -135,23 +145,26 @@ export default function SlipGaji({
           <p><span className="inline-block w-24 text-gray-600">Kehadiran</span>: {slip.hadir} hari (telat {slip.telat})</p>
         </div>
 
-        {/* Checklist hari masuk */}
+        {/* Checklist hari masuk (dengan status penyesuaian bila ada) */}
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-semibold text-gray-700">Rekap Kehadiran (✓ = masuk)</p>
+          <p className="mb-1.5 text-xs font-semibold text-gray-700">
+            Rekap Kehadiran (✓ penuh · ½ setengah · S sakit · I izin · – tidak masuk · L libur)
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {slip.hari.map((h) => (
-              <div
-                key={h.tanggal}
-                className={
-                  "flex w-10 flex-col items-center rounded border px-1 py-1 text-center " +
-                  (h.masuk ? "border-green-600 bg-green-50 text-green-700" : "border-gray-300 bg-gray-50 text-gray-400")
-                }
-              >
-                <span className="text-[9px] leading-none">{HARI3[dow(h.tanggal)]}</span>
-                <span className="text-[11px] font-semibold leading-tight">{dayNum(h.tanggal)}</span>
-                <span className="text-[10px] leading-none">{h.masuk ? "✓" : "–"}</span>
-              </div>
-            ))}
+            {slip.hari.map((h) => {
+              const st = STATUS_TAMPIL[h.status] || STATUS_TAMPIL.alpha;
+              return (
+                <div
+                  key={h.tanggal}
+                  className={"flex w-10 flex-col items-center rounded border px-1 py-1 text-center " + st.cls}
+                  title={h.override ? "Disesuaikan HR" + (h.catatan ? ": " + h.catatan : "") : ""}
+                >
+                  <span className="text-[9px] leading-none">{HARI3[dow(h.tanggal)]}</span>
+                  <span className="text-[11px] font-semibold leading-tight">{dayNum(h.tanggal)}</span>
+                  <span className="text-[10px] leading-none">{st.sym}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -166,7 +179,7 @@ export default function SlipGaji({
               </tr>
             </thead>
             <tbody>
-              {baris("Upah Kehadiran", `${slip.hadir} hari × ${rupiah(u.gaji_harian)}`, slip.upah_kehadiran)}
+              {baris("Upah Kehadiran", `${slip.hadir} hari kerja`, slip.upah_kehadiran)}
               {baris("Uang Lembur", `${slip.lembur_hari} hari × ${rupiah(u.lembur_per_hari)}`, slip.upah_lembur)}
               {/* BPJS: status, bukan nominal */}
               <tr>
@@ -177,6 +190,14 @@ export default function SlipGaji({
                 </td>
               </tr>
               {baris("Potongan Keterlambatan", `${slip.telat} × ${rupiah(u.potongan_per_telat)}`, slip.potongan, true)}
+              {/* Kasbon hanya tampil bila pegawai punya kasbon belum lunas */}
+              {slip.kasbon > 0 &&
+                baris(
+                  "Potongan Kasbon",
+                  `${slip.kasbon_items.length} kasbon`,
+                  slip.kasbon,
+                  true,
+                )}
               <tr className="text-base font-bold" style={{ backgroundColor: "#cfe0cf" }}>
                 <td className="border border-black px-2 py-2 sm:px-3" colSpan={2}>TOTAL DITERIMA</td>
                 <td className="whitespace-nowrap border border-black px-2 py-2 text-right sm:px-3">{rupiah(slip.total)}</td>
@@ -186,6 +207,21 @@ export default function SlipGaji({
         </div>
 
         <p className="mt-2 text-xs italic text-gray-600">Terbilang: {terbilang(slip.total)} rupiah.</p>
+
+        {/* Rincian kasbon (hanya bila ada) */}
+        {slip.kasbon > 0 && (
+          <div className="mt-3 rounded-md border border-gray-300 bg-gray-50 p-3 text-xs">
+            <p className="mb-1 font-semibold text-gray-700">Rincian Kasbon (belum lunas):</p>
+            <ul className="space-y-0.5">
+              {slip.kasbon_items.map((k) => (
+                <li key={k.id} className="flex justify-between gap-2">
+                  <span>{tgl(k.tanggal)}{k.keterangan ? ` — ${k.keterangan}` : ""}</span>
+                  <span className="whitespace-nowrap font-medium">{rupiah(k.jumlah)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Konfirmasi diterima (bukan tanda tangan) */}
         <div className="mt-6 rounded-md border border-gray-300 bg-gray-50 p-3">

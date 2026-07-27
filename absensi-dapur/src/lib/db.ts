@@ -406,7 +406,7 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_penerima_sppg ON penerima (sppg_id)`);
-    // Sub-kategori B3: "balita" atau "b2" (Bumil+Busui) agar porsi tidak tercampur.
+    // Sub-kategori B3: "balita" / "bumil" / "busui" agar porsi tidak tercampur.
     await client.query(`ALTER TABLE penerima ADD COLUMN IF NOT EXISTS kategori TEXT NOT NULL DEFAULT ''`);
     // Backfill data B3 lama yang belum berkategori — tebak dari nama.
     await client.query(
@@ -414,8 +414,20 @@ async function doEnsureSchema(): Promise<void> {
          WHERE jenis = 'b3' AND kategori = '' AND UPPER(nama) LIKE '%BALITA%'`,
     );
     await client.query(
-      `UPDATE penerima SET kategori = 'b2'
+      `UPDATE penerima SET kategori = 'busui'
+         WHERE jenis = 'b3' AND kategori = '' AND (UPPER(nama) LIKE '%MENYUSUI%' OR UPPER(nama) LIKE '%BUSUI%')`,
+    );
+    await client.query(
+      `UPDATE penerima SET kategori = 'bumil'
          WHERE jenis = 'b3' AND kategori = ''`,
+    );
+    // Migrasi kategori lama "b2" (gabungan Bumil+Busui) → pecah jadi bumil/busui by nama.
+    await client.query(
+      `UPDATE penerima SET kategori = 'busui'
+         WHERE jenis = 'b3' AND kategori = 'b2' AND (UPPER(nama) LIKE '%MENYUSUI%' OR UPPER(nama) LIKE '%BUSUI%')`,
+    );
+    await client.query(
+      `UPDATE penerima SET kategori = 'bumil' WHERE jenis = 'b3' AND kategori = 'b2'`,
     );
 
     // Satu hari distribusi + baris penerima (angka bisa di-adjust harian).
@@ -638,6 +650,37 @@ async function doEnsureSchema(): Promise<void> {
         PRIMARY KEY (user_id, periode_from, periode_to)
       );
     `);
+
+    // Penyesuaian slip per HARI (HR menimpa hasil absensi otomatis).
+    // status: penuh | setengah | sakit | izin | alpha | libur. upah = nominal efektif hari itu.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS slip_adjust (
+        id       SERIAL PRIMARY KEY,
+        sppg_id  INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tanggal  DATE NOT NULL,
+        status   TEXT NOT NULL DEFAULT 'penuh',
+        upah     NUMERIC NOT NULL DEFAULT 0,
+        lembur   BOOLEAN NOT NULL DEFAULT FALSE,
+        catatan  TEXT NOT NULL DEFAULT '',
+        UNIQUE (user_id, tanggal)
+      );
+    `);
+
+    // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kasbon (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL DEFAULT CURRENT_DATE,
+        jumlah     NUMERIC NOT NULL DEFAULT 0,
+        keterangan TEXT NOT NULL DEFAULT '',
+        lunas      BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_kasbon_user ON kasbon (user_id)`);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,

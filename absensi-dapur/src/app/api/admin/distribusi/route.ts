@@ -86,19 +86,21 @@ export const GET = route(async (req: NextRequest) => {
   let tBesar = 0,
     tKecil = 0,
     tBalita = 0,
-    tB2 = 0;
+    tBumil = 0,
+    tBusui = 0;
   for (const r of baris) {
     if (!r.ikut) continue;
     // PJ (penanggung jawab) dihitung sebagai porsi besar (harga besar 10.000).
     tBesar += r.besar + r.pj;
     tKecil += r.kecil;
     if (r.jenis === "b3") {
-      // Balita vs B2 (Bumil+Busui) dipisah agar tidak tercampur.
+      // Balita / Bumil / Busui dipisah agar tidak tercampur.
       if (r.kategori === "balita") tBalita += r.b3;
-      else tB2 += r.b3;
+      else if (r.kategori === "busui") tBusui += r.b3;
+      else tBumil += r.b3;
     }
   }
-  const tB3 = tBalita + tB2;
+  const tB3 = tBalita + tBumil + tBusui;
   const pagu = tBesar * hb + tKecil * hk + tB3 * h3;
 
   return ok({
@@ -127,7 +129,8 @@ export const GET = route(async (req: NextRequest) => {
       besar: tBesar,
       kecil: tKecil,
       balita: tBalita,
-      b2: tB2,
+      bumil: tBumil,
+      busui: tBusui,
       b3: tB3,
       porsi: tBesar + tKecil + tB3,
       pagu,

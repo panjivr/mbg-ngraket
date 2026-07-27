@@ -3,12 +3,14 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+type KategoriB3 = "balita" | "bumil" | "busui" | "";
+
 interface Penerima {
   id: number;
   jenis: "serdik" | "b3";
   nama: string;
   jenjang: string;
-  kategori: "balita" | "b2" | "";
+  kategori: KategoriB3;
   besar: number;
   kecil: number;
   b3: number;
@@ -23,12 +25,41 @@ const empty: Form = {
   besar: 0, kecil: 0, b3: 0, pj: 0, jam_kirim: "07:00", aktif: true,
 };
 
+// Label & prefiks nama posyandu per kategori B3 (untuk susun nama otomatis).
+const KAT_LABEL: Record<Exclude<KategoriB3, "">, string> = {
+  balita: "Balita",
+  bumil: "Ibu Hamil",
+  busui: "Ibu Menyusui",
+};
+const KAT_PREFIX: Record<Exclude<KategoriB3, "">, string> = {
+  balita: "BALITA DESA",
+  bumil: "IBU HAMIL DESA",
+  busui: "IBU MENYUSUI DESA",
+};
+// Daftar desa bawaan (jadi opsi dropdown bila belum ada data B3 tersimpan).
+const DESA_DEFAULT = [
+  "NGRAKET", "PANDAK", "BULAK", "SEDARAT", "DADAPAN", "SINGKIL", "BULU KIDUL",
+];
+// Ambil nama desa dari nama penerima B3 (mis. "BALITA DESA NGRAKET" → "NGRAKET").
+function desaDariNama(nama: string): string {
+  const m = nama.toUpperCase().match(/DESA\s+(.+)$/);
+  return m ? m[1].trim() : "";
+}
+
 export default function PenerimaPage() {
   const [list, setList] = useState<Penerima[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Form | null>(null);
+  const [desa, setDesa] = useState(""); // helper desa untuk susun nama posyandu
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Buka form: reset & (untuk B3) parse desa dari nama agar dropdown terisi.
+  function bukaForm(f: Form) {
+    setError(null);
+    setDesa(f.jenis === "b3" ? desaDariNama(f.nama) : "");
+    setForm(f);
+  }
 
   async function load() {
     setLoading(true);
@@ -79,6 +110,21 @@ export default function PenerimaPage() {
     for (const p of list) if (p.aktif) { besar += p.besar; kecil += p.kecil; b3 += p.b3; }
     return { besar, kecil, b3 };
   }, [list]);
+  // Daftar desa untuk dropdown: gabungan bawaan + yang sudah ada di data B3.
+  const desaList = useMemo(() => {
+    const set = new Set<string>(DESA_DEFAULT);
+    for (const p of list) if (p.jenis === "b3") {
+      const d = desaDariNama(p.nama);
+      if (d) set.add(d);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "id"));
+  }, [list]);
+
+  // Susun nama posyandu otomatis dari kategori + desa (nama tetap bisa diedit).
+  function terapkanDesa(f: Form, kategori: KategoriB3, d: string): Form {
+    if (f.jenis !== "b3" || !kategori || !d.trim()) return f;
+    return { ...f, kategori, nama: `${KAT_PREFIX[kategori]} ${d.trim().toUpperCase()}` };
+  }
 
   return (
     <div className="space-y-5">
@@ -89,7 +135,7 @@ export default function PenerimaPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => window.open("/cetak/penerima", "_blank")} className="btn-ghost">🖨️ Cetak</button>
-          <button onClick={() => { setError(null); setForm({ ...empty }); }} className="btn-gold">+ Tambah Penerima</button>
+          <button onClick={() => bukaForm({ ...empty })} className="btn-gold">+ Tambah Penerima</button>
         </div>
       </div>
       <p className="text-sm text-slate-400">
@@ -124,9 +170,12 @@ export default function PenerimaPage() {
                       <tr key={p.id} className="border-b border-white/5">
                         <td className="px-3 py-1.5 font-medium">
                           {p.nama}
-                          {p.jenis === "b3" && (
-                            <span className={"badge ml-2 " + (p.kategori === "balita" ? "bg-amber-500/15 text-amber-300" : "bg-orange-500/15 text-orange-300")}>
-                              {p.kategori === "balita" ? "Balita" : "B2"}
+                          {p.jenis === "b3" && p.kategori && (
+                            <span className={"badge ml-2 " + (
+                              p.kategori === "balita" ? "bg-amber-500/15 text-amber-300"
+                                : p.kategori === "busui" ? "bg-pink-500/15 text-pink-300"
+                                : "bg-orange-500/15 text-orange-300")}>
+                              {KAT_LABEL[p.kategori]}
                             </span>
                           )}
                         </td>
@@ -142,7 +191,7 @@ export default function PenerimaPage() {
                         </td>
                         <td className="px-3 py-1.5">
                           <div className="flex justify-end gap-2">
-                            <button onClick={() => { setError(null); setForm({ ...p }); }} className="btn-ghost px-2.5 py-1 text-xs">Edit</button>
+                            <button onClick={() => bukaForm({ ...p })} className="btn-ghost px-2.5 py-1 text-xs">Edit</button>
                             <button onClick={() => hapus(p)} className="btn-danger px-2.5 py-1 text-xs">Hapus</button>
                           </div>
                         </td>
@@ -167,7 +216,8 @@ export default function PenerimaPage() {
                   <label className="label">Jenis</label>
                   <select className="input" value={form.jenis} onChange={(e) => {
                     const jenis = e.target.value === "b3" ? "b3" : "serdik";
-                    setForm({ ...form, jenis, kategori: jenis === "b3" ? (form.kategori || "balita") : "" });
+                    const kategori = jenis === "b3" ? (form.kategori || "balita") : "";
+                    setForm(terapkanDesa({ ...form, jenis, kategori, jenjang: jenis === "b3" ? "POSYANDU" : form.jenjang }, kategori, desa));
                   }}>
                     <option value="serdik">SERDIK (Sekolah)</option>
                     <option value="b3">B3 (Posyandu)</option>
@@ -176,14 +226,34 @@ export default function PenerimaPage() {
                 <div><label className="label">Jenjang</label><input className="input" value={form.jenjang} onChange={(e) => setForm({ ...form, jenjang: e.target.value })} placeholder="SD/MI, POSYANDU…" /></div>
               </div>
               {form.jenis === "b3" && (
-                <div>
-                  <label className="label">Kategori B3</label>
-                  <select className="input" value={form.kategori || "balita"}
-                    onChange={(e) => setForm({ ...form, kategori: e.target.value === "b2" ? "b2" : "balita" })}>
-                    <option value="balita">Balita</option>
-                    <option value="b2">B2 (Bumil &amp; Busui)</option>
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">Menentukan porsi masuk hitungan Balita atau B2 — tidak tercampur.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Kategori B3</label>
+                    <select className="input" value={form.kategori || "balita"}
+                      onChange={(e) => {
+                        const kategori = e.target.value as KategoriB3;
+                        setForm(terapkanDesa({ ...form, kategori }, kategori, desa));
+                      }}>
+                      <option value="balita">Balita</option>
+                      <option value="bumil">Ibu Hamil</option>
+                      <option value="busui">Ibu Menyusui</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Desa</label>
+                    <select className="input" value={desa}
+                      onChange={(e) => {
+                        const d = e.target.value;
+                        setDesa(d);
+                        setForm(terapkanDesa(form, form.kategori, d));
+                      }}>
+                      <option value="">— pilih desa —</option>
+                      {desaList.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <p className="col-span-2 -mt-1 text-xs text-slate-500">
+                    Pilih kategori + desa → nama tersusun otomatis (mis. “IBU HAMIL DESA NGRAKET”). Nama masih bisa diedit manual di atas.
+                  </p>
                 </div>
               )}
               <div className="grid grid-cols-4 gap-2">

@@ -14,9 +14,24 @@ export interface SlipUser {
   lembur_min_jam: number; // ambang jam kerja harian untuk mulai dihitung lembur
 }
 
-export interface HariMasuk {
+// Status kehadiran efektif per hari (bisa ditimpa HR).
+export type StatusHari = "penuh" | "setengah" | "sakit" | "izin" | "alpha" | "libur";
+
+export interface HariSlip {
   tanggal: string;
-  masuk: boolean;
+  masuk: boolean; // dari absensi asli (info, sebelum override)
+  status: StatusHari; // status efektif hari itu
+  upah: number; // nominal upah efektif hari itu (Rp)
+  lembur: boolean; // hari lembur efektif
+  override: boolean; // true bila ada penyesuaian manual HR
+  catatan: string;
+}
+
+export interface KasbonItem {
+  id: number;
+  tanggal: string;
+  jumlah: number;
+  keterangan: string;
 }
 
 export interface Slip {
@@ -29,8 +44,10 @@ export interface Slip {
   upah_kehadiran: number;
   upah_lembur: number;
   potongan: number;
+  kasbon: number; // total potongan kasbon (0 = tidak ada)
+  kasbon_items: KasbonItem[];
   total: number;
-  hari: HariMasuk[];
+  hari: HariSlip[];
   confirmed_at: string | null;
 }
 
@@ -39,6 +56,14 @@ interface AbsRow {
   check_in: Date | string | null;
   check_out: Date | string | null;
   status_masuk: string | null;
+}
+
+interface AdjustRow {
+  tanggal: string;
+  status: StatusHari;
+  upah: string | number;
+  lembur: boolean;
+  catatan: string;
 }
 
 function eachDate(from: string, to: string): string[] {
@@ -60,9 +85,10 @@ function eachDate(from: string, to: string): string[] {
 
 /**
  * Hitung slip gaji satu karyawan pada rentang tanggal.
- * - Kehadiran dihitung dari CHECK-IN (bukan check-out).
- * - Lembur dihitung per HARI: setiap hari yang durasinya melewati ambang
- *   (default 10 jam) dihitung 1 hari lembur × tarif lembur/hari.
+ * - Kehadiran & durasi diambil dari CHECK-IN/CHECK-OUT sebagai NILAI AWAL.
+ * - HR dapat menimpa per hari lewat tabel `slip_adjust` (status, upah, lembur):
+ *   mis. sakit, izin, atau kegiatan dengan honor 50%.
+ * - Kasbon (hutang gaji) yang belum lunas dipotong dari total; hanya tampil bila ada.
  * - Tunjangan BPJS Ketenagakerjaan berupa status "Terbayar", bukan nominal.
  */
 export async function computeSlip(
@@ -92,30 +118,75 @@ export async function computeSlip(
     [userId, from, to],
   );
 
-  const masukSet = new Set<string>();
+  // Rangkum absensi per tanggal (masuk, lembur, telat/tepat).
+  const absHari = new Map<string, { masuk: boolean; lembur: boolean }>();
   let tepat = 0;
   let telat = 0;
-  let lemburHari = 0;
   for (const r of rows) {
-    if (r.check_in) masukSet.add(r.d);
+    const prev = absHari.get(r.d) || { masuk: false, lembur: false };
+    if (r.check_in) prev.masuk = true;
     if (r.status_masuk === "Tepat Waktu") tepat += 1;
     else if (r.status_masuk === "Terlambat") telat += 1;
     if (r.check_in && r.check_out) {
       const menit = (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 60000;
-      if (menit > ambangMenit) lemburHari += 1;
+      if (menit > ambangMenit) prev.lembur = true;
     }
+    absHari.set(r.d, prev);
   }
 
-  const hadir = masukSet.size;
-  const upahKehadiran = u.gaji_harian * hadir;
+  // Penyesuaian manual HR per hari.
+  const adjRows = await query<AdjustRow>(
+    `SELECT tanggal::text AS tanggal, status, upah, lembur, catatan
+       FROM slip_adjust
+      WHERE user_id = $1 AND tanggal BETWEEN $2 AND $3`,
+    [userId, from, to],
+  );
+  const adjMap = new Map<string, AdjustRow>();
+  for (const a of adjRows) adjMap.set(a.tanggal, a);
+
+  const hari: HariSlip[] = eachDate(from, to).map((tanggal) => {
+    const abs = absHari.get(tanggal);
+    const masuk = !!abs?.masuk;
+    // Nilai awal dari absensi.
+    let status: StatusHari = masuk ? "penuh" : "alpha";
+    let upah = masuk ? u.gaji_harian : 0;
+    let lembur = !!abs?.lembur;
+    let catatan = "";
+    let override = false;
+    const adj = adjMap.get(tanggal);
+    if (adj) {
+      override = true;
+      status = adj.status;
+      upah = Math.max(0, Number(adj.upah) || 0);
+      lembur = !!adj.lembur;
+      catatan = adj.catatan || "";
+    }
+    return { tanggal, masuk, status, upah, lembur, override, catatan };
+  });
+
+  const hadir = hari.filter((h) => h.status === "penuh" || h.status === "setengah").length;
+  const lemburHari = hari.filter((h) => h.lembur).length;
+  const upahKehadiran = hari.reduce((a, h) => a + h.upah, 0);
   const upahLembur = lemburHari * u.lembur_per_hari;
   const potongan = telat * u.potongan_per_telat;
-  const total = upahKehadiran + upahLembur - potongan;
 
-  const hari: HariMasuk[] = eachDate(from, to).map((tanggal) => ({
-    tanggal,
-    masuk: masukSet.has(tanggal),
+  // Kasbon belum lunas.
+  const kasbonRows = await query<{ id: number; tanggal: string; jumlah: string | number; keterangan: string }>(
+    `SELECT id, tanggal::text AS tanggal, jumlah, keterangan
+       FROM kasbon
+      WHERE user_id = $1 AND sppg_id = $2 AND lunas = FALSE
+      ORDER BY tanggal ASC, id ASC`,
+    [userId, sppgId],
+  );
+  const kasbonItems: KasbonItem[] = kasbonRows.map((k) => ({
+    id: k.id,
+    tanggal: k.tanggal,
+    jumlah: Math.max(0, Number(k.jumlah) || 0),
+    keterangan: k.keterangan || "",
   }));
+  const kasbon = kasbonItems.reduce((a, k) => a + k.jumlah, 0);
+
+  const total = upahKehadiran + upahLembur - potongan - kasbon;
 
   const konf = (
     await query<{ confirmed_at: string }>(
@@ -135,6 +206,8 @@ export async function computeSlip(
     upah_kehadiran: upahKehadiran,
     upah_lembur: upahLembur,
     potongan,
+    kasbon,
+    kasbon_items: kasbonItems,
     total,
     hari,
     confirmed_at: konf?.confirmed_at || null,

@@ -9,7 +9,7 @@ interface Baris {
   jenis: "serdik" | "b3";
   nama: string;
   jenjang: string;
-  kategori: "balita" | "b2" | "";
+  kategori: "balita" | "bumil" | "busui" | "";
   jam_kirim: string;
   besar: number;
   kecil: number;
@@ -143,12 +143,14 @@ function Inner() {
   const serdik = data.baris.filter((b) => b.jenis === "serdik" && b.ikut && b.besar + b.kecil > 0);
   const b3 = data.baris.filter((b) => b.jenis === "b3" && b.ikut && b.b3 > 0);
   // B3 dikirim ke satu tempat → digabung untuk Surat Jalan & Organoleptik.
-  // Porsi dipisah: Balita vs B2 (Bumil + Busui) agar tidak tercampur.
+  // Porsi dipisah: Balita / Bumil / Busui agar tidak tercampur.
   const b3Balita = b3.filter((b) => b.kategori === "balita").reduce((a, b) => a + b.b3, 0);
-  const b3B2 = b3.filter((b) => b.kategori !== "balita").reduce((a, b) => a + b.b3, 0);
+  const b3Busui = b3.filter((b) => b.kategori === "busui").reduce((a, b) => a + b.b3, 0);
+  const b3Bumil = b3.filter((b) => b.kategori !== "balita" && b.kategori !== "busui").reduce((a, b) => a + b.b3, 0);
   const b3Rows: { kelas: string; porsi: number }[] = [];
   if (b3Balita > 0) b3Rows.push({ kelas: "Balita", porsi: b3Balita });
-  if (b3B2 > 0) b3Rows.push({ kelas: "B2 (Bumil & Busui)", porsi: b3B2 });
+  if (b3Bumil > 0) b3Rows.push({ kelas: "Ibu Hamil", porsi: b3Bumil });
+  if (b3Busui > 0) b3Rows.push({ kelas: "Ibu Menyusui", porsi: b3Busui });
   const b3Jam = b3[0]?.jam_kirim || "";
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";

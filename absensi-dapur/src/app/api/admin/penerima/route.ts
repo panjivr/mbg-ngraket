@@ -22,8 +22,9 @@ export const POST = route(async (req: NextRequest) => {
   const nama = String(b.nama ?? "").trim();
   if (!nama) return fail(400, "Nama penerima wajib diisi.");
   const jenis = b.jenis === "b3" ? "b3" : "serdik";
-  // kategori hanya berlaku untuk B3 (balita / b2). Serdik selalu kosong.
-  const kategori = jenis === "b3" ? (b.kategori === "balita" ? "balita" : "b2") : "";
+  // kategori hanya berlaku untuk B3 (balita / bumil / busui). Serdik selalu kosong.
+  const KAT_B3 = ["balita", "bumil", "busui"];
+  const kategori = jenis === "b3" ? (KAT_B3.includes(String(b.kategori)) ? String(b.kategori) : "balita") : "";
   const jenjang = String(b.jenjang ?? "").trim();
   const besar = Math.max(0, Math.round(Number(b.besar ?? 0)) || 0);
   const kecil = Math.max(0, Math.round(Number(b.kecil ?? 0)) || 0);

@@ -4,9 +4,10 @@ export type JenisPenerima = "serdik" | "b3";
 
 // Sub-kategori khusus penerima B3 (posyandu) agar porsi tidak tercampur:
 // - "balita"  → porsi Balita
-// - "b2"      → porsi B2 (Bumil + Busui)
+// - "bumil"   → porsi Ibu Hamil
+// - "busui"   → porsi Ibu Menyusui
 // Kosong ("") untuk penerima serdik.
-export type KategoriB3 = "balita" | "b2" | "";
+export type KategoriB3 = "balita" | "bumil" | "busui" | "";
 
 // Menu terstruktur untuk form Uji Organoleptik: grup (mis. "Menu Basah",
 // "Menu Jumat (Kering)") berisi daftar nama sampel makanan.
@@ -22,7 +23,7 @@ export interface Penerima {
   jenis: JenisPenerima;
   nama: string;
   jenjang: string; // PAUD, TK/RA, SD/MI, SMP/MTS/MA, POSYANDU
-  kategori: KategoriB3; // hanya untuk B3: "balita" / "b2" (bumil+busui)
+  kategori: KategoriB3; // hanya untuk B3: "balita" / "bumil" / "busui"
   besar: number; // porsi besar (SERDIK)
   kecil: number; // porsi kecil (SERDIK)
   b3: number; // porsi B3 (posyandu: balita atau b2 sesuai kategori)

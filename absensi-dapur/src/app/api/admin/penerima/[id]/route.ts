@@ -28,12 +28,13 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const nama = b.nama !== undefined ? String(b.nama).trim() || cur.nama : cur.nama;
   const jenis = b.jenis !== undefined ? (b.jenis === "b3" ? "b3" : "serdik") : cur.jenis;
-  // kategori hanya untuk B3; serdik selalu kosong.
+  // kategori hanya untuk B3 (balita / bumil / busui); serdik selalu kosong.
+  const KAT_B3 = ["balita", "bumil", "busui"];
   const kategori =
     jenis === "b3"
       ? (b.kategori !== undefined
-          ? (b.kategori === "balita" ? "balita" : "b2")
-          : cur.kategori || "b2")
+          ? (KAT_B3.includes(String(b.kategori)) ? String(b.kategori) : "balita")
+          : cur.kategori || "balita")
       : "";
   const jenjang = b.jenjang !== undefined ? String(b.jenjang).trim() : cur.jenjang;
   const besar = num(b.besar, cur.besar);
