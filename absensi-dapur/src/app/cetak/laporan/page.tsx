@@ -59,7 +59,7 @@ function Inner() {
 
   const { isi, foto, sppg } = data;
   const namaSppg = (sppg.nama || "").replace(/^SPPG\s+/i, "");
-  const alamat = sppg.alamat || "Jl. Raya Balong - Ngumpul, Desa Ngraket, Kecamatan Balong, Kabupaten Ponorogo";
+  const alamat = sppg.alamat || "";
   const mt = isi.menu_tabel;
   const menuRows = Math.max(mt.besar.length, mt.kecil.length, mt.busui_bumil.length, mt.balita.length);
   const totalPersonel = isi.personel.reduce((a, p) => a + (p.jumlah || 0), 0);

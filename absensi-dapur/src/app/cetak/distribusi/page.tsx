@@ -51,8 +51,9 @@ function kelasRows(s: Baris): { kelas: string; porsi: number }[] {
   return r;
 }
 
-/** Kop surat resmi Badan Gizi Nasional (logo + 3 baris + garis tebal). */
-function KopBGN() {
+/** Kop surat resmi Badan Gizi Nasional (logo + 3 baris + garis tebal).
+ *  Baris ketiga mengikuti dapur/SPPG masing-masing (bukan hardcode Ngraket). */
+function KopBGN({ sppgNama }: { sppgNama: string }) {
   return (
     <div className="relative">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -60,7 +61,7 @@ function KopBGN() {
       <div className="px-20 text-center leading-snug">
         <p className="text-sm font-bold">BADAN GIZI NASIONAL (<span className="italic">NATIONAL NUTRITION AGENCY</span>)</p>
         <p className="text-sm font-bold">SATUAN PELAYANAN PEMENUHAN GIZI</p>
-        <p className="text-sm font-bold">KABUPATEN PONOROGO BALONG NGRAKET</p>
+        <p className="text-sm font-bold">SPPG {sppgNama.toUpperCase()}</p>
       </div>
       <div className="mt-2 border-b-4 border-black" />
     </div>
@@ -258,7 +259,7 @@ function Inner() {
     const grup = isB3 ? data.distribusi.menu_posyandu || [] : data.distribusi.menu_sekolah || [];
     return (
       <div key={key} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
-        <KopBGN />
+        <KopBGN sppgNama={namaSppg} />
         <h2 className="mt-6 text-center text-base font-bold">FORM UJI ORGANOLEPTIK</h2>
 
         <div className="mt-6 text-sm leading-relaxed">

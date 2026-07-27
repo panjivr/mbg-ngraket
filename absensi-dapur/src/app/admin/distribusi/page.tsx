@@ -27,6 +27,7 @@ interface DistData {
 }
 interface Pengaturan {
   nama_sppg: string;
+  alamat: string;
   kepala_sppg: string;
   harga_besar: number;
   harga_kecil: number;
@@ -364,6 +365,10 @@ export default function DistribusiPage() {
               <div>
                 <label className="label">Nama SPPG</label>
                 <input className="input" value={setel.nama_sppg} onChange={(e) => setSetel({ ...setel, nama_sppg: e.target.value })} />
+              </div>
+              <div>
+                <label className="label">Alamat SPPG (untuk kop dokumen &amp; laporan)</label>
+                <input className="input" value={setel.alamat} onChange={(e) => setSetel({ ...setel, alamat: e.target.value })} placeholder="mis. Jl. Raya … Desa … Kec. … Kab. …" />
               </div>
               <div>
                 <label className="label">Kepala SPPG</label>

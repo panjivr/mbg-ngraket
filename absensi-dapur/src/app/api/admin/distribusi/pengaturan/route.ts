@@ -13,6 +13,7 @@ export const GET = route(async () => {
   return ok({
     pengaturan: {
       nama_sppg: s?.nama ?? "",
+      alamat: s?.alamat ?? "",
       kepala_sppg: s?.kepala_sppg ?? "",
       harga_besar: s?.harga_besar ?? 10000,
       harga_kecil: s?.harga_kecil ?? 8000,
@@ -31,6 +32,7 @@ export const PUT = route(async (req: NextRequest) => {
     v === undefined ? d : Math.max(0, Math.round(Number(v)) || 0);
 
   const nama = b.nama_sppg !== undefined ? String(b.nama_sppg).trim() : s?.nama ?? "";
+  const alamat = b.alamat !== undefined ? String(b.alamat).trim() : s?.alamat ?? "";
   const kepala =
     b.kepala_sppg !== undefined ? String(b.kepala_sppg).trim() : s?.kepala_sppg ?? "";
   const hb = num(b.harga_besar, s?.harga_besar ?? 10000);
@@ -42,13 +44,13 @@ export const PUT = route(async (req: NextRequest) => {
     b.koordinator !== undefined ? String(b.koordinator).trim() : s?.koordinator ?? "";
 
   await query(
-    `UPDATE sppg SET nama=$1, kepala_sppg=$2, harga_besar=$3, harga_kecil=$4, harga_b3=$5, ahli_gizi=$6, koordinator=$7 WHERE id=$8`,
-    [nama, kepala, hb, hk, h3, ahliGizi, koordinator, admin.sppg_id],
+    `UPDATE sppg SET nama=$1, alamat=$2, kepala_sppg=$3, harga_besar=$4, harga_kecil=$5, harga_b3=$6, ahli_gizi=$7, koordinator=$8 WHERE id=$9`,
+    [nama, alamat, kepala, hb, hk, h3, ahliGizi, koordinator, admin.sppg_id],
   );
   invalidateSppg(admin.sppg_id as number);
   return ok({
     pengaturan: {
-      nama_sppg: nama, kepala_sppg: kepala, harga_besar: hb, harga_kecil: hk, harga_b3: h3,
+      nama_sppg: nama, alamat, kepala_sppg: kepala, harga_besar: hb, harga_kecil: hk, harga_b3: h3,
       ahli_gizi: ahliGizi, koordinator,
     },
   });
