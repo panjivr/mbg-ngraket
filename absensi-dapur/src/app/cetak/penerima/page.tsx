@@ -4,8 +4,11 @@ import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 
 interface Penerima {
   id: number; jenis: "serdik" | "b3"; nama: string; jenjang: string;
+  kategori: "balita" | "bumil" | "busui" | "";
   besar: number; kecil: number; b3: number; pj: number; jam_kirim: string; aktif: boolean;
 }
+
+const KAT_LABEL: Record<string, string> = { balita: "Balita", bumil: "Ibu Hamil", busui: "Ibu Menyusui" };
 
 const PAPERS: Record<string, { label: string; size: string }> = {
   A4: { label: "A4 (210×297)", size: "210mm 297mm" },
@@ -39,9 +42,16 @@ function Inner() {
     return [...m.entries()];
   }, [list]);
   const tot = useMemo(() => {
-    let besar = 0, kecil = 0, b3 = 0, pj = 0;
-    for (const p of list || []) if (p.aktif) { besar += p.besar; kecil += p.kecil; b3 += p.b3; pj += p.pj; }
-    return { besar, kecil, b3, pj };
+    let besar = 0, kecil = 0, b3 = 0, pj = 0, balita = 0, bumil = 0, busui = 0;
+    for (const p of list || []) if (p.aktif) {
+      besar += p.besar; kecil += p.kecil; b3 += p.b3; pj += p.pj;
+      if (p.jenis === "b3") {
+        if (p.kategori === "balita") balita += p.b3;
+        else if (p.kategori === "busui") busui += p.b3;
+        else bumil += p.b3;
+      }
+    }
+    return { besar, kecil, b3, pj, balita, bumil, busui };
   }, [list]);
 
   if (err) return <p className="p-8 text-center">Gagal memuat data penerima.</p>;
@@ -78,7 +88,7 @@ function Inner() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="font-bold" style={{ backgroundColor: "#dbe5f1" }}>
-              <th className={th}>No</th><th className={th}>Nama Penerima</th><th className={th}>Jam</th>
+              <th className={th}>No</th><th className={th}>Nama Penerima</th><th className={th}>Klasifikasi</th><th className={th}>Jam</th>
               <th className={th}>Besar</th><th className={th}>Kecil</th><th className={th}>B3</th><th className={th}>PJ</th>
             </tr>
           </thead>
@@ -86,12 +96,13 @@ function Inner() {
             {grup.map(([jenjang, rows]) => (
               <Fragment key={jenjang}>
                 <tr style={{ backgroundColor: "#eef2f7" }}>
-                  <td className={cell + " font-bold"} colSpan={7}>{jenjang}</td>
+                  <td className={cell + " font-bold"} colSpan={8}>{jenjang}</td>
                 </tr>
                 {rows.map((p, i) => (
                   <tr key={p.id}>
                     <td className={th}>{i + 1}</td>
                     <td className={cell}>{p.nama}</td>
+                    <td className={th}>{p.jenis === "b3" ? (KAT_LABEL[p.kategori] || "Ibu Hamil") : "—"}</td>
                     <td className={th}>{p.jam_kirim}</td>
                     <td className={th}>{p.besar || ""}</td>
                     <td className={th}>{p.kecil || ""}</td>
@@ -102,11 +113,28 @@ function Inner() {
               </Fragment>
             ))}
             <tr className="font-bold" style={{ backgroundColor: "#dbe5f1" }}>
-              <td className={th} colSpan={3}>TOTAL AKTIF</td>
+              <td className={th} colSpan={4}>TOTAL AKTIF</td>
               <td className={th}>{tot.besar}</td>
               <td className={th}>{tot.kecil}</td>
               <td className={th}>{tot.b3}</td>
               <td className={th}>{tot.pj}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Rincian porsi B3 per klasifikasi */}
+        <table className="mt-4 w-full max-w-sm border-collapse text-sm">
+          <thead>
+            <tr className="font-bold" style={{ backgroundColor: "#dbe5f1" }}>
+              <th className={th} colSpan={2}>Rincian Porsi B3 (Posyandu)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className={cell}>Balita</td><td className={th}>{tot.balita}</td></tr>
+            <tr><td className={cell}>Ibu Hamil</td><td className={th}>{tot.bumil}</td></tr>
+            <tr><td className={cell}>Ibu Menyusui</td><td className={th}>{tot.busui}</td></tr>
+            <tr className="font-bold" style={{ backgroundColor: "#eef2f7" }}>
+              <td className={cell}>Total B3</td><td className={th}>{tot.b3}</td>
             </tr>
           </tbody>
         </table>
