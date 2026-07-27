@@ -408,26 +408,26 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_penerima_sppg ON penerima (sppg_id)`);
     // Sub-kategori B3: "balita" / "bumil" / "busui" agar porsi tidak tercampur.
     await client.query(`ALTER TABLE penerima ADD COLUMN IF NOT EXISTS kategori TEXT NOT NULL DEFAULT ''`);
-    // Backfill data B3 lama yang belum berkategori — tebak dari nama.
-    await client.query(
-      `UPDATE penerima SET kategori = 'balita'
-         WHERE jenis = 'b3' AND kategori = '' AND UPPER(nama) LIKE '%BALITA%'`,
-    );
+    // Sinkronkan kategori B3 dari NAMA (tanpa syarat) — data lama bisa terlanjur
+    // salah kategori (mis. semua 'bumil'/'b2'), jadi selalu perbaiki dari nama.
+    // Urutan penting: MENYUSUI/BUSUI dulu agar tidak tertimpa aturan lain.
     await client.query(
       `UPDATE penerima SET kategori = 'busui'
-         WHERE jenis = 'b3' AND kategori = '' AND (UPPER(nama) LIKE '%MENYUSUI%' OR UPPER(nama) LIKE '%BUSUI%')`,
+         WHERE jenis = 'b3' AND (UPPER(nama) LIKE '%MENYUSUI%' OR UPPER(nama) LIKE '%BUSUI%')
+           AND kategori <> 'busui'`,
+    );
+    await client.query(
+      `UPDATE penerima SET kategori = 'balita'
+         WHERE jenis = 'b3' AND UPPER(nama) LIKE '%BALITA%' AND kategori <> 'balita'`,
     );
     await client.query(
       `UPDATE penerima SET kategori = 'bumil'
-         WHERE jenis = 'b3' AND kategori = ''`,
+         WHERE jenis = 'b3' AND UPPER(nama) LIKE '%HAMIL%' AND kategori <> 'bumil'`,
     );
-    // Migrasi kategori lama "b2" (gabungan Bumil+Busui) → pecah jadi bumil/busui by nama.
+    // Sisanya (b3 tanpa pola nama yang jelas) default ke bumil.
     await client.query(
-      `UPDATE penerima SET kategori = 'busui'
-         WHERE jenis = 'b3' AND kategori = 'b2' AND (UPPER(nama) LIKE '%MENYUSUI%' OR UPPER(nama) LIKE '%BUSUI%')`,
-    );
-    await client.query(
-      `UPDATE penerima SET kategori = 'bumil' WHERE jenis = 'b3' AND kategori = 'b2'`,
+      `UPDATE penerima SET kategori = 'bumil'
+         WHERE jenis = 'b3' AND kategori NOT IN ('balita','bumil','busui')`,
     );
 
     // Satu hari distribusi + baris penerima (angka bisa di-adjust harian).
