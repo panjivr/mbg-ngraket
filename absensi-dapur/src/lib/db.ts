@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28d.menu-komponen-gizi";
+const SCHEMA_VERSION = "2026-07-28e.audit-log";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -971,6 +971,23 @@ async function doEnsureSchema(): Promise<void> {
         );
       }
     }
+
+    // === Audit log: jejak aktivitas admin (siapa mengubah apa & kapan) ===
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id         BIGSERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        user_nama  TEXT NOT NULL DEFAULT '',
+        aksi       TEXT NOT NULL DEFAULT '',
+        entitas    TEXT NOT NULL DEFAULT '',
+        ringkasan  TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_audit_sppg ON audit_log (sppg_id, created_at DESC)`,
+    );
 
     // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
     await client.query(

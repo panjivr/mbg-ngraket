@@ -82,6 +82,7 @@ export default async function AdminLayout({
           {aksesLaporan && <NavLink href="/admin/laporan" label="📋 Laporan Harian" />}
           {(fullAdmin || aksesLaporan) && <NavLink href="/admin/gudang" label="📦 Gudang" />}
           {isHr && <NavLink href="/admin/hr" label="🧾 HR / Gaji" />}
+          {fullAdmin && <NavLink href="/admin/audit" label="🧾 Aktivitas" />}
           {fullAdmin && <NavLink href="/admin/pengaturan" label="Pengaturan" />}
           {isSuper && <NavLink href="/admin/pusat" label="🌐 Semua Dapur" />}
           {isSuper && <NavLink href="/admin/sppg" label="🏢 Kelola Dapur" />}

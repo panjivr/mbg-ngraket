@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
+import { catatAudit } from "@/lib/audit";
 import { ok, fail, route } from "@/lib/api";
 import type { User } from "@/lib/types";
 
@@ -129,7 +130,12 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
                tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr`,
     paramsArr,
   );
-  void admin;
+  const ubah: string[] = [];
+  if (existing.nama !== nama) ubah.push("nama");
+  if (existing.role !== role) ubah.push(`role→${role}`);
+  if (existing.aktif !== aktif) ubah.push(aktif ? "diaktifkan" : "dinonaktifkan");
+  if (passwordClause) ubah.push("password");
+  await catatAudit(admin, "ubah", "Pegawai", `${nama}${ubah.length ? " · " + ubah.join(", ") : ""}`);
   return ok({ employee: rows[0] });
 });
 
@@ -140,7 +146,7 @@ export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
   if (id === admin.uid) return fail(409, "Tidak bisa menghapus akun sendiri.");
 
   const target = (
-    await query<User>(`SELECT id, role FROM users WHERE id = $1 AND sppg_id = $2`, [
+    await query<User>(`SELECT id, nama, role FROM users WHERE id = $1 AND sppg_id = $2`, [
       id,
       admin.sppg_id,
     ])
@@ -159,5 +165,6 @@ export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
   }
 
   await query(`DELETE FROM users WHERE id = $1 AND sppg_id = $2`, [id, admin.sppg_id]);
+  await catatAudit(admin, "hapus", "Pegawai", target.nama || `#${id}`);
   return ok({ ok: true });
 });

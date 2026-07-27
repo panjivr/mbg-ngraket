@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
+import { catatAudit } from "@/lib/audit";
 import { ok, fail, route } from "@/lib/api";
 import type { User } from "@/lib/types";
 
@@ -99,5 +100,6 @@ export const POST = route(async (req: NextRequest) => {
      RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin`,
     [nama, username, hash, role, jabatan, nip, aktif, divId, tempat_lahir, tanggal_lahir, jenis_kelamin, admin.sppg_id],
   );
+  await catatAudit(admin, "buat", "Pegawai", `${nama} (@${username})${role === "admin" ? " · admin" : ""}`);
   return ok({ employee: rows[0] }, { status: 201 });
 });

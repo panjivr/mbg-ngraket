@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireAkses } from "@/lib/session";
 import { getSppg, invalidateSppg } from "@/lib/sppg";
+import { catatAudit } from "@/lib/audit";
 import { ok, route } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -48,6 +49,12 @@ export const PUT = route(async (req: NextRequest) => {
     [nama, alamat, kepala, hb, hk, h3, ahliGizi, koordinator, admin.sppg_id],
   );
   invalidateSppg(admin.sppg_id as number);
+  await catatAudit(
+    admin,
+    "ubah",
+    "Pengaturan Distribusi",
+    `Identitas & harga pagu: ${nama} · besar ${hb}, kecil ${hk}, B3 ${h3}`,
+  );
   return ok({
     pengaturan: {
       nama_sppg: nama, alamat, kepala_sppg: kepala, harga_besar: hb, harga_kecil: hk, harga_b3: h3,
