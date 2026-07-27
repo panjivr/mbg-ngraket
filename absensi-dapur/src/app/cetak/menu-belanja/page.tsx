@@ -4,8 +4,12 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   KATEGORI_MENU_LABEL,
+  KOMPONEN_GIZI,
+  KOMPONEN_GIZI_LIST,
   skalaBahan,
+  perPorsi,
   fmtJumlah,
+  fmtKecil,
   type MenuLengkap,
 } from "@/lib/menu";
 
@@ -39,16 +43,21 @@ function Inner() {
       .catch(() => setErr(true));
   }, [menuId]);
 
-  const rows = useMemo(
-    () =>
-      (menu?.bahan || []).map((b) => ({
-        nama: b.nama,
-        satuan: b.satuan,
-        dasar: b.jumlah_dasar,
-        target: skalaBahan(b.jumlah_dasar, menu!.porsi_dasar, porsi, b.pembulatan),
-      })),
-    [menu, porsi],
-  );
+  const rows = useMemo(() => {
+    const list = (menu?.bahan || []).map((b) => ({
+      nama: b.nama,
+      satuan: b.satuan,
+      komponen: b.komponen,
+      perPorsi: perPorsi(b.jumlah_dasar, menu!.porsi_dasar),
+      target: skalaBahan(b.jumlah_dasar, menu!.porsi_dasar, porsi, b.pembulatan),
+    }));
+    // Urutkan mengikuti urutan komponen gizi agar belanja lebih rapi.
+    const rank = (k: string) => {
+      const i = KOMPONEN_GIZI_LIST.indexOf(k as never);
+      return i < 0 ? 99 : i;
+    };
+    return list.sort((a, b) => rank(a.komponen) - rank(b.komponen));
+  }, [menu, porsi]);
 
   if (err) return <p className="p-8 text-center">Gagal memuat data menu.</p>;
   if (!menu) return <p className="p-8 text-center">Memuat…</p>;
@@ -98,6 +107,8 @@ function Inner() {
             <tr className="font-bold" style={{ backgroundColor: "#dbe5f1" }}>
               <th className={th}>No</th>
               <th className={th}>Bahan</th>
+              <th className={th}>Komponen</th>
+              <th className={th}>Per porsi</th>
               <th className={th}>Kebutuhan</th>
               <th className={th}>Satuan</th>
               <th className={th}>Ceklis</th>
@@ -108,6 +119,8 @@ function Inner() {
               <tr key={i}>
                 <td className={th}>{i + 1}</td>
                 <td className={cell}>{r.nama}</td>
+                <td className={th}>{KOMPONEN_GIZI[r.komponen]?.label || "-"}</td>
+                <td className={th}>{fmtKecil(r.perPorsi)}</td>
                 <td className={th}>{fmtJumlah(r.target)}</td>
                 <td className={th}>{r.satuan}</td>
                 <td className={th}>☐</td>
@@ -115,7 +128,7 @@ function Inner() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td className={cell} colSpan={5}>
+                <td className={cell} colSpan={7}>
                   Menu ini belum punya bahan.
                 </td>
               </tr>

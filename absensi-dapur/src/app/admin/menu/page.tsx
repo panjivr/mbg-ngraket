@@ -6,13 +6,21 @@ import {
   KATEGORI_MENU_LIST,
   PEMBULATAN_LABEL,
   PEMBULATAN_LIST,
+  KOMPONEN_GIZI,
+  KOMPONEN_GIZI_LIST,
+  KOMPONEN_INTI,
+  komponenKurang,
   skalaBahan,
+  perPorsi,
   fmtJumlah,
+  fmtKecil,
   type KategoriMenu,
+  type KomponenGizi,
   type MenuLengkap,
   type MenuBahan,
   type Pembulatan,
 } from "@/lib/menu";
+import QuoteBanner from "@/components/QuoteBanner";
 
 interface BarangPilih {
   id: number;
@@ -28,6 +36,7 @@ interface BahanDraft {
   satuan: string;
   jumlah_dasar: number;
   pembulatan: Pembulatan;
+  komponen: KomponenGizi;
 }
 
 function toDraft(b: MenuBahan): BahanDraft {
@@ -37,6 +46,7 @@ function toDraft(b: MenuBahan): BahanDraft {
     satuan: b.satuan,
     jumlah_dasar: b.jumlah_dasar,
     pembulatan: b.pembulatan,
+    komponen: b.komponen,
   };
 }
 
@@ -87,10 +97,28 @@ export default function MenuPage() {
     }
   };
 
+  const duplikatMenu = async (m: MenuLengkap) => {
+    const nama = prompt("Nama menu salinan:", `${m.nama} (salinan)`)?.trim();
+    if (!nama) return;
+    const res = await fetch("/api/admin/menu", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nama, duplikat_dari: m.id }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      await load();
+      setSelId(d.menu?.id ?? null);
+    } else {
+      alert(d?.error || "Gagal menduplikat menu.");
+    }
+  };
+
   const selected = menus.find((m) => m.id === selId) || null;
 
   return (
     <div className="space-y-4">
+      <QuoteBanner />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-bold">🍱 Bank Menu &amp; Kalkulasi Bahan</h1>
@@ -145,6 +173,7 @@ export default function MenuPage() {
               menu={selected}
               barang={barang}
               onSaved={load}
+              onDuplikat={() => duplikatMenu(selected)}
               onDeleted={() => {
                 setSelId(null);
                 load();
@@ -161,11 +190,13 @@ function MenuEditor({
   menu,
   barang,
   onSaved,
+  onDuplikat,
   onDeleted,
 }: {
   menu: MenuLengkap;
   barang: BarangPilih[];
   onSaved: () => void;
+  onDuplikat: () => void;
   onDeleted: () => void;
 }) {
   const [nama, setNama] = useState(menu.nama);
@@ -191,7 +222,10 @@ function MenuEditor({
   };
 
   const addBahan = () =>
-    setBahan((prev) => [...prev, { barang_id: null, nama: "", satuan: "kg", jumlah_dasar: 0, pembulatan: "desimal" }]);
+    setBahan((prev) => [
+      ...prev,
+      { barang_id: null, nama: "", satuan: "kg", jumlah_dasar: 0, pembulatan: "desimal", komponen: "lainnya" },
+    ]);
   const delBahan = (i: number) => setBahan((prev) => prev.filter((_, idx) => idx !== i));
 
   const simpan = async () => {
@@ -237,10 +271,18 @@ function MenuEditor({
         .map((b) => ({
           nama: b.nama,
           satuan: b.satuan,
+          komponen: b.komponen,
           dasar: b.jumlah_dasar,
+          perPorsi: perPorsi(b.jumlah_dasar, porsiDasar),
           target: skalaBahan(b.jumlah_dasar, porsiDasar, porsiTarget, b.pembulatan),
         })),
     [bahan, porsiDasar, porsiTarget],
+  );
+
+  // Cek kelengkapan komponen "Isi Piringku" (untuk ahli gizi).
+  const kurang = useMemo(
+    () => komponenKurang(bahan.filter((b) => b.nama.trim())),
+    [bahan],
   );
 
   return (
@@ -295,11 +337,12 @@ function MenuEditor({
           <p className="text-xs text-slate-500">Belum ada bahan. Klik <b>+ Bahan</b>.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-2 py-2">Sumber</th>
                   <th className="px-2 py-2">Nama bahan</th>
+                  <th className="px-2 py-2">Komponen gizi</th>
                   <th className="px-2 py-2">Jumlah</th>
                   <th className="px-2 py-2">Satuan</th>
                   <th className="px-2 py-2">Pembulatan</th>
@@ -327,6 +370,19 @@ function MenuEditor({
                         disabled={b.barang_id !== null}
                         placeholder="nama bahan"
                       />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="input py-1"
+                        value={b.komponen}
+                        onChange={(e) => updBahan(i, { komponen: e.target.value as KomponenGizi })}
+                      >
+                        {KOMPONEN_GIZI_LIST.map((k) => (
+                          <option key={k} value={k}>
+                            {KOMPONEN_GIZI[k].emoji} {KOMPONEN_GIZI[k].label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-2 py-1.5">
                       <input
@@ -367,9 +423,42 @@ function MenuEditor({
             </table>
           </div>
         )}
+        {/* Cek kelengkapan gizi "Isi Piringku" untuk ahli gizi */}
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Kelengkapan gizi (Isi Piringku)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {KOMPONEN_INTI.map((k) => {
+              const ada = !kurang.includes(k);
+              return (
+                <span
+                  key={k}
+                  className={
+                    "rounded-full px-2 py-0.5 text-[11px] font-medium " +
+                    (ada
+                      ? "bg-green-500/15 text-green-300"
+                      : "bg-white/5 text-slate-500 line-through")
+                  }
+                >
+                  {KOMPONEN_GIZI[k].emoji} {KOMPONEN_GIZI[k].label} {ada ? "✓" : ""}
+                </span>
+              );
+            })}
+          </div>
+          {kurang.length > 0 && (
+            <p className="mt-2 text-[11px] text-amber-300/90">
+              ⚠️ Komponen inti belum ada: {kurang.map((k) => KOMPONEN_GIZI[k].label).join(", ")}.
+              Menu makan utama idealnya memuat karbohidrat, protein hewani, sayur, dan buah.
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={simpan} disabled={saving} className="btn-primary">
             {saving ? "Menyimpan…" : "💾 Simpan Menu"}
+          </button>
+          <button onClick={onDuplikat} className="btn-ghost px-3 py-1.5 text-sm">
+            📑 Duplikat menu
           </button>
           <button onClick={hapus} className="btn-ghost px-3 py-1.5 text-sm text-red-400">
             Hapus menu
@@ -412,10 +501,11 @@ function MenuEditor({
           <p className="text-xs text-slate-500">Tambahkan bahan dulu untuk melihat hitungan.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[420px] text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-2 py-2">Bahan</th>
+                  <th className="px-2 py-2 text-right">Per porsi</th>
                   <th className="px-2 py-2 text-right">Dasar</th>
                   <th className="px-2 py-2 text-right">Butuh ({fmtJumlah(porsiTarget)} porsi)</th>
                 </tr>
@@ -423,7 +513,18 @@ function MenuEditor({
               <tbody className="divide-y divide-white/5">
                 {hasil.map((h, i) => (
                   <tr key={i}>
-                    <td className="px-2 py-1.5">{h.nama}</td>
+                    <td className="px-2 py-1.5">
+                      <span
+                        className="mr-1.5"
+                        title={KOMPONEN_GIZI[h.komponen].label}
+                      >
+                        {KOMPONEN_GIZI[h.komponen].emoji}
+                      </span>
+                      {h.nama}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1.5 text-right text-slate-400">
+                      {fmtKecil(h.perPorsi)} {h.satuan}
+                    </td>
                     <td className="px-2 py-1.5 text-right text-slate-400">
                       {fmtJumlah(h.dasar)} {h.satuan}
                     </td>

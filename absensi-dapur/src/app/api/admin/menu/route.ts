@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { query } from "@/lib/db";
+import { query, withClient } from "@/lib/db";
 import { requireAkses } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import {
@@ -30,7 +30,7 @@ export const GET = route(async () => {
   const bahan = menus.length
     ? await query<MenuBahan>(
         `SELECT id, menu_id, barang_id, nama, satuan,
-                jumlah_dasar::float8 AS jumlah_dasar, pembulatan, urutan
+                jumlah_dasar::float8 AS jumlah_dasar, pembulatan, komponen, urutan
            FROM menu_bahan
           WHERE menu_id = ANY($1::int[])
           ORDER BY urutan ASC, id ASC`,
@@ -52,22 +52,61 @@ export const GET = route(async () => {
   return ok({ menu, barang });
 });
 
-// Buat menu baru (tanpa bahan; bahan ditambah lewat PUT /[id]).
+// Buat menu baru. Jika `duplikat_dari` diisi, salin menu + seluruh bahannya
+// (untuk membuat variasi menu dengan cepat). Selain itu buat menu kosong.
 export const POST = route(async (req: NextRequest) => {
   const admin = await requireAkses("distribusi");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nama = String(b.nama ?? "").trim().slice(0, 120);
   if (!nama) return fail(400, "Nama menu wajib diisi.");
-  const kategori = normalizeKategoriMenu(b.kategori);
-  const porsi_dasar = Math.max(1, Math.round(Number(b.porsi_dasar)) || 1000);
-  const maxUrut =
-    (await query<{ m: number }>(`SELECT COALESCE(MAX(urutan),0) AS m FROM menu WHERE sppg_id = $1`, [admin.sppg_id]))[0]
-      ?.m ?? 0;
-  const rows = await query<Menu>(
-    `INSERT INTO menu (sppg_id, nama, kategori, porsi_dasar, keterangan, aktif, urutan)
-     VALUES ($1,$2,$3,$4,'',TRUE,$5)
-     RETURNING id, sppg_id, nama, kategori, porsi_dasar, keterangan, aktif, urutan`,
-    [admin.sppg_id, nama, kategori, porsi_dasar, maxUrut + 1],
-  );
-  return ok({ menu: { ...rows[0], bahan: [] } }, { status: 201 });
+  const dupId =
+    b.duplikat_dari === null || b.duplikat_dari === undefined ? null : Number(b.duplikat_dari) || null;
+
+  const created = await withClient(async (client) => {
+    const maxUrut =
+      (await client.query<{ m: number }>(`SELECT COALESCE(MAX(urutan),0) AS m FROM menu WHERE sppg_id = $1`, [admin.sppg_id]))
+        .rows[0]?.m ?? 0;
+
+    // Sumber duplikat (opsional) — harus milik dapur ini.
+    let kategori = normalizeKategoriMenu(b.kategori);
+    let porsi_dasar = Math.max(1, Math.round(Number(b.porsi_dasar)) || 1000);
+    let keterangan = "";
+    if (dupId) {
+      const src = await client.query<{ kategori: string; porsi_dasar: number; keterangan: string }>(
+        `SELECT kategori, porsi_dasar, keterangan FROM menu WHERE id = $1 AND sppg_id = $2`,
+        [dupId, admin.sppg_id],
+      );
+      if (!src.rows[0]) return null;
+      kategori = normalizeKategoriMenu(src.rows[0].kategori);
+      porsi_dasar = src.rows[0].porsi_dasar;
+      keterangan = src.rows[0].keterangan;
+    }
+
+    const rows = await client.query<Menu>(
+      `INSERT INTO menu (sppg_id, nama, kategori, porsi_dasar, keterangan, aktif, urutan)
+       VALUES ($1,$2,$3,$4,$5,TRUE,$6)
+       RETURNING id, sppg_id, nama, kategori, porsi_dasar, keterangan, aktif, urutan`,
+      [admin.sppg_id, nama, kategori, porsi_dasar, keterangan, maxUrut + 1],
+    );
+    const menu = rows.rows[0];
+
+    if (dupId) {
+      await client.query(
+        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan)
+         SELECT $1, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan
+           FROM menu_bahan WHERE menu_id = $2`,
+        [menu.id, dupId],
+      );
+    }
+    const bahan = await client.query<MenuBahan>(
+      `SELECT id, menu_id, barang_id, nama, satuan,
+              jumlah_dasar::float8 AS jumlah_dasar, pembulatan, komponen, urutan
+         FROM menu_bahan WHERE menu_id = $1 ORDER BY urutan ASC, id ASC`,
+      [menu.id],
+    );
+    return { ...menu, bahan: bahan.rows } as MenuLengkap;
+  });
+
+  if (!created) return fail(404, "Menu sumber duplikat tidak ditemukan.");
+  return ok({ menu: created }, { status: 201 });
 });

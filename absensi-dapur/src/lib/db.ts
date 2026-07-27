@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28c.bank-menu-bahan";
+const SCHEMA_VERSION = "2026-07-28d.menu-komponen-gizi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -578,9 +578,12 @@ async function doEnsureSchema(): Promise<void> {
         satuan       TEXT NOT NULL DEFAULT 'kg',
         jumlah_dasar NUMERIC NOT NULL DEFAULT 0,
         pembulatan   TEXT NOT NULL DEFAULT 'desimal',
+        komponen     TEXT NOT NULL DEFAULT 'lainnya',
         urutan       INTEGER NOT NULL DEFAULT 0
       );
     `);
+    // Komponen gizi "Isi Piringku" per bahan (untuk cek kelengkapan gizi oleh ahli gizi).
+    await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS komponen TEXT NOT NULL DEFAULT 'lainnya'`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_bahan_menu ON menu_bahan (menu_id)`);
 
     // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===

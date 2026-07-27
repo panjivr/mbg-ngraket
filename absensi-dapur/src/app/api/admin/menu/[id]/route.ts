@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { withClient } from "@/lib/db";
 import { requireAkses } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import { normalizeKategoriMenu, normalizePembulatan } from "@/lib/menu";
+import { normalizeKategoriMenu, normalizePembulatan, normalizeKomponen } from "@/lib/menu";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ interface BahanIn {
   satuan?: string;
   jumlah_dasar?: number;
   pembulatan?: string;
+  komponen?: string;
 }
 
 // Update data menu + ganti seluruh daftar bahan dalam satu transaksi.
@@ -51,11 +52,12 @@ export const PUT = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
       const satuan = String(row.satuan ?? "kg").trim().slice(0, 20) || "kg";
       const jumlah = Math.max(0, Number(row.jumlah_dasar) || 0);
       const pembulatan = normalizePembulatan(row.pembulatan);
+      const komponen = normalizeKomponen(row.komponen);
       urut += 1;
       await client.query(
-        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, urutan)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [id, barangId, namaB, satuan, jumlah, pembulatan, urut],
+        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [id, barangId, namaB, satuan, jumlah, pembulatan, komponen, urut],
       );
     }
     return true;
