@@ -6,6 +6,7 @@ import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
+import NotifBell from "@/components/NotifBell";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function AdminLayout({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotifBell />
             <Link href="/dapur" className="btn-ghost px-3 py-1.5 text-xs">
               Mode Absen
             </Link>
