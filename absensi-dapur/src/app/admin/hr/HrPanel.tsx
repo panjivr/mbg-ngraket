@@ -273,6 +273,7 @@ function CetakSlip() {
   const [slip, setSlip] = useState<Slip | null>(null);
   const [dapur, setDapur] = useState("");
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     fetch("/api/hr/gaji", { cache: "no-store" })
@@ -284,13 +285,20 @@ function CetakSlip() {
   const tampil = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    setErr("");
     try {
       const res = await fetch(`/api/hr/slip?user=${userId}`, { cache: "no-store" });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (res.ok) {
         setSlip(d.slip);
         setDapur(d.dapur || "");
+      } else {
+        setSlip(null);
+        setErr(d?.error || `Gagal memuat slip (kode ${res.status}).`);
       }
+    } catch {
+      setSlip(null);
+      setErr("Gagal terhubung ke server.");
     } finally {
       setLoading(false);
     }
@@ -313,6 +321,11 @@ function CetakSlip() {
         </button>
       </div>
       <p className="text-xs text-slate-400">Slip memakai periode gaji yang dikonfigurasi di tab Pengaturan Slip.</p>
+      {err && (
+        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          ⚠️ {err}
+        </p>
+      )}
       {slip && typeof userId === "number" && (
         <>
           <AdjustHarian userId={userId} slip={slip} onSaved={tampil} />

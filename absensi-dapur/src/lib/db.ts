@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28.slip-per-employee-lembur-divisi";
+const SCHEMA_VERSION = "2026-07-28b.slip-adjust-kasbon-tables";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
