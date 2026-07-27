@@ -70,6 +70,21 @@ export default function AuditPage() {
     });
   }, [rows, q, filterAksi]);
 
+  const exportCsv = useCallback(() => {
+    const esc = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["Waktu", "Nama", "Aksi", "Objek", "Keterangan"];
+    const body = filtered.map((r) =>
+      [fmt(r.created_at), r.user_nama, r.aksi, r.entitas, r.ringkasan].map(esc).join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jejak-aktivitas-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filtered]);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -79,9 +94,14 @@ export default function AuditPage() {
             Riwayat perubahan penting oleh admin — untuk akuntabilitas & audit.
           </p>
         </div>
-        <button onClick={load} disabled={loading} className="btn-ghost px-3 py-1.5 text-xs">
-          {loading ? "Memuat…" : "Segarkan"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportCsv} disabled={loading || rows.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
+            ⬇️ Ekspor CSV
+          </button>
+          <button onClick={load} disabled={loading} className="btn-ghost px-3 py-1.5 text-xs">
+            {loading ? "Memuat…" : "Segarkan"}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

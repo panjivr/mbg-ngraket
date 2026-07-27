@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { addDays, durasiMenit, fmtDurasi } from "@/lib/time";
 import FotoAbsen from "@/components/FotoAbsen";
+import RingkasanHarian from "@/components/RingkasanHarian";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -397,6 +398,9 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Ringkasan harian siap-kirim (WhatsApp) */}
+      <RingkasanHarian />
 
       {/* Kartu statistik */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

@@ -12,7 +12,6 @@ import {
   fmtKecil,
   type MenuLengkap,
 } from "@/lib/menu";
-import CetakFooter from "@/components/CetakFooter";
 
 const PAPERS: Record<string, { label: string; size: string }> = {
   A4: { label: "A4 (210×297)", size: "210mm 297mm" },
@@ -149,8 +148,6 @@ function Inner() {
             <div className="mt-14 border-t border-black" />
           </div>
         </div>
-
-        <CetakFooter dapur={nama} />
       </div>
     </div>
   );
