@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28b.slip-adjust-kasbon-tables";
+const SCHEMA_VERSION = "2026-07-28c.bank-menu-bahan";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -552,6 +552,36 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mutasi_barang ON stok_mutasi (barang_id, created_at DESC)`);
+
+    // Bank Menu: resep menu + daftar bahan (jumlah dikunci pada porsi_dasar,
+    // diskalakan linear ke porsi berapa pun). barang_id nullable = bahan ketik bebas.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS menu (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        nama        TEXT NOT NULL DEFAULT '',
+        kategori    TEXT NOT NULL DEFAULT 'makan_siang',
+        porsi_dasar INTEGER NOT NULL DEFAULT 1000,
+        keterangan  TEXT NOT NULL DEFAULT '',
+        aktif       BOOLEAN NOT NULL DEFAULT TRUE,
+        urutan      INTEGER NOT NULL DEFAULT 0,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_sppg ON menu (sppg_id)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS menu_bahan (
+        id           SERIAL PRIMARY KEY,
+        menu_id      INTEGER NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
+        barang_id    INTEGER REFERENCES barang(id) ON DELETE SET NULL,
+        nama         TEXT NOT NULL DEFAULT '',
+        satuan       TEXT NOT NULL DEFAULT 'kg',
+        jumlah_dasar NUMERIC NOT NULL DEFAULT 0,
+        pembulatan   TEXT NOT NULL DEFAULT 'desimal',
+        urutan       INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_bahan_menu ON menu_bahan (menu_id)`);
 
     // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===
 
