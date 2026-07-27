@@ -22,6 +22,8 @@ export const POST = route(async (req: NextRequest) => {
   const nama = String(b.nama ?? "").trim();
   if (!nama) return fail(400, "Nama penerima wajib diisi.");
   const jenis = b.jenis === "b3" ? "b3" : "serdik";
+  // kategori hanya berlaku untuk B3 (balita / b2). Serdik selalu kosong.
+  const kategori = jenis === "b3" ? (b.kategori === "balita" ? "balita" : "b2") : "";
   const jenjang = String(b.jenjang ?? "").trim();
   const besar = Math.max(0, Math.round(Number(b.besar ?? 0)) || 0);
   const kecil = Math.max(0, Math.round(Number(b.kecil ?? 0)) || 0);
@@ -35,9 +37,9 @@ export const POST = route(async (req: NextRequest) => {
   );
   const urutan = (urutRow[0]?.m ?? 0) + 1;
   const rows = await query<Penerima>(
-    `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, besar, kecil, b3, pj, jam_kirim, urutan, aktif)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-    [admin.sppg_id, jenis, nama, jenjang, besar, kecil, b3, pj, jam_kirim, urutan, aktif],
+    `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, kategori, besar, kecil, b3, pj, jam_kirim, urutan, aktif)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+    [admin.sppg_id, jenis, nama, jenjang, kategori, besar, kecil, b3, pj, jam_kirim, urutan, aktif],
   );
   return ok({ penerima: rows[0] }, { status: 201 });
 });

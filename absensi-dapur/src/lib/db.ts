@@ -406,6 +406,17 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_penerima_sppg ON penerima (sppg_id)`);
+    // Sub-kategori B3: "balita" atau "b2" (Bumil+Busui) agar porsi tidak tercampur.
+    await client.query(`ALTER TABLE penerima ADD COLUMN IF NOT EXISTS kategori TEXT NOT NULL DEFAULT ''`);
+    // Backfill data B3 lama yang belum berkategori — tebak dari nama.
+    await client.query(
+      `UPDATE penerima SET kategori = 'balita'
+         WHERE jenis = 'b3' AND kategori = '' AND UPPER(nama) LIKE '%BALITA%'`,
+    );
+    await client.query(
+      `UPDATE penerima SET kategori = 'b2'
+         WHERE jenis = 'b3' AND kategori = ''`,
+    );
 
     // Satu hari distribusi + baris penerima (angka bisa di-adjust harian).
     await client.query(`
@@ -837,9 +848,9 @@ async function doEnsureSchema(): Promise<void> {
       let urut2 = 1;
       for (const p of PENERIMA_SEED) {
         await client.query(
-          `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, besar, kecil, b3, pj, jam_kirim, urutan)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [sppgId2, p.jenis, p.nama, p.jenjang, p.besar, p.kecil, p.b3, p.pj, p.jam_kirim, urut2++],
+          `INSERT INTO penerima (sppg_id, jenis, nama, jenjang, kategori, besar, kecil, b3, pj, jam_kirim, urutan)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [sppgId2, p.jenis, p.nama, p.jenjang, p.kategori, p.besar, p.kecil, p.b3, p.pj, p.jam_kirim, urut2++],
         );
       }
     }

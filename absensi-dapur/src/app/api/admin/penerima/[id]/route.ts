@@ -28,6 +28,13 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   const nama = b.nama !== undefined ? String(b.nama).trim() || cur.nama : cur.nama;
   const jenis = b.jenis !== undefined ? (b.jenis === "b3" ? "b3" : "serdik") : cur.jenis;
+  // kategori hanya untuk B3; serdik selalu kosong.
+  const kategori =
+    jenis === "b3"
+      ? (b.kategori !== undefined
+          ? (b.kategori === "balita" ? "balita" : "b2")
+          : cur.kategori || "b2")
+      : "";
   const jenjang = b.jenjang !== undefined ? String(b.jenjang).trim() : cur.jenjang;
   const besar = num(b.besar, cur.besar);
   const kecil = num(b.kecil, cur.kecil);
@@ -37,9 +44,9 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : cur.aktif;
 
   const rows = await query<Penerima>(
-    `UPDATE penerima SET nama=$1, jenis=$2, jenjang=$3, besar=$4, kecil=$5, b3=$6, pj=$7, jam_kirim=$8, aktif=$9
-      WHERE id=$10 AND sppg_id=$11 RETURNING *`,
-    [nama, jenis, jenjang, besar, kecil, b3, pj, jam_kirim, aktif, id, admin.sppg_id],
+    `UPDATE penerima SET nama=$1, jenis=$2, jenjang=$3, kategori=$4, besar=$5, kecil=$6, b3=$7, pj=$8, jam_kirim=$9, aktif=$10
+      WHERE id=$11 AND sppg_id=$12 RETURNING *`,
+    [nama, jenis, jenjang, kategori, besar, kecil, b3, pj, jam_kirim, aktif, id, admin.sppg_id],
   );
   return ok({ penerima: rows[0] });
 });

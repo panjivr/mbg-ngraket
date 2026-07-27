@@ -70,6 +70,7 @@ export const GET = route(async (req: NextRequest) => {
       jenis: p.jenis,
       nama: p.nama,
       jenjang: p.jenjang,
+      kategori: p.kategori,
       jam_kirim: p.jam_kirim,
       besar: ov ? ov.besar : p.besar,
       kecil: ov ? ov.kecil : p.kecil,
@@ -84,14 +85,20 @@ export const GET = route(async (req: NextRequest) => {
   const h3 = s?.harga_b3 ?? 8000;
   let tBesar = 0,
     tKecil = 0,
-    tB3 = 0;
+    tBalita = 0,
+    tB2 = 0;
   for (const r of baris) {
     if (!r.ikut) continue;
     // PJ (penanggung jawab) dihitung sebagai porsi besar (harga besar 10.000).
     tBesar += r.besar + r.pj;
     tKecil += r.kecil;
-    tB3 += r.b3;
+    if (r.jenis === "b3") {
+      // Balita vs B2 (Bumil+Busui) dipisah agar tidak tercampur.
+      if (r.kategori === "balita") tBalita += r.b3;
+      else tB2 += r.b3;
+    }
   }
+  const tB3 = tBalita + tB2;
   const pagu = tBesar * hb + tKecil * hk + tB3 * h3;
 
   return ok({
@@ -119,6 +126,8 @@ export const GET = route(async (req: NextRequest) => {
     total: {
       besar: tBesar,
       kecil: tKecil,
+      balita: tBalita,
+      b2: tB2,
       b3: tB3,
       porsi: tBesar + tKecil + tB3,
       pagu,

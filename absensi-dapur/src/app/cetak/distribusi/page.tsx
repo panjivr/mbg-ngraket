@@ -9,6 +9,7 @@ interface Baris {
   jenis: "serdik" | "b3";
   nama: string;
   jenjang: string;
+  kategori: "balita" | "b2" | "";
   jam_kirim: string;
   besar: number;
   kecil: number;
@@ -141,11 +142,182 @@ function Inner() {
   const sppg = data.sppg;
   const serdik = data.baris.filter((b) => b.jenis === "serdik" && b.ikut && b.besar + b.kecil > 0);
   const b3 = data.baris.filter((b) => b.jenis === "b3" && b.ikut && b.b3 > 0);
+  // B3 dikirim ke satu tempat → digabung untuk Surat Jalan & Organoleptik.
+  // Porsi dipisah: Balita vs B2 (Bumil + Busui) agar tidak tercampur.
+  const b3Balita = b3.filter((b) => b.kategori === "balita").reduce((a, b) => a + b.b3, 0);
+  const b3B2 = b3.filter((b) => b.kategori !== "balita").reduce((a, b) => a + b.b3, 0);
+  const b3Rows: { kelas: string; porsi: number }[] = [];
+  if (b3Balita > 0) b3Rows.push({ kelas: "Balita", porsi: b3Balita });
+  if (b3B2 > 0) b3Rows.push({ kelas: "B2 (Bumil & Busui)", porsi: b3B2 });
+  const b3Jam = b3[0]?.jam_kirim || "";
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
   const namaSppg = (sppg.nama || "").replace(/^SPPG\s+/i, "");
   const sppgLine = ("SPPG " + namaSppg).toUpperCase();
+
+  // Satu dokumen Surat Jalan (dipakai per sekolah, dan sekali untuk gabungan B3).
+  const suratJalanDoc = (
+    key: string,
+    kepada: string,
+    jam: string,
+    rows: { kelas: string; porsi: number }[],
+    pihak: string,
+  ) => {
+    const totalPorsi = rows.reduce((a, r) => a + r.porsi, 0);
+    const pad = Math.max(0, 5 - rows.length);
+    return (
+      <div key={key} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+        <div className="text-center leading-snug">
+          <p className="text-base font-bold">SURAT JALAN</p>
+          <p className="text-base font-bold">PROGRAM MAKAN BERGIZI GRATIS</p>
+          <p className="text-base font-bold">{sppgLine}</p>
+        </div>
+        <div className="mt-1 border-b-4 border-black" />
+
+        <div className="mt-6 flex justify-between text-sm">
+          <div className="pt-1">Kepada : {kepada}</div>
+          <table className="text-sm">
+            <tbody>
+              <tr><td className="pr-4">Hari / Tanggal</td><td>: {tglSlash(tanggal)}</td></tr>
+              <tr><td className="pr-4">Waktu Pengiriman</td><td>: {jam}</td></tr>
+              <tr><td className="pr-4">Driver</td><td>: {data.distribusi.driver || ""}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <table className="mt-6 w-full border-collapse text-center text-sm">
+          <thead>
+            <tr className="bg-[#dbe5f1]">
+              <th rowSpan={2} className="border border-black px-2 py-1">No</th>
+              <th rowSpan={2} className="border border-black px-2 py-1">Kelas</th>
+              <th rowSpan={2} className="border border-black px-2 py-1">Jumlah<br />Porsi</th>
+              <th colSpan={2} className="border border-black px-2 py-1">Jumlah Packaging</th>
+              <th rowSpan={2} className="border border-black px-2 py-1">Keterangan</th>
+            </tr>
+            <tr className="bg-[#dbe5f1]">
+              <th className="border border-black px-2 py-1">Sebelum</th>
+              <th className="border border-black px-2 py-1">Sesudah</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.kelas}>
+                <td className="border border-black px-2 py-1">{i + 1}</td>
+                <td className="border border-black px-2 py-1">{r.kelas}</td>
+                <td className="border border-black px-2 py-1">{r.porsi}</td>
+                <td className="border border-black px-2 py-1"></td>
+                <td className="border border-black px-2 py-1"></td>
+                <td className="border border-black px-2 py-1"></td>
+              </tr>
+            ))}
+            {Array.from({ length: pad }).map((_, i) => (
+              <tr key={"pad" + i}>
+                <td className="border border-black px-2 py-3"></td>
+                <td className="border border-black"></td>
+                <td className="border border-black"></td>
+                <td className="border border-black"></td>
+                <td className="border border-black"></td>
+                <td className="border border-black"></td>
+              </tr>
+            ))}
+            <tr className="font-bold">
+              <td className="border border-black px-2 py-1" colSpan={2}>Total</td>
+              <td className="border border-black px-2 py-1">{totalPorsi}</td>
+              <td className="border border-black px-2 py-1"></td>
+              <td className="border border-black px-2 py-1"></td>
+              <td className="border border-black px-2 py-1"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="mt-10 text-sm">
+          <div className="flex justify-between">
+            <div className="w-2/3 text-center">Diperiksa Oleh,</div>
+            <div className="w-1/3 text-center">Diterima Oleh,<br />Pihak {pihak},</div>
+          </div>
+          <div className="mt-1 flex">
+            <div className="w-1/3 text-center">Ahli Gizi Dapur,</div>
+            <div className="w-1/3 text-center">Koordinator Lapangan</div>
+            <div className="w-1/3" />
+          </div>
+          <div className="mt-28 flex items-end">
+            <div className="w-1/3 text-center font-bold">{sppg.ahli_gizi || "____________"}</div>
+            <div className="w-1/3 text-center font-bold">{sppg.koordinator || "____________"}</div>
+            <div className="w-1/3 px-2"><div className="border-b border-black" /></div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Satu dokumen Uji Organoleptik (per sekolah, dan sekali untuk gabungan B3).
+  const orgDoc = (key: string, nama: string, isB3: boolean) => {
+    const grup = isB3 ? data.distribusi.menu_posyandu || [] : data.distribusi.menu_sekolah || [];
+    return (
+      <div key={key} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+        <KopBGN />
+        <h2 className="mt-6 text-center text-base font-bold">FORM UJI ORGANOLEPTIK</h2>
+
+        <div className="mt-6 text-sm leading-relaxed">
+          {[
+            { l: <>Hari/Tanggal</>, v: <>{(hari(tanggal) + " " + tglLong(tanggal)).toUpperCase()}</> },
+            { l: isB3 ? <>Nama Posyandu</> : <>Nama Sekolah</>, v: <b>{nama}</b> },
+            { l: <>Asal Sampel</>, v: <b>SPPG {namaSppg}</b> },
+            { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isB3 ? "Posyandu" : "sekolah"})</span></>, v: null },
+            { l: <>Menu</>, v: data.distribusi.menu ? <>{data.distribusi.menu}</> : null },
+            { l: <>Instruksi</>, v: <>Isilah dengan memberi tanda centang (✓) pada Indikator Penilaian Uji Organoleptik</> },
+          ].map((row, i) => (
+            <div key={i} className="flex items-end py-0.5">
+              <div className="w-36 shrink-0">{row.l}</div>
+              <div className="shrink-0 pr-1">:</div>
+              {row.v !== null ? (
+                <div className="flex-1 self-center">{row.v}</div>
+              ) : (
+                <div className="mb-1 flex-1 self-end border-b border-dotted border-black" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <table className="mt-5 w-full border-collapse text-center text-sm">
+          <thead className="font-bold">
+            <tr>
+              <th rowSpan={3} className="border border-black px-2 py-1">No</th>
+              <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "Balita" : "Sampel"})</th>
+              <th colSpan={8} className="border border-black px-2 py-1">Indikator Penilaian</th>
+            </tr>
+            <tr>
+              <th colSpan={2} className="border border-black px-2 py-1">Rasa</th>
+              <th colSpan={2} className="border border-black px-2 py-1">Aroma</th>
+              <th colSpan={2} className="border border-black px-2 py-1">Warna</th>
+              <th colSpan={2} className="border border-black px-2 py-1">Tekstur</th>
+            </tr>
+            <tr className="text-xs font-normal">
+              {["Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik"].map((h, i) => (
+                <th key={i} className="border border-black px-1 py-1">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <OrgTableBody grup={grup} />
+        </table>
+
+        <div className="mt-4 text-sm">
+          <div className="flex items-end"><span className="shrink-0 pr-1">Catatan :</span><span className="mb-1 flex-1 self-end border-b border-dotted border-black" /></div>
+          <div className="mb-1 mt-2 border-b border-dotted border-black" />
+          <div className="mb-1 mt-2 border-b border-dotted border-black" />
+        </div>
+
+        <div className="mt-8 flex justify-end text-center text-sm">
+          <div className="w-64">
+            <p>Diperiksa oleh,</p>
+            <p>Pihak {isB3 ? "Posyandu" : "Sekolah"}</p>
+            <div className="mx-auto mt-20 w-56 border-b border-black" />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white py-6 text-black">
@@ -230,164 +402,16 @@ function Inner() {
         );
       })}
 
-      {/* ===== Surat Jalan per penerima ===== */}
-      {showSJ && [...serdik, ...b3].map((s) => {
-        const rows = kelasRows(s);
-        const totalPorsi = rows.reduce((a, r) => a + r.porsi, 0);
-        const pad = Math.max(0, 5 - rows.length);
-        return (
-          <div key={"sj-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
-            <div className="text-center leading-snug">
-              <p className="text-base font-bold">SURAT JALAN</p>
-              <p className="text-base font-bold">PROGRAM MAKAN BERGIZI GRATIS</p>
-              <p className="text-base font-bold">{sppgLine}</p>
-            </div>
-            <div className="mt-1 border-b-4 border-black" />
+      {/* ===== Surat Jalan: per sekolah (serdik) + SATU gabungan untuk B3 ===== */}
+      {showSJ && serdik.map((s) =>
+        suratJalanDoc("sj-" + s.penerima_id, s.nama, s.jam_kirim || "", kelasRows(s), "Sekolah"),
+      )}
+      {showSJ && b3Rows.length > 0 &&
+        suratJalanDoc("sj-b3", "Posyandu (Semua Desa)", b3Jam, b3Rows, "Posyandu")}
 
-            <div className="mt-6 flex justify-between text-sm">
-              <div className="pt-1">Kepada : {s.nama}</div>
-              <table className="text-sm">
-                <tbody>
-                  <tr><td className="pr-4">Hari / Tanggal</td><td>: {tglSlash(tanggal)}</td></tr>
-                  <tr><td className="pr-4">Waktu Pengiriman</td><td>: {s.jam_kirim || ""}</td></tr>
-                  <tr><td className="pr-4">Driver</td><td>: {data.distribusi.driver || ""}</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <table className="mt-6 w-full border-collapse text-center text-sm">
-              <thead>
-                <tr className="bg-[#dbe5f1]">
-                  <th rowSpan={2} className="border border-black px-2 py-1">No</th>
-                  <th rowSpan={2} className="border border-black px-2 py-1">Kelas</th>
-                  <th rowSpan={2} className="border border-black px-2 py-1">Jumlah<br />Porsi</th>
-                  <th colSpan={2} className="border border-black px-2 py-1">Jumlah Packaging</th>
-                  <th rowSpan={2} className="border border-black px-2 py-1">Keterangan</th>
-                </tr>
-                <tr className="bg-[#dbe5f1]">
-                  <th className="border border-black px-2 py-1">Sebelum</th>
-                  <th className="border border-black px-2 py-1">Sesudah</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={r.kelas}>
-                    <td className="border border-black px-2 py-1">{i + 1}</td>
-                    <td className="border border-black px-2 py-1">{r.kelas}</td>
-                    <td className="border border-black px-2 py-1">{r.porsi}</td>
-                    <td className="border border-black px-2 py-1"></td>
-                    <td className="border border-black px-2 py-1"></td>
-                    <td className="border border-black px-2 py-1"></td>
-                  </tr>
-                ))}
-                {Array.from({ length: pad }).map((_, i) => (
-                  <tr key={"pad" + i}>
-                    <td className="border border-black px-2 py-3"></td>
-                    <td className="border border-black"></td>
-                    <td className="border border-black"></td>
-                    <td className="border border-black"></td>
-                    <td className="border border-black"></td>
-                    <td className="border border-black"></td>
-                  </tr>
-                ))}
-                <tr className="font-bold">
-                  <td className="border border-black px-2 py-1" colSpan={2}>Total</td>
-                  <td className="border border-black px-2 py-1">{totalPorsi}</td>
-                  <td className="border border-black px-2 py-1"></td>
-                  <td className="border border-black px-2 py-1"></td>
-                  <td className="border border-black px-2 py-1"></td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="mt-10 text-sm">
-              <div className="flex justify-between">
-                <div className="w-2/3 text-center">Diperiksa Oleh,</div>
-                <div className="w-1/3 text-center">Diterima Oleh,<br />Pihak {s.jenis === "b3" ? "Posyandu" : "Sekolah"},</div>
-              </div>
-              <div className="mt-1 flex">
-                <div className="w-1/3 text-center">Ahli Gizi Dapur,</div>
-                <div className="w-1/3 text-center">Koordinator Lapangan</div>
-                <div className="w-1/3" />
-              </div>
-              <div className="mt-28 flex items-end">
-                <div className="w-1/3 text-center font-bold">{sppg.ahli_gizi || "____________"}</div>
-                <div className="w-1/3 text-center font-bold">{sppg.koordinator || "____________"}</div>
-                <div className="w-1/3 px-2"><div className="border-b border-black" /></div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* ===== Uji Organoleptik per penerima (sekolah & posyandu) ===== */}
-      {showOrg && [...serdik, ...b3].map((s) => {
-        const isB3 = s.jenis === "b3";
-        const grup = isB3 ? data.distribusi.menu_posyandu || [] : data.distribusi.menu_sekolah || [];
-        return (
-          <div key={"org-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
-            <KopBGN />
-            <h2 className="mt-6 text-center text-base font-bold">FORM UJI ORGANOLEPTIK</h2>
-
-            <div className="mt-6 text-sm leading-relaxed">
-              {[
-                { l: <>Hari/Tanggal</>, v: <>{(hari(tanggal) + " " + tglLong(tanggal)).toUpperCase()}</> },
-                { l: <>Nama Sekolah</>, v: <b>{s.nama}</b> },
-                { l: <>Asal Sampel</>, v: <b>SPPG {namaSppg}</b> },
-                { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isB3 ? "Posyandu" : "sekolah"})</span></>, v: null },
-                { l: <>Menu</>, v: data.distribusi.menu ? <>{data.distribusi.menu}</> : null },
-                { l: <>Instruksi</>, v: <>Isilah dengan memberi tanda centang (✓) pada Indikator Penilaian Uji Organoleptik</> },
-              ].map((row, i) => (
-                <div key={i} className="flex items-end py-0.5">
-                  <div className="w-36 shrink-0">{row.l}</div>
-                  <div className="shrink-0 pr-1">:</div>
-                  {row.v !== null ? (
-                    <div className="flex-1 self-center">{row.v}</div>
-                  ) : (
-                    <div className="mb-1 flex-1 self-end border-b border-dotted border-black" />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <table className="mt-5 w-full border-collapse text-center text-sm">
-              <thead className="font-bold">
-                <tr>
-                  <th rowSpan={3} className="border border-black px-2 py-1">No</th>
-                  <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "Balita" : "Sampel"})</th>
-                  <th colSpan={8} className="border border-black px-2 py-1">Indikator Penilaian</th>
-                </tr>
-                <tr>
-                  <th colSpan={2} className="border border-black px-2 py-1">Rasa</th>
-                  <th colSpan={2} className="border border-black px-2 py-1">Aroma</th>
-                  <th colSpan={2} className="border border-black px-2 py-1">Warna</th>
-                  <th colSpan={2} className="border border-black px-2 py-1">Tekstur</th>
-                </tr>
-                <tr className="text-xs font-normal">
-                  {["Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik", "Baik", "Tidak Baik"].map((h, i) => (
-                    <th key={i} className="border border-black px-1 py-1">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <OrgTableBody grup={grup} />
-            </table>
-
-            <div className="mt-4 text-sm">
-              <div className="flex items-end"><span className="shrink-0 pr-1">Catatan :</span><span className="mb-1 flex-1 self-end border-b border-dotted border-black" /></div>
-              <div className="mb-1 mt-2 border-b border-dotted border-black" />
-              <div className="mb-1 mt-2 border-b border-dotted border-black" />
-            </div>
-
-            <div className="mt-8 flex justify-end text-center text-sm">
-              <div className="w-64">
-                <p>Diperiksa oleh,</p>
-                <p>Pihak {isB3 ? "Posyandu" : "Sekolah"}</p>
-                <div className="mx-auto mt-20 w-56 border-b border-black" />
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {/* ===== Uji Organoleptik: per sekolah (serdik) + SATU gabungan untuk B3 ===== */}
+      {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, false))}
+      {showOrg && b3.length > 0 && orgDoc("org-b3", "Posyandu (Semua Desa)", true)}
 
       {serdik.length === 0 && b3.length === 0 && (
         <p className="p-8 text-center text-gray-600">

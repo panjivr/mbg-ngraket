@@ -8,6 +8,7 @@ interface Penerima {
   jenis: "serdik" | "b3";
   nama: string;
   jenjang: string;
+  kategori: "balita" | "b2" | "";
   besar: number;
   kecil: number;
   b3: number;
@@ -18,7 +19,7 @@ interface Penerima {
 type Form = Omit<Penerima, "id"> & { id: number | null };
 
 const empty: Form = {
-  id: null, jenis: "serdik", nama: "", jenjang: "SD/MI",
+  id: null, jenis: "serdik", nama: "", jenjang: "SD/MI", kategori: "",
   besar: 0, kecil: 0, b3: 0, pj: 0, jam_kirim: "07:00", aktif: true,
 };
 
@@ -121,7 +122,14 @@ export default function PenerimaPage() {
                     <tr className="bg-white/5"><td colSpan={8} className="px-3 py-1.5 text-xs font-semibold text-gold-400">{jenjang}</td></tr>
                     {rows.map((p) => (
                       <tr key={p.id} className="border-b border-white/5">
-                        <td className="px-3 py-1.5 font-medium">{p.nama}</td>
+                        <td className="px-3 py-1.5 font-medium">
+                          {p.nama}
+                          {p.jenis === "b3" && (
+                            <span className={"badge ml-2 " + (p.kategori === "balita" ? "bg-amber-500/15 text-amber-300" : "bg-orange-500/15 text-orange-300")}>
+                              {p.kategori === "balita" ? "Balita" : "B2"}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-1.5 text-slate-400">{p.jam_kirim}</td>
                         <td className="px-3 py-1.5">{p.besar}</td>
                         <td className="px-3 py-1.5">{p.kecil}</td>
@@ -157,13 +165,27 @@ export default function PenerimaPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Jenis</label>
-                  <select className="input" value={form.jenis} onChange={(e) => setForm({ ...form, jenis: e.target.value === "b3" ? "b3" : "serdik" })}>
+                  <select className="input" value={form.jenis} onChange={(e) => {
+                    const jenis = e.target.value === "b3" ? "b3" : "serdik";
+                    setForm({ ...form, jenis, kategori: jenis === "b3" ? (form.kategori || "balita") : "" });
+                  }}>
                     <option value="serdik">SERDIK (Sekolah)</option>
                     <option value="b3">B3 (Posyandu)</option>
                   </select>
                 </div>
                 <div><label className="label">Jenjang</label><input className="input" value={form.jenjang} onChange={(e) => setForm({ ...form, jenjang: e.target.value })} placeholder="SD/MI, POSYANDU…" /></div>
               </div>
+              {form.jenis === "b3" && (
+                <div>
+                  <label className="label">Kategori B3</label>
+                  <select className="input" value={form.kategori || "balita"}
+                    onChange={(e) => setForm({ ...form, kategori: e.target.value === "b2" ? "b2" : "balita" })}>
+                    <option value="balita">Balita</option>
+                    <option value="b2">B2 (Bumil &amp; Busui)</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">Menentukan porsi masuk hitungan Balita atau B2 — tidak tercampur.</p>
+                </div>
+              )}
               <div className="grid grid-cols-4 gap-2">
                 <div><label className="label">Besar</label><input type="number" min={0} className="input" value={form.besar} onChange={(e) => setForm({ ...form, besar: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
                 <div><label className="label">Kecil</label><input type="number" min={0} className="input" value={form.kecil} onChange={(e) => setForm({ ...form, kecil: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
