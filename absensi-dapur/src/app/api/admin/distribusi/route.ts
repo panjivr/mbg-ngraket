@@ -37,6 +37,9 @@ export const GET = route(async (req: NextRequest) => {
   const tz = s?.tz || "Asia/Jakarta";
   const sp = req.nextUrl.searchParams;
   const tanggal = DATE_RE.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : localDate(tz);
+  // ?master=1 → abaikan snapshot porsi harian, pakai nilai master Data Penerima
+  // (dipakai tombol "Muat dari Master" untuk sinkron ulang porsi).
+  const useMaster = sp.get("master") === "1";
 
   const penerima = await query<Penerima>(
     `SELECT * FROM penerima WHERE sppg_id = $1 AND aktif = TRUE ORDER BY urutan ASC, id ASC`,
@@ -64,7 +67,7 @@ export const GET = route(async (req: NextRequest) => {
   }
 
   const baris: DistribusiBaris[] = penerima.map((p) => {
-    const ov = itemMap.get(p.id);
+    const ov = useMaster ? undefined : itemMap.get(p.id);
     return {
       penerima_id: p.id,
       jenis: p.jenis,

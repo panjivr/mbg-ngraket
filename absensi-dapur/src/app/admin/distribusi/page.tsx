@@ -150,6 +150,20 @@ export default function DistribusiPage() {
     finally { setSaving(false); }
   }
 
+  async function muatMaster() {
+    if (!confirm("Muat ulang porsi Besar/Kecil/B3 semua penerima dari Data Penerima?\nPorsi hari ini akan diganti dengan angka master (balita/bumil/busui ikut). Klik Simpan setelahnya.")) return;
+    setLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/distribusi?tanggal=${tanggal}&master=1`, { cache: "no-store" });
+      const d: DistData = await res.json();
+      setBaris(d.baris || []);
+      setMsg("↻ Porsi dimuat dari Data Penerima. Periksa lalu klik Simpan.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function bukaSetel() {
     const res = await fetch("/api/admin/distribusi/pengaturan", { cache: "no-store" });
     const d = await res.json();
@@ -189,6 +203,7 @@ export default function DistribusiPage() {
         <div className="flex flex-wrap items-center gap-2">
           <input type="date" className="input" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
           <Link href="/admin/distribusi/penerima" className="btn-ghost">🏫 Data Penerima</Link>
+          <button onClick={muatMaster} className="btn-ghost">↻ Muat dari Master</button>
           <button onClick={bukaSetel} className="btn-ghost">⚙️ Harga & Kepala</button>
         </div>
       </div>
