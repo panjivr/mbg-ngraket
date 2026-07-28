@@ -125,6 +125,34 @@ export default function PegawaiPage() {
     }
   }
 
+  function exportCsv() {
+    const esc = (v: string | number | boolean | null) =>
+      `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = [
+      "Nama", "Username", "Peran", "Jabatan", "NIP", "Divisi",
+      "Jenis Kelamin", "Tempat Lahir", "Tanggal Lahir", "Status",
+      "Sopir", "HR", "Akses Distribusi", "Akses Laporan", "Akses Gudang Keluar",
+    ];
+    const body = list.map((e) =>
+      [
+        e.nama, e.username, e.role === "admin" ? "Admin" : "Staf",
+        e.jabatan || "", e.nip || "", e.divisi_nama || "",
+        e.jenis_kelamin || "", e.tempat_lahir || "", e.tanggal_lahir || "",
+        e.aktif ? "Aktif" : "Nonaktif",
+        e.is_driver ? "Ya" : "", e.is_hr ? "Ya" : "",
+        e.akses_distribusi ? "Ya" : "", e.akses_laporan ? "Ya" : "",
+        e.akses_gudang_keluar ? "Ya" : "",
+      ].map(esc).join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `data-pegawai-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function openKartu(e: Employee) {
     setKartuOpen(true);
     setKartu(null);
@@ -284,6 +312,14 @@ export default function PegawaiPage() {
             title="Lengkapi tanggal & tempat lahir akun yang sudah ada dari data PDF"
           >
             {importBusy ? "Mengimpor…" : "📥 Impor Tgl Lahir (PDF)"}
+          </button>
+          <button
+            onClick={exportCsv}
+            disabled={list.length === 0}
+            className="btn-ghost"
+            title="Unduh seluruh data pegawai sebagai CSV (buka di Excel)"
+          >
+            ⬇️ Ekspor CSV
           </button>
           <button onClick={openNew} className="btn-gold">
             + Tambah Pegawai
