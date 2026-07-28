@@ -69,7 +69,7 @@ const kategoriFitur = [
 const PORTAL_BGN = "https://www.bgn.go.id";
 
 // Ganti dengan nomor WhatsApp bisnis kamu (format internasional tanpa "+").
-const KONTAK_WA = "6281234567890";
+const KONTAK_WA = "6285157503744";
 const PESAN_WA =
   "Halo, saya tertarik memakai aplikasi manajemen dapur MBG untuk dapur kami. Boleh minta info & penawaran?";
 const WA_LINK = `https://wa.me/${KONTAK_WA}?text=${encodeURIComponent(PESAN_WA)}`;
