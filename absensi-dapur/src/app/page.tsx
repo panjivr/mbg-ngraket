@@ -68,6 +68,70 @@ const kategoriFitur = [
 
 const PORTAL_BGN = "https://www.bgn.go.id";
 
+// Ganti dengan nomor WhatsApp bisnis kamu (format internasional tanpa "+").
+const KONTAK_WA = "6281234567890";
+const PESAN_WA =
+  "Halo, saya tertarik memakai aplikasi manajemen dapur MBG untuk dapur kami. Boleh minta info & penawaran?";
+const WA_LINK = `https://wa.me/${KONTAK_WA}?text=${encodeURIComponent(PESAN_WA)}`;
+
+const statistik = [
+  { angka: "6", label: "Modul Terintegrasi" },
+  { angka: "20+", label: "Fitur Siap Pakai" },
+  { angka: "∞", label: "Dapur & Cabang" },
+  { angka: "24/7", label: "Akses Cloud" },
+];
+
+const keunggulan = [
+  {
+    icon: "⏱️",
+    judul: "Hemat Waktu Admin",
+    teks: "Rekap absensi, dokumen distribusi, dan daftar belanja dibuat otomatis. Pekerjaan berjam-jam jadi hitungan menit.",
+  },
+  {
+    icon: "🧾",
+    judul: "Dokumen Siap Cetak",
+    teks: "BAST, Surat Jalan, dan Uji Organoleptik langsung berkop resmi & rapi — tinggal cetak dan tanda tangan.",
+  },
+  {
+    icon: "📈",
+    judul: "Transparan & Akuntabel",
+    teks: "Kehadiran, distribusi, dan biaya tercatat digital. Mudah diaudit dan dipertanggungjawabkan.",
+  },
+  {
+    icon: "🌐",
+    judul: "Siap Multi-Dapur",
+    teks: "Kelola satu atau banyak dapur SPPG dari satu akun. Tumbuh tanpa perlu ganti sistem.",
+  },
+  {
+    icon: "🔒",
+    judul: "Aman & Andal",
+    teks: "Data terenkripsi, sesi JWT, hak akses per peran, berjalan di infrastruktur cloud modern.",
+  },
+  {
+    icon: "🤝",
+    judul: "Tanpa Ribet Setup",
+    teks: "Kami bantu pasang, migrasi data, dan latih tim. Anda tinggal pakai dan fokus ke dapur.",
+  },
+];
+
+const langkah = [
+  {
+    no: "1",
+    judul: "Hubungi & Konsultasi",
+    teks: "Ceritakan kebutuhan dapur Anda lewat WhatsApp. Kami bantu tentukan paket yang paling pas.",
+  },
+  {
+    no: "2",
+    judul: "Setup & Migrasi Data",
+    teks: "Kami siapkan akun, sesuaikan data penerima & menu, lalu selaraskan dengan alur kerja dapur Anda.",
+  },
+  {
+    no: "3",
+    judul: "Latih Tim & Jalan",
+    teks: "Pelatihan singkat untuk staf dan admin. Dapur Anda langsung beroperasi secara digital.",
+  },
+];
+
 const berita = [
   {
     tag: "Program",
@@ -146,6 +210,14 @@ export default function Home() {
     <main className="relative mx-auto flex min-h-dvh max-w-6xl flex-col px-5 py-7">
       {/* aksen garis emas khas dokumen resmi */}
       <div className="pointer-events-none fixed inset-x-0 top-0 h-1 bg-gradient-to-r from-emas-500 via-gold-500 to-emas-500" />
+      {/* cahaya dekoratif latar */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(700px 350px at 15% -5%, rgba(224,169,46,0.16), transparent 60%), radial-gradient(600px 300px at 100% 10%, rgba(214,120,40,0.12), transparent 60%)",
+        }}
+      />
 
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -165,43 +237,60 @@ export default function Home() {
       <section className="mt-14 flex flex-1 flex-col items-start justify-center sm:mt-20">
         <BgnLogo size={88} className="mb-6" />
         <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
-          ★ Program Makan Bergizi Gratis · Republik Indonesia
+          ★ Solusi Digital untuk Dapur SPPG · Program MBG
         </span>
         <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl">
-          Sistem Manajemen{" "}
+          Digitalkan Seluruh{" "}
           <span className="bg-gradient-to-r from-gold-400 to-ember-400 bg-clip-text text-transparent">
             Operasional Dapur
           </span>{" "}
-          Badan Gizi Nasional
+          MBG Anda
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          Satu aplikasi untuk seluruh operasional dapur MBG: absensi wajah &amp;
-          GPS, distribusi porsi dengan dokumen resmi, menu &amp; belanja ber-HPP,
-          laporan harian, gudang, hingga penggajian. Cepat untuk staf, transparan
-          untuk admin.
+          Satu aplikasi untuk absensi wajah &amp; GPS, distribusi porsi dengan
+          dokumen resmi, menu &amp; belanja ber-HPP, laporan harian, gudang,
+          hingga penggajian. Hemat waktu admin, rapi, dan transparan — siap pakai
+          untuk dapur Anda.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/login" className="btn-gold px-6 py-3 text-base">
-            Mulai Absen →
-          </Link>
-          <a href="#fitur" className="btn-ghost px-6 py-3 text-base">
-            Lihat Fitur
+          <a
+            href={WA_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-gold px-6 py-3 text-base"
+          >
+            💬 Pesan untuk Dapur Anda
           </a>
+          <Link href="/login" className="btn-ghost px-6 py-3 text-base">
+            Coba Masuk Demo →
+          </Link>
         </div>
 
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-slate-400">
           <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" /> Sesi aman JWT
-            + cookie httpOnly
+            <span className="h-2 w-2 rounded-full bg-emerald-400" /> Berbasis
+            cloud, akses dari mana saja
           </span>
           <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-gold-400" /> HTTPS &
-            kamera/GPS aktif otomatis
+            <span className="h-2 w-2 rounded-full bg-gold-400" /> Data aman —
+            enkripsi &amp; sesi JWT
           </span>
           <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emas-400" /> Peran Admin &
-            Staf terpisah
+            <span className="h-2 w-2 rounded-full bg-emas-400" /> Setup dibantu
+            sampai jalan
           </span>
+        </div>
+
+        {/* Statistik ringkas */}
+        <div className="mt-12 grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+          {statistik.map((s) => (
+            <div key={s.label} className="card p-4 text-center">
+              <p className="bg-gradient-to-r from-gold-300 to-ember-400 bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl">
+                {s.angka}
+              </p>
+              <p className="mt-1 text-xs text-slate-400">{s.label}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -246,6 +335,97 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Kenapa memilih kami */}
+      <section className="mt-20">
+        <div className="text-center">
+          <span className="badge border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
+            ✓ Kenapa Memilih Kami
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Dibuat Khusus untuk Alur Kerja Dapur MBG
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Bukan aplikasi umum yang dipaksakan — setiap fitur mengikuti cara
+            kerja dapur SPPG sehari-hari.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {keunggulan.map((k) => (
+            <div key={k.judul} className="card p-5 transition hover:border-gold-500/40">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500/15 text-2xl">
+                {k.icon}
+              </div>
+              <h3 className="mt-3 text-base font-bold">{k.judul}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-300">{k.teks}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Cara mulai */}
+      <section className="mt-20">
+        <div className="text-center">
+          <span className="badge border border-sky-500/30 bg-sky-500/10 text-sky-300">
+            🚀 Cara Mulai
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Dapur Anda Digital dalam 3 Langkah
+          </h2>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {langkah.map((l) => (
+            <div key={l.no} className="card relative p-6">
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-gold-400 to-ember-400 text-xl font-extrabold text-black">
+                {l.no}
+              </div>
+              <h3 className="mt-4 text-lg font-bold">{l.judul}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-300">{l.teks}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA penutup */}
+      <section className="mt-20">
+        <div className="card relative overflow-hidden p-8 text-center sm:p-12">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                "radial-gradient(600px 260px at 50% -20%, rgba(224,169,46,0.5), transparent 70%)",
+            }}
+          />
+          <div className="relative">
+            <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
+              💛 Siap Digitalkan Dapur Anda?
+            </span>
+            <h2 className="mx-auto mt-3 max-w-2xl text-2xl font-extrabold leading-tight sm:text-4xl">
+              Tinggalkan Kertas &amp; Excel.{" "}
+              <span className="bg-gradient-to-r from-gold-300 to-ember-400 bg-clip-text text-transparent">
+                Kelola Dapur dari Satu Layar.
+              </span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-slate-300">
+              Konsultasi gratis. Ceritakan kebutuhan dapur Anda dan kami bantu
+              siapkan sistemnya — dari setup, migrasi data, sampai pelatihan tim.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a
+                href={WA_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold px-7 py-3 text-base"
+              >
+                💬 Chat via WhatsApp
+              </a>
+              <a href="#fitur" className="btn-ghost px-7 py-3 text-base">
+                Lihat Semua Fitur
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -344,9 +524,22 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} Absensi Dapur · Program Makan Bergizi Gratis
-        — Badan Gizi Nasional. Sistem internal operasional dapur.
+      <footer className="mt-16 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
+        <p>
+          Ingin sistem serupa untuk dapur Anda?{" "}
+          <a
+            href={WA_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-gold-400 underline underline-offset-2 hover:text-gold-300"
+          >
+            Hubungi kami via WhatsApp →
+          </a>
+        </p>
+        <p className="mt-3">
+          © {new Date().getFullYear()} Sistem Manajemen Dapur MBG · Mendukung
+          Program Makan Bergizi Gratis.
+        </p>
       </footer>
     </main>
   );
