@@ -207,9 +207,9 @@ const berita = [
 
 export default function Home() {
   return (
-    <main className="relative mx-auto flex min-h-dvh max-w-6xl flex-col px-5 py-7">
+    <div id="atas" className="relative min-h-dvh scroll-mt-24">
       {/* aksen garis emas khas dokumen resmi */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-1 bg-gradient-to-r from-emas-500 via-gold-500 to-emas-500" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-40 h-1 bg-gradient-to-r from-emas-500 via-gold-500 to-emas-500" />
       {/* cahaya dekoratif latar */}
       <div
         className="pointer-events-none fixed inset-0 -z-10"
@@ -219,22 +219,32 @@ export default function Home() {
         }}
       />
 
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BgnLogo size={48} />
-          <div className="leading-tight">
-            <p className="text-sm font-bold tracking-wide">ABSENSI DAPUR MBG</p>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-              Badan Gizi Nasional
-            </p>
+      {/* Navigasi atas — sticky, kaca, profesional */}
+      <header className="sticky top-0 z-30 border-b border-white/5 bg-ink-950/70 backdrop-blur-md">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+          <a href="#atas" className="flex items-center gap-2.5">
+            <BgnLogo size={40} />
+            <span className="leading-tight">
+              <span className="block text-sm font-bold tracking-wide">SISTEM DAPUR MBG</span>
+              <span className="block text-[10px] uppercase tracking-[0.18em] text-slate-400">
+                Badan Gizi Nasional
+              </span>
+            </span>
+          </a>
+          <div className="hidden items-center gap-0.5 text-sm md:flex">
+            <a href="#fitur" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Fitur</a>
+            <a href="#keunggulan" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Keunggulan</a>
+            <a href="#cara" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Cara Mulai</a>
+            <a href="#berita" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Berita</a>
           </div>
-        </div>
-        <Link href="/login" className="btn-gold px-5">
-          Masuk
-        </Link>
+          <Link href="/login" className="btn-gold px-5">
+            Masuk
+          </Link>
+        </nav>
       </header>
 
-      <section className="mt-14 flex flex-1 flex-col items-start justify-center sm:mt-20">
+      <main className="relative mx-auto flex max-w-6xl flex-col px-5 pb-7">
+      <section className="mt-10 flex flex-1 flex-col items-start justify-center sm:mt-16">
         <BgnLogo size={88} className="mb-6" />
         <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
           ★ Solusi Digital untuk Dapur SPPG · Program MBG
@@ -294,7 +304,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="fitur" className="mt-16">
+      <section id="fitur" className="mt-16 scroll-mt-24">
         <div className="text-center">
           <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">
             ⚡ Fitur Lengkap
@@ -339,7 +349,7 @@ export default function Home() {
       </section>
 
       {/* Kenapa memilih kami */}
-      <section className="mt-20">
+      <section id="keunggulan" className="mt-20 scroll-mt-24">
         <div className="text-center">
           <span className="badge border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
             ✓ Kenapa Memilih Kami
@@ -366,7 +376,7 @@ export default function Home() {
       </section>
 
       {/* Cara mulai */}
-      <section className="mt-20">
+      <section id="cara" className="mt-20 scroll-mt-24">
         <div className="text-center">
           <span className="badge border border-sky-500/30 bg-sky-500/10 text-sky-300">
             🚀 Cara Mulai
@@ -430,7 +440,7 @@ export default function Home() {
       </section>
 
       {/* Berita & informasi BGN */}
-      <section id="berita" className="mt-16">
+      <section id="berita" className="mt-16 scroll-mt-24">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
@@ -541,6 +551,7 @@ export default function Home() {
           Program Makan Bergizi Gratis.
         </p>
       </footer>
-    </main>
+      </main>
+    </div>
   );
 }
