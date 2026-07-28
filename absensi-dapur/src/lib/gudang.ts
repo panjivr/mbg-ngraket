@@ -1,6 +1,15 @@
 // Tipe untuk fitur Gudang / Stok Opname.
 
-export type Kategori = "operasional" | "bahan_baku" | "packaging";
+export type Kategori =
+  | "bahan_kering"
+  | "bumbu_rempah"
+  | "olahan_dasar"
+  | "fermentasi"
+  | "protein_hewani"
+  | "susu_olahan"
+  | "bahan_baku"
+  | "operasional"
+  | "packaging";
 export type TipeMutasi = "masuk" | "keluar" | "opname";
 
 export interface Barang {
@@ -29,14 +38,31 @@ export interface Mutasi {
 }
 
 export const KATEGORI_LABEL: Record<Kategori, string> = {
-  operasional: "Operasional",
-  bahan_baku: "Bahan Baku",
-  packaging: "Packaging",
+  bahan_kering: "Bahan Kering (minyak, tepung, gula)",
+  bumbu_rempah: "Bumbu & Rempah (garam, kunyit, bawang, kecap, saus)",
+  olahan_dasar: "Produk Olahan Dasar (perisa, pasta, agar, essence, pewarna)",
+  fermentasi: "Bahan Fermentasi/Pelengkap (baking powder, terasi, SP)",
+  protein_hewani: "Protein Hewani (telur)",
+  susu_olahan: "Susu & Olahannya (SKM, keju, margarin)",
+  bahan_baku: "Bahan Baku (lainnya)",
+  operasional: "Operasional (plastik, hair net, dll)",
+  packaging: "Packaging (ompreng, kotak nasi, dll)",
 };
-export const KATEGORI_LIST: Kategori[] = ["operasional", "bahan_baku", "packaging"];
-/** Normalkan input kategori ke nilai valid (default operasional). */
+export const KATEGORI_LIST: Kategori[] = [
+  "bahan_kering",
+  "bumbu_rempah",
+  "olahan_dasar",
+  "fermentasi",
+  "protein_hewani",
+  "susu_olahan",
+  "bahan_baku",
+  "operasional",
+  "packaging",
+];
+const KATEGORI_SET = new Set<string>(KATEGORI_LIST);
+/** Normalkan input kategori ke nilai valid (default bahan_baku). */
 export function normalizeKategori(v: unknown): Kategori {
-  return v === "bahan_baku" || v === "packaging" ? v : "operasional";
+  return typeof v === "string" && KATEGORI_SET.has(v) ? (v as Kategori) : "bahan_baku";
 }
 export const TIPE_LABEL: Record<TipeMutasi, string> = {
   masuk: "Masuk (pembelian)",
