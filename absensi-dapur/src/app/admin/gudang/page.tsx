@@ -12,7 +12,7 @@ function jakartaToday(): string {
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
 
 type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; catatan: string; aktif: boolean };
-const emptyB: BForm = { id: null, nama: "", kategori: "operasional", satuan: "pcs", stok_min: 0, catatan: "", aktif: true };
+const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, catatan: "", aktif: true };
 type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: number; keterangan: string; tanggal: string };
 
 const STATUS_BADGE: Record<string, string> = {
