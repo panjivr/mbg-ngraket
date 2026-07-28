@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28f.hpp-harga-pasar";
+const SCHEMA_VERSION = "2026-07-28g.jadwal-belanja";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -590,6 +590,34 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS harga NUMERIC NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS pasar_ref TEXT NOT NULL DEFAULT ''`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_bahan_menu ON menu_bahan (menu_id)`);
+
+    // Jadwal menu per tanggal (siklus/periode): tempel menu Bank Menu ke tanggal,
+    // dipisah sasaran 'reguler' (Besar+Kecil) vs 'b3' (Balita/Bumil/Busui).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS jadwal_menu (
+        id        SERIAL PRIMARY KEY,
+        sppg_id   INTEGER NOT NULL REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal   DATE NOT NULL,
+        sasaran   TEXT NOT NULL DEFAULT 'reguler',
+        menu_id   INTEGER NOT NULL REFERENCES menu(id) ON DELETE CASCADE,
+        urutan    INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (sppg_id, tanggal, sasaran, menu_id)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_jadwal_menu_sppg_tgl ON jadwal_menu (sppg_id, tanggal)`);
+    // Override jumlah porsi per tanggal (default = SUM penerima terdaftar bila baris tak ada).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS jadwal_porsi (
+        id        SERIAL PRIMARY KEY,
+        sppg_id   INTEGER NOT NULL REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal   DATE NOT NULL,
+        besar     INTEGER NOT NULL DEFAULT 0,
+        kecil     INTEGER NOT NULL DEFAULT 0,
+        b3        INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (sppg_id, tanggal)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_jadwal_porsi_sppg_tgl ON jadwal_porsi (sppg_id, tanggal)`);
 
     // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===
 
