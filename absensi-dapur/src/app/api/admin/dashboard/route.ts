@@ -45,7 +45,7 @@ export const GET = route(async () => {
               COUNT(*) FILTER (WHERE stok <= 0)::text AS habis,
               COUNT(*) FILTER (WHERE stok > 0 AND stok <= stok_min)::text AS menipis,
               COUNT(*) FILTER (WHERE stok > stok_min)::text AS aman
-         FROM barang WHERE sppg_id = $1`,
+         FROM barang WHERE sppg_id = $1 AND aktif`,
       [admin.sppg_id],
     ),
     query<{ menu: string }>(`SELECT menu FROM distribusi WHERE sppg_id = $1 AND tanggal = $2`, [admin.sppg_id, tanggal]),
