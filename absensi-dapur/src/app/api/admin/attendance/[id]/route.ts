@@ -119,6 +119,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
         }
       }
     }
+    // Jaga konsistensi walau hanya jam_masuk yang diubah: pulang harus > masuk.
+    if (newCheckOut && newCheckOut.getTime() <= newCheckIn.getTime()) {
+      return fail(409, "Jam pulang harus setelah jam masuk.");
+    }
 
     const status = statusMasukShift(
       newCheckIn,

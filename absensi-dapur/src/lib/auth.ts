@@ -25,22 +25,27 @@ export interface SessionData {
 }
 
 function secretKey(): Uint8Array {
-  const secret =
-    process.env.AUTH_SECRET ||
-    (process.env.NODE_ENV !== "production"
-      ? "dev-secret-change-me-please-32chars-min"
-      : "");
-  if (!secret) {
-    // Stable fallback so the app never crashes if AUTH_SECRET is missing in
-    // production; sessions reset if it later changes. Set AUTH_SECRET to fix.
-    console.warn(
-      "[absensi] AUTH_SECRET tidak diset — memakai kunci fallback. Set AUTH_SECRET di Vercel.",
-    );
-    return new TextEncoder().encode(
-      "absensi-dapur-fallback-key-please-set-AUTH_SECRET",
-    );
+  if (process.env.AUTH_SECRET) {
+    return new TextEncoder().encode(process.env.AUTH_SECRET);
   }
-  return new TextEncoder().encode(secret);
+  // Tanpa AUTH_SECRET: turunkan kunci dari DATABASE_URL (rahasia & stabil antar
+  // deploy) agar token TIDAK bisa dipalsukan dengan konstanta publik, tanpa
+  // memaksa downtime. Set AUTH_SECRET di Vercel untuk kunci khusus.
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    "";
+  if (dbUrl) {
+    console.warn(
+      "[absensi] AUTH_SECRET tidak diset — memakai kunci turunan dari DATABASE_URL. Set AUTH_SECRET di Vercel.",
+    );
+    return new TextEncoder().encode("absensi-dapur::v1::" + dbUrl);
+  }
+  if (process.env.NODE_ENV !== "production") {
+    return new TextEncoder().encode("dev-secret-change-me-please-32chars-min");
+  }
+  throw new Error("AUTH_SECRET (atau DATABASE_URL) wajib diset di produksi.");
 }
 
 export async function signSession(data: SessionData): Promise<string> {

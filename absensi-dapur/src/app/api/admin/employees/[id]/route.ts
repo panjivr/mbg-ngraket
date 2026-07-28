@@ -101,8 +101,12 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     body.akses_laporan !== undefined ? Boolean(body.akses_laporan) : (existing.akses_laporan ?? false);
   const akses_gudang_keluar =
     body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
+  // Peran HR hanya boleh diberikan/dicabut oleh super admin (pemilik), bukan
+  // admin biasa — menegakkan batas "admin biasa pun tidak cukup".
   const is_hr =
-    body.is_hr !== undefined ? Boolean(body.is_hr) : (existing.is_hr ?? false);
+    admin.is_super && body.is_hr !== undefined
+      ? Boolean(body.is_hr)
+      : (existing.is_hr ?? false);
 
   let passwordClause = "";
   const paramsArr: unknown[] = [
@@ -165,11 +169,11 @@ export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
   if (target.role === "admin") {
     const otherAdmins = await query<{ c: string }>(
       `SELECT COUNT(*)::text AS c FROM users
-        WHERE role = 'admin' AND id <> $1 AND sppg_id = $2`,
+        WHERE role = 'admin' AND aktif = TRUE AND id <> $1 AND sppg_id = $2`,
       [id, admin.sppg_id],
     );
     if (Number(otherAdmins[0].c) === 0) {
-      return fail(409, "Tidak bisa menghapus admin terakhir.");
+      return fail(409, "Tidak bisa menghapus admin aktif terakhir.");
     }
   }
 

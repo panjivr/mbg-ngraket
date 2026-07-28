@@ -54,7 +54,14 @@ export const POST = route(async (req: NextRequest) => {
       let stokBaru = cur.stok;
       let keterangan = keteranganIn;
       if (tipe === "masuk") stokBaru = cur.stok + jumlah;
-      else if (tipe === "keluar") stokBaru = Math.max(0, cur.stok - jumlah);
+      else if (tipe === "keluar") {
+        // Tolak bila keluar melebihi stok — jangan diam-diam clamp ke 0.
+        if (jumlah > cur.stok) {
+          await client.query("ROLLBACK");
+          return { insufficient: true, stok: cur.stok, nama: cur.nama };
+        }
+        stokBaru = cur.stok - jumlah;
+      }
       else {
         // opname: jumlah = hasil hitung fisik; catat selisihnya.
         stokBaru = jumlah;
@@ -78,5 +85,8 @@ export const POST = route(async (req: NextRequest) => {
   });
 
   if (!result) return fail(404, "Barang tidak ditemukan.");
+  if ("insufficient" in result) {
+    return fail(400, `Stok tidak cukup. Sisa ${result.stok} ${result.nama}.`);
+  }
   return ok({ ok: true, stok: result.stok });
 });
