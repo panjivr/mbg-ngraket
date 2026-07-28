@@ -38,15 +38,27 @@ export interface Mutasi {
 }
 
 export const KATEGORI_LABEL: Record<Kategori, string> = {
-  bahan_kering: "Bahan Kering (minyak, tepung, gula)",
-  bumbu_rempah: "Bumbu & Rempah (garam, kunyit, bawang, kecap, saus)",
-  olahan_dasar: "Produk Olahan Dasar (perisa, pasta, agar, essence, pewarna)",
-  fermentasi: "Bahan Fermentasi/Pelengkap (baking powder, terasi, SP)",
-  protein_hewani: "Protein Hewani (telur)",
-  susu_olahan: "Susu & Olahannya (SKM, keju, margarin)",
-  bahan_baku: "Bahan Baku (lainnya)",
-  operasional: "Operasional (plastik, hair net, dll)",
-  packaging: "Packaging (ompreng, kotak nasi, dll)",
+  bahan_kering: "Bahan Kering",
+  bumbu_rempah: "Bumbu & Rempah",
+  olahan_dasar: "Produk Olahan Dasar",
+  fermentasi: "Bahan Fermentasi/Pelengkap",
+  protein_hewani: "Protein Hewani",
+  susu_olahan: "Susu & Olahannya",
+  bahan_baku: "Bahan Baku Lainnya",
+  operasional: "Operasional",
+  packaging: "Packaging",
+};
+/** Contoh isi tiap kategori — ditampilkan saat diklik (info), bukan di label. */
+export const KATEGORI_INFO: Record<Kategori, string> = {
+  bahan_kering: "minyak, tepung, gula",
+  bumbu_rempah: "garam, kunyit bubuk, bawang, kecap, saus",
+  olahan_dasar: "perisa, pasta, agar-agar, essence, pewarna",
+  fermentasi: "baking powder, terasi, SP",
+  protein_hewani: "telur",
+  susu_olahan: "SKM, keju, margarin",
+  bahan_baku: "kategori umum untuk data lama",
+  operasional: "plastik, hair net, sarung tangan, dll",
+  packaging: "ompreng, kotak nasi, sendok plastik, dll",
 };
 export const KATEGORI_LIST: Kategori[] = [
   "bahan_kering",
