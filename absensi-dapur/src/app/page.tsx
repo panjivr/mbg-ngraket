@@ -1,26 +1,68 @@
 import Link from "next/link";
 import BgnLogo from "@/components/BgnLogo";
 
-const fitur = [
+const kategoriFitur = [
   {
-    judul: "Verifikasi Wajah + Lokasi",
-    teks: "Clock in & clock out dengan foto wajah langsung dari kamera dan validasi titik lokasi (GPS geofence) area dapur.",
-    icon: "📸",
-  },
-  {
-    judul: "Shift per Divisi",
-    teks: "Setiap divisi punya jam kerja sendiri — termasuk shift malam lintas hari (mis. 22:00–08:00).",
-    icon: "🗂️",
-  },
-  {
-    judul: "Berbasis Jam, Bukan Hari",
-    teks: "Absensi dihitung per shift, bukan per tanggal, sehingga shift yang melewati tengah malam tetap akurat.",
+    tag: "Absensi & Kehadiran",
     icon: "🕒",
+    warna: "border-gold-500/30 bg-gold-500/10 text-gold-300",
+    items: [
+      { icon: "📸", judul: "Verifikasi Wajah + GPS", teks: "Clock in & out dengan foto wajah langsung dari kamera dan validasi titik lokasi (geofence) area dapur." },
+      { icon: "🗂️", judul: "Shift per Divisi", teks: "Tiap divisi punya jam kerja sendiri — termasuk shift malam lintas hari (mis. 22:00–08:00)." },
+      { icon: "⏱️", judul: "Berbasis Jam, Bukan Hari", teks: "Absensi dihitung per shift, bukan per tanggal, sehingga shift lewat tengah malam tetap akurat." },
+      { icon: "📊", judul: "Rekap & Ekspor", teks: "Pantau kehadiran real-time, status tepat waktu/terlambat, unduh rekap ke Excel/CSV/PDF." },
+    ],
   },
   {
-    judul: "Rekap & Ekspor",
-    teks: "Admin memantau kehadiran real-time, status tepat waktu/terlambat, dan mengunduh rekap ke Excel/CSV/PDF.",
-    icon: "📊",
+    tag: "Distribusi & Dokumen Resmi",
+    icon: "🚚",
+    warna: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+    items: [
+      { icon: "🚚", judul: "Distribusi Harian", teks: "Atur porsi Besar/Kecil/B3 tiap penerima per hari, dengan checklist penerima yang ikut hari itu." },
+      { icon: "🏫", judul: "Data Penerima", teks: "Master sekolah (SERDIK) & posyandu B3 — Balita, Ibu Hamil, Ibu Menyusui — dikelompokkan per desa." },
+      { icon: "🧾", judul: "BAST · Surat Jalan · Organoleptik", teks: "Cetak dokumen resmi berkop BGN otomatis; Surat Jalan & Uji Organoleptik dibuat per desa." },
+      { icon: "🔬", judul: "Menu Uji Organoleptik", teks: "Menu sampel terpisah untuk Sekolah, Balita, dan B2 (Bumil & Busui) di tiap dokumen." },
+    ],
+  },
+  {
+    tag: "Menu, Resep & Belanja",
+    icon: "🍱",
+    warna: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+    items: [
+      { icon: "🍱", judul: "Bank Menu & Resep", teks: "Simpan resep bahan per menu; jumlah bahan otomatis diskalakan mengikuti porsi." },
+      { icon: "💰", judul: "HPP & Food Cost", teks: "Hitung harga pokok per porsi dari resep + harga bahan pasar terkini (SISKAPERBAPO)." },
+      { icon: "📅", judul: "Jadwal Menu Periode", teks: "Susun menu Reguler & B3 per periode (~10 hari kerja) meniru pola kerja dapur nyata." },
+      { icon: "🛒", judul: "Generator Belanja", teks: "Daftar belanja otomatis per hari dari resep × porsi, plus realisasi Harga AK vs patokan SP." },
+    ],
+  },
+  {
+    tag: "Laporan & Gudang",
+    icon: "📋",
+    warna: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+    items: [
+      { icon: "📋", judul: "Laporan Harian", teks: "Isi laporan kegiatan terstruktur lengkap dengan dokumentasi foto per tanggal." },
+      { icon: "📦", judul: "Gudang & Stok", teks: "Kelola stok bahan masuk & keluar untuk memantau kebutuhan dapur." },
+    ],
+  },
+  {
+    tag: "HR & Penggajian",
+    icon: "👥",
+    warna: "border-ember-500/30 bg-ember-500/10 text-ember-400",
+    items: [
+      { icon: "👥", judul: "Pegawai & Divisi", teks: "Kelola data pegawai, divisi, jadwal kerja, dan pengajuan izin dalam satu tempat." },
+      { icon: "💵", judul: "Gaji & Slip", teks: "Hitung gaji berbasis kehadiran dan cetak slip gaji rapi per pegawai." },
+      { icon: "🏆", judul: "Leaderboard, SOP & Pengumuman", teks: "Peringkat kedisiplinan, panduan SOP dapur, dan papan pengumuman internal." },
+    ],
+  },
+  {
+    tag: "Manajemen & Keamanan",
+    icon: "🛡️",
+    warna: "border-emas-500/30 bg-emas-500/10 text-emas-300",
+    items: [
+      { icon: "🌐", judul: "Multi-Dapur (SPPG)", teks: "Super admin memantau & mengelola banyak dapur dari satu pusat kendali." },
+      { icon: "🔐", judul: "Peran & Akses Terpisah", teks: "Admin, Sub-Admin Distribusi/Penerimaan, HR, dan Staf dengan hak akses masing-masing." },
+      { icon: "🔔", judul: "Notifikasi & Audit Log", teks: "Pusat notifikasi dan catatan aktivitas (audit trail) untuk mendukung akuntabilitas." },
+    ],
   },
 ];
 
@@ -126,16 +168,17 @@ export default function Home() {
           ★ Program Makan Bergizi Gratis · Republik Indonesia
         </span>
         <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl">
-          Sistem Absensi{" "}
+          Sistem Manajemen{" "}
           <span className="bg-gradient-to-r from-gold-400 to-ember-400 bg-clip-text text-transparent">
             Operasional Dapur
           </span>{" "}
           Badan Gizi Nasional
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          Catat kehadiran tim dapur MBG dengan verifikasi wajah dan lokasi GPS,
-          jadwal shift per divisi, serta perhitungan berbasis jam yang akurat
-          untuk shift malam. Cepat untuk staf, transparan untuk admin.
+          Satu aplikasi untuk seluruh operasional dapur MBG: absensi wajah &amp;
+          GPS, distribusi porsi dengan dokumen resmi, menu &amp; belanja ber-HPP,
+          laporan harian, gudang, hingga penggajian. Cepat untuk staf, transparan
+          untuk admin.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/login" className="btn-gold px-6 py-3 text-base">
@@ -162,16 +205,48 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="fitur" className="mt-16 grid gap-4 sm:grid-cols-2">
-        {fitur.map((f) => (
-          <div key={f.judul} className="card p-5 transition hover:border-gold-500/40">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gold-500/15 text-2xl">
-              {f.icon}
+      <section id="fitur" className="mt-16">
+        <div className="text-center">
+          <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">
+            ⚡ Fitur Lengkap
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Satu Sistem untuk Seluruh Operasional Dapur MBG
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Dari absensi tim, distribusi &amp; dokumen resmi, menu &amp; belanja,
+            sampai laporan, gudang, dan penggajian — semua dalam satu aplikasi.
+          </p>
+        </div>
+
+        <div className="mt-10 space-y-10">
+          {kategoriFitur.map((k) => (
+            <div key={k.tag}>
+              <div className="flex items-center gap-3">
+                <span className={`badge border ${k.warna}`}>
+                  {k.icon} {k.tag}
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {k.items.map((f) => (
+                  <div
+                    key={f.judul}
+                    className="card p-5 transition hover:border-gold-500/40"
+                  >
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gold-500/15 text-2xl">
+                      {f.icon}
+                    </div>
+                    <h3 className="mt-3 text-base font-bold">{f.judul}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-300">
+                      {f.teks}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <h3 className="mt-3 text-lg font-bold">{f.judul}</h3>
-            <p className="mt-1 text-sm leading-relaxed text-slate-300">{f.teks}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       {/* Berita & informasi BGN */}
