@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
 import MoodAI from "@/components/MoodAI";
+import { getFaceApiLite, detectLandmarks, type FaceApi, type Pt } from "@/lib/faceapiLite";
+import { STICKERS, computeRefs } from "@/lib/faceStickers";
 
 // Filter kamera "lucu-lucu" (murni CSS filter, ringan & jalan di semua HP).
 // Diterapkan ke preview video sekaligus ikut tercetak di foto saat diambil.
@@ -95,6 +97,7 @@ export default function AbsenPanel() {
   const [cameraOn, setCameraOn] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
   const [filterIdx, setFilterIdx] = useState(0);
+  const [stikerIdx, setStikerIdx] = useState(-1); // -1 = tanpa filter wajah
   const [moodOpen, setMoodOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
@@ -107,6 +110,57 @@ export default function AbsenPanel() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
+  const faceApiRef = useRef<FaceApi | null>(null);
+  const landmarksRef = useRef<Pt[] | null>(null);
+  const stikerIdxRef = useRef(-1);
+  stikerIdxRef.current = stikerIdx;
+
+  // Deteksi wajah + gambar sticker ke overlay (hanya saat filter wajah dipilih).
+  useEffect(() => {
+    const canvas = overlayRef.current;
+    const clear = () => {
+      const c = overlayRef.current;
+      const g = c?.getContext("2d");
+      if (c && g) g.clearRect(0, 0, c.width, c.height);
+    };
+    if (!cameraOn || stikerIdx < 0) {
+      clear();
+      return;
+    }
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    (async () => {
+      if (!faceApiRef.current) faceApiRef.current = await getFaceApiLite();
+      const api = faceApiRef.current;
+      const tick = async () => {
+        if (!alive) return;
+        const video = videoRef.current;
+        const c = overlayRef.current || canvas;
+        if (api && video && c && video.videoWidth) {
+          if (c.width !== video.videoWidth) c.width = video.videoWidth;
+          if (c.height !== video.videoHeight) c.height = video.videoHeight;
+          const pts = await detectLandmarks(api, video);
+          if (pts) landmarksRef.current = pts;
+          const g = c.getContext("2d");
+          if (g) {
+            g.clearRect(0, 0, c.width, c.height);
+            const r = computeRefs(landmarksRef.current);
+            const s = STICKERS[stikerIdxRef.current];
+            if (r && s) s.draw(g, r);
+          }
+        }
+        if (alive) timer = setTimeout(tick, 110);
+      };
+      tick();
+    })();
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraOn, stikerIdx]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -217,6 +271,17 @@ export default function AbsenPanel() {
     if (css && css !== "none") ctx.filter = css;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.filter = "none";
+    // Sticker wajah (bila dipilih) ikut tercetak, dipetakan mirror ke kanvas.
+    const si = stikerIdxRef.current;
+    const pts = landmarksRef.current;
+    if (si >= 0 && pts) {
+      const r = computeRefs(pts);
+      if (r) {
+        ctx.setTransform(-scale, 0, 0, scale, canvas.width, 0);
+        STICKERS[si].draw(ctx, r);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+    }
     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
     setSelfie(dataUrl);
     stopCamera();
@@ -581,16 +646,22 @@ export default function AbsenPanel() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={selfie} alt="Foto wajah" className="mx-auto max-h-72" />
             ) : (
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                style={{ filter: FOTO_FILTERS[filterIdx]?.css }}
-                className={
-                  "mx-auto max-h-72 w-full -scale-x-100 object-cover " +
-                  (cameraOn ? "" : "hidden")
-                }
-              />
+              <div className={"relative " + (cameraOn ? "" : "hidden")}>
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  style={{ filter: FOTO_FILTERS[filterIdx]?.css }}
+                  className="mx-auto max-h-72 w-full -scale-x-100 object-cover"
+                />
+                <canvas
+                  ref={overlayRef}
+                  className={
+                    "pointer-events-none absolute inset-0 h-full w-full -scale-x-100 object-cover " +
+                    (stikerIdx >= 0 ? "" : "hidden")
+                  }
+                />
+              </div>
             )}
             {!cameraOn && !selfie && (
               <div className="grid h-44 place-items-center text-sm text-slate-500">
@@ -601,23 +672,56 @@ export default function AbsenPanel() {
           <canvas ref={canvasRef} className="hidden" />
           {/* Filter kamera lucu-lucu — biar tidak bosan saat absen */}
           {cameraOn && !selfie && (
-            <div className="scroll-x mt-2 flex gap-1.5 overflow-x-auto pb-1">
-              {FOTO_FILTERS.map((f, i) => (
+            <>
+              {/* Filter wajah ala TikTok (kumis, tanduk, telinga, dll) */}
+              <div className="scroll-x mt-2 flex gap-1.5 overflow-x-auto pb-1">
                 <button
-                  key={f.label}
                   type="button"
-                  onClick={() => setFilterIdx(i)}
+                  onClick={() => setStikerIdx(-1)}
                   className={
                     "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
-                    (filterIdx === i
+                    (stikerIdx === -1
                       ? "border-gold-500/60 bg-gold-500/20 text-gold-300"
                       : "border-white/10 text-slate-400 hover:bg-white/5")
                   }
                 >
-                  {f.label}
+                  🚫 Tanpa Filter
                 </button>
-              ))}
-            </div>
+                {STICKERS.map((s, i) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setStikerIdx(i)}
+                    className={
+                      "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
+                      (stikerIdx === i
+                        ? "border-gold-500/60 bg-gold-500/20 text-gold-300"
+                        : "border-white/10 text-slate-400 hover:bg-white/5")
+                    }
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {/* Efek warna */}
+              <div className="scroll-x mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
+                {FOTO_FILTERS.map((f, i) => (
+                  <button
+                    key={f.label}
+                    type="button"
+                    onClick={() => setFilterIdx(i)}
+                    className={
+                      "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
+                      (filterIdx === i
+                        ? "border-sky-500/60 bg-sky-500/20 text-sky-300"
+                        : "border-white/10 text-slate-400 hover:bg-white/5")
+                    }
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
           <div className="mt-3 flex gap-2">
             {!cameraOn && !selfie && (
