@@ -20,6 +20,8 @@ interface Baris {
   jumlah: number;
   harga: number;
   subtotal: number;
+  harga_ak?: number;
+  subtotal_ak?: number;
 }
 interface HariB {
   tanggal: string;
@@ -34,7 +36,7 @@ interface Data {
   hari: number;
   porsiDefault: Porsi;
   hariList: HariB[];
-  periode: { baris: Baris[]; total: number };
+  periode: { baris: Baris[]; total: number; totalAk: number };
 }
 
 const fmtTgl = (s: string) =>
@@ -76,6 +78,26 @@ export default function BelanjaPage() {
     }
   }, []);
 
+  const saveAk = useCallback(
+    async (key: string, val: number) => {
+      if (!data) return;
+      await fetch("/api/admin/belanja", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mulai: data.mulai, hari: data.hari, bahan_key: key, harga_ak: val }),
+      });
+      setData((prev) => {
+        if (!prev) return prev;
+        const baris = prev.periode.baris.map((b) =>
+          b.key === key ? { ...b, harga_ak: val, subtotal_ak: Math.round(b.jumlah * val) } : b,
+        );
+        const totalAk = baris.reduce((a, b) => a + (b.subtotal_ak || 0), 0);
+        return { ...prev, periode: { ...prev.periode, baris, totalAk } };
+      });
+    },
+    [data],
+  );
+
   // Ambil parameter awal dari URL (dikirim dari halaman jadwal).
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -88,11 +110,26 @@ export default function BelanjaPage() {
     const lines: string[] = [];
     lines.push(esc(`Belanja ${data.mulai} s/d ${data.selesai}`));
     lines.push("");
-    lines.push(["BAHAN", "JUMLAH", "SATUAN", "HARGA SP", "SUBTOTAL"].map(esc).join(","));
+    lines.push(
+      ["BAHAN", "JUMLAH", "SATUAN", "HARGA SP", "SUBTOTAL", "HARGA AK", "SUBTOTAL AK"].map(esc).join(","),
+    );
     for (const b of data.periode.baris) {
-      lines.push([b.nama, fmtJumlah(b.jumlah), b.satuan, b.harga || "", b.subtotal || ""].map(esc).join(","));
+      lines.push(
+        [
+          b.nama,
+          fmtJumlah(b.jumlah),
+          b.satuan,
+          b.harga || "",
+          b.subtotal || "",
+          b.harga_ak || "",
+          b.subtotal_ak || "",
+        ]
+          .map(esc)
+          .join(","),
+      );
     }
-    lines.push(["TOTAL", "", "", "", data.periode.total].map(esc).join(","));
+    lines.push(["TOTAL", "", "", "", data.periode.total, "", ""].map(esc).join(","));
+    lines.push(["TOTAL AK", "", "", "", "", "", data.periode.totalAk].map(esc).join(","));
     const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -164,9 +201,31 @@ export default function BelanjaPage() {
       {data && !loading && (
         <>
           <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-xs text-slate-400">Total anggaran belanja (patokan)</p>
-              <p className="text-2xl font-bold text-gold-400">{rupiah(data.periode.total)}</p>
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <p className="text-xs text-slate-400">Total anggaran belanja (patokan / SP)</p>
+                <p className="text-2xl font-bold text-gold-400">{rupiah(data.periode.total)}</p>
+              </div>
+              {data.periode.totalAk > 0 && (
+                <>
+                  <div>
+                    <p className="text-xs text-slate-400">Total harga beli aktual (AK)</p>
+                    <p className="text-2xl font-bold text-gold-300">{rupiah(data.periode.totalAk)}</p>
+                  </div>
+                  {(() => {
+                    const selisih = data.periode.total - data.periode.totalAk;
+                    const hemat = selisih >= 0;
+                    return (
+                      <div>
+                        <p className="text-xs text-slate-400">Selisih SP − AK</p>
+                        <p className={`text-2xl font-bold ${hemat ? "text-emerald-400" : "text-red-400"}`}>
+                          {hemat ? "Hemat" : "Boros"} {rupiah(Math.abs(selisih))}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </div>
             <p className="text-xs text-slate-400">
               {fmtTgl(data.mulai)} — {fmtTgl(data.selesai)} · {data.periode.baris.length} jenis bahan
@@ -174,7 +233,7 @@ export default function BelanjaPage() {
           </div>
 
           {tampil === "periode" ? (
-            <BelanjaTabel baris={data.periode.baris} total={data.periode.total} />
+            <BelanjaTabel baris={data.periode.baris} total={data.periode.total} editableAk onSaveAk={saveAk} />
           ) : (
             <div className="space-y-4">
               {data.hariList
@@ -211,12 +270,23 @@ export default function BelanjaPage() {
   );
 }
 
-function BelanjaTabel({ baris, total }: { baris: Baris[]; total: number }) {
+function BelanjaTabel({
+  baris,
+  total,
+  editableAk,
+  onSaveAk,
+}: {
+  baris: Baris[];
+  total: number;
+  editableAk?: boolean;
+  onSaveAk?: (key: string, val: number) => void;
+}) {
   if (baris.length === 0)
     return <p className="text-sm text-slate-500">Tidak ada bahan (menu belum punya resep bahan).</p>;
+  const totalAk = baris.reduce((a, b) => a + (b.subtotal_ak || 0), 0);
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[520px] text-sm">
+      <table className={`w-full text-sm ${editableAk ? "min-w-[720px]" : "min-w-[520px]"}`}>
         <thead>
           <tr className="border-b border-white/10 text-left text-[11px] uppercase text-slate-400">
             <th className="px-2 py-2">Bahan</th>
@@ -224,6 +294,12 @@ function BelanjaTabel({ baris, total }: { baris: Baris[]; total: number }) {
             <th className="px-2 py-2">Satuan</th>
             <th className="px-2 py-2 text-right">Harga SP</th>
             <th className="px-2 py-2 text-right">Subtotal</th>
+            {editableAk && (
+              <>
+                <th className="px-2 py-2 text-right">Harga AK</th>
+                <th className="px-2 py-2 text-right">Subtotal AK</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -236,6 +312,22 @@ function BelanjaTabel({ baris, total }: { baris: Baris[]; total: number }) {
                 {b.harga > 0 ? rupiah(b.harga) : "—"}
               </td>
               <td className="px-2 py-1.5 text-right">{b.subtotal > 0 ? rupiah(b.subtotal) : "—"}</td>
+              {editableAk && (
+                <>
+                  <td className="px-2 py-1.5 text-right">
+                    <input
+                      type="number"
+                      min={0}
+                      className="input py-1 text-right w-28 text-sm"
+                      defaultValue={b.harga_ak || ""}
+                      onBlur={(e) => onSaveAk?.(b.key, Math.max(0, Number(e.target.value) || 0))}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5 text-right text-gold-300">
+                    {b.subtotal_ak && b.subtotal_ak > 0 ? rupiah(b.subtotal_ak) : "—"}
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
@@ -245,6 +337,12 @@ function BelanjaTabel({ baris, total }: { baris: Baris[]; total: number }) {
               TOTAL
             </td>
             <td className="px-2 py-2 text-right text-gold-400">{rupiah(total)}</td>
+            {editableAk && (
+              <>
+                <td className="px-2 py-2" />
+                <td className="px-2 py-2 text-right text-gold-300">{rupiah(totalAk)}</td>
+              </>
+            )}
           </tr>
         </tfoot>
       </table>

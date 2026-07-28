@@ -108,5 +108,50 @@ export const GET = route(async (req: NextRequest) => {
 
   const periode = agregasiBelanja(semuaKontribusi);
 
-  return ok({ mulai, selesai, hari, porsiDefault, hariList, periode });
+  // Realisasi harga beli aktual (HARGA AK) tersimpan untuk periode ini.
+  const akRows = await query<{ bahan_key: string; harga_ak: number }>(
+    `SELECT bahan_key, harga_ak::float8 AS harga_ak
+       FROM belanja_ak WHERE sppg_id = $1 AND mulai = $2 AND hari = $3`,
+    [admin.sppg_id, mulai, hari],
+  );
+  const akMap = new Map(akRows.map((r) => [r.bahan_key, r.harga_ak]));
+  const barisBaru = periode.baris.map((b) => {
+    const harga_ak = akMap.get(b.key) ?? 0;
+    const subtotal_ak = Math.round(b.jumlah * harga_ak);
+    return { ...b, harga_ak, subtotal_ak };
+  });
+  const totalAk = barisBaru.reduce((a, r) => a + r.subtotal_ak, 0);
+
+  return ok({
+    mulai,
+    selesai,
+    hari,
+    porsiDefault,
+    hariList,
+    periode: { baris: barisBaru, total: periode.total, totalAk },
+  });
+});
+
+// PUT: simpan/ubah harga beli aktual (HARGA AK) satu bahan untuk satu periode.
+export const PUT = route(async (req: NextRequest) => {
+  const admin = await requireAkses("distribusi");
+  const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  const mulai = String(b.mulai ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(mulai)) return fail(400, "Tanggal tidak valid.");
+  const hari = Math.min(31, Math.max(1, Math.round(Number(b.hari)) || 0));
+  if (!hari) return fail(400, "Periode tidak valid.");
+  const bahanKey = String(b.bahan_key ?? "").trim().slice(0, 200);
+  if (!bahanKey) return fail(400, "Bahan tidak valid.");
+  const hargaAk = Math.max(0, Number(b.harga_ak) || 0);
+
+  await query(
+    `INSERT INTO belanja_ak (sppg_id, mulai, hari, bahan_key, harga_ak)
+       VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (sppg_id, mulai, hari, bahan_key)
+       DO UPDATE SET harga_ak = $5`,
+    [admin.sppg_id, mulai, hari, bahanKey, hargaAk],
+  );
+
+  return ok({ ok: true });
 });

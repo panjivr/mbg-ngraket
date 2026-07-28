@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28g.jadwal-belanja";
+const SCHEMA_VERSION = "2026-07-28h.belanja-ak";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -618,6 +618,21 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_jadwal_porsi_sppg_tgl ON jadwal_porsi (sppg_id, tanggal)`);
+
+    // Realisasi harga beli aktual (HARGA AK) per bahan, per periode belanja
+    // (dikunci oleh tanggal mulai + jumlah hari). Patokan (SP) sudah ada di menu_bahan.harga.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS belanja_ak (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER NOT NULL REFERENCES sppg(id) ON DELETE CASCADE,
+        mulai      DATE NOT NULL,
+        hari       INTEGER NOT NULL,
+        bahan_key  TEXT NOT NULL,
+        harga_ak   NUMERIC NOT NULL DEFAULT 0,
+        UNIQUE (sppg_id, mulai, hari, bahan_key)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_belanja_ak ON belanja_ak (sppg_id, mulai, hari)`);
 
     // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===
 
