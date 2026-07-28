@@ -5,6 +5,20 @@ import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
 import MoodAI from "@/components/MoodAI";
 
+// Filter kamera "lucu-lucu" (murni CSS filter, ringan & jalan di semua HP).
+// Diterapkan ke preview video sekaligus ikut tercetak di foto saat diambil.
+const FOTO_FILTERS: { label: string; css: string }[] = [
+  { label: "🙂 Normal", css: "none" },
+  { label: "✨ Cerah", css: "brightness(1.15) contrast(1.05) saturate(1.15)" },
+  { label: "☀️ Hangat", css: "sepia(0.35) saturate(1.4) brightness(1.05)" },
+  { label: "❄️ Sejuk", css: "hue-rotate(-20deg) saturate(1.2) brightness(1.05)" },
+  { label: "🎞️ Vintage", css: "sepia(0.55) contrast(1.1) brightness(1.05)" },
+  { label: "🌈 Pop", css: "saturate(1.9) contrast(1.1)" },
+  { label: "🎭 Dramatis", css: "contrast(1.4) brightness(0.95) saturate(1.2)" },
+  { label: "🖤 Hitam Putih", css: "grayscale(1) contrast(1.1)" },
+  { label: "🔆 Silau", css: "brightness(1.35) contrast(0.9) saturate(1.3)" },
+];
+
 interface SettingsLite {
   nama_dapur: string;
   alamat: string;
@@ -80,6 +94,7 @@ export default function AbsenPanel() {
 
   const [cameraOn, setCameraOn] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
+  const [filterIdx, setFilterIdx] = useState(0);
   const [moodOpen, setMoodOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
@@ -197,7 +212,11 @@ export default function AbsenPanel() {
     // konsisten dengan preview yang juga dibalik via CSS (-scale-x-100).
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
+    // Terapkan filter terpilih agar ikut tercetak di foto (bila didukung).
+    const css = FOTO_FILTERS[filterIdx]?.css;
+    if (css && css !== "none") ctx.filter = css;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.filter = "none";
     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
     setSelfie(dataUrl);
     stopCamera();
@@ -566,6 +585,7 @@ export default function AbsenPanel() {
                 ref={videoRef}
                 playsInline
                 muted
+                style={{ filter: FOTO_FILTERS[filterIdx]?.css }}
                 className={
                   "mx-auto max-h-72 w-full -scale-x-100 object-cover " +
                   (cameraOn ? "" : "hidden")
@@ -579,6 +599,26 @@ export default function AbsenPanel() {
             )}
           </div>
           <canvas ref={canvasRef} className="hidden" />
+          {/* Filter kamera lucu-lucu — biar tidak bosan saat absen */}
+          {cameraOn && !selfie && (
+            <div className="scroll-x mt-2 flex gap-1.5 overflow-x-auto pb-1">
+              {FOTO_FILTERS.map((f, i) => (
+                <button
+                  key={f.label}
+                  type="button"
+                  onClick={() => setFilterIdx(i)}
+                  className={
+                    "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
+                    (filterIdx === i
+                      ? "border-gold-500/60 bg-gold-500/20 text-gold-300"
+                      : "border-white/10 text-slate-400 hover:bg-white/5")
+                  }
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="mt-3 flex gap-2">
             {!cameraOn && !selfie && (
               <button onClick={startCamera} className="btn-ghost flex-1">

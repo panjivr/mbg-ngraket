@@ -245,18 +245,19 @@ export default function PenerimaPage() {
                   </div>
                   <div>
                     <label className="label">Desa</label>
-                    <select className="input" value={desa}
+                    <input className="input" list="desa-list" value={desa}
+                      placeholder="Ketik atau pilih desa…"
                       onChange={(e) => {
                         const d = e.target.value;
                         setDesa(d);
                         setForm(terapkanDesa(form, form.kategori, d));
-                      }}>
-                      <option value="">— pilih desa —</option>
-                      {desaList.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                      }} />
+                    <datalist id="desa-list">
+                      {desaList.map((d) => <option key={d} value={d} />)}
+                    </datalist>
                   </div>
                   <p className="col-span-2 -mt-1 text-xs text-slate-500">
-                    Pilih kategori + desa → nama tersusun otomatis (mis. “IBU HAMIL DESA NGRAKET”). Nama masih bisa diedit manual di atas.
+                    Ketik nama desa sendiri (atau pilih dari saran) — untuk SPPG mana pun. Pilih kategori + desa → nama tersusun otomatis (mis. “IBU HAMIL DESA NGRAKET”). Nama masih bisa diedit manual di atas.
                   </p>
                 </div>
               )}
