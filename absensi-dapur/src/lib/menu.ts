@@ -93,7 +93,23 @@ export interface MenuBahan {
   jumlah_dasar: number; // jumlah untuk porsi_dasar
   pembulatan: Pembulatan;
   komponen: KomponenGizi;
+  harga: number; // harga per satuan bahan (Rp) — untuk HPP/food cost
+  pasar_ref: string; // nama komoditas SISKAPERBAPO yang jadi acuan harga (opsional)
   urutan: number;
+}
+
+/** Biaya bahan per 1 porsi = (jumlah_dasar / porsi_dasar) × harga satuan. */
+export function biayaPerPorsi(jumlahDasar: number, porsiDasar: number, harga: number): number {
+  if (!(porsiDasar > 0) || !(harga > 0)) return 0;
+  return (jumlahDasar / porsiDasar) * harga;
+}
+
+/** Total HPP (biaya bahan) per porsi untuk satu menu. */
+export function hppPerPorsi(
+  bahan: { jumlah_dasar: number; harga: number }[],
+  porsiDasar: number,
+): number {
+  return bahan.reduce((a, b) => a + biayaPerPorsi(b.jumlah_dasar, porsiDasar, b.harga), 0);
 }
 
 export interface MenuLengkap extends Menu {

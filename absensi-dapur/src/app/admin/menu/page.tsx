@@ -12,6 +12,8 @@ import {
   komponenKurang,
   skalaBahan,
   perPorsi,
+  biayaPerPorsi,
+  hppPerPorsi,
   fmtJumlah,
   fmtKecil,
   type KategoriMenu,
@@ -20,7 +22,49 @@ import {
   type MenuBahan,
   type Pembulatan,
 } from "@/lib/menu";
+import type { KomoditasPasar } from "@/lib/siskaperbapo";
 import QuoteBanner from "@/components/QuoteBanner";
+
+const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(n));
+
+interface Pagu {
+  besar: number;
+  kecil: number;
+  b3: number;
+}
+interface PasarData {
+  tersedia: boolean;
+  tanggal: string;
+  kabkota: string;
+  label: string;
+  daftarKabkota: { value: string; label: string }[];
+  lokasiDapur: string;
+  sumber: "live" | "cache" | null;
+  komoditas: KomoditasPasar[];
+  catatan: string | null;
+}
+
+/** Cocokkan nama bahan ke komoditas pasar (heuristik token sederhana). */
+function cariKomoditas(namaBahan: string, list: KomoditasPasar[]): KomoditasPasar | null {
+  const n = namaBahan.trim().toLowerCase();
+  if (!n) return null;
+  const exact = list.find((k) => k.nama.toLowerCase() === n);
+  if (exact) return exact;
+  const kata = n.split(/\s+/).filter((w) => w.length >= 3);
+  let best: KomoditasPasar | null = null;
+  let bestScore = 0;
+  for (const k of list) {
+    const kn = k.nama.toLowerCase();
+    let score = 0;
+    for (const w of kata) if (kn.includes(w)) score += w.length;
+    if (kn.includes(n) || n.includes(kn.split(/\s+/)[0])) score += 2;
+    if (score > bestScore) {
+      bestScore = score;
+      best = k;
+    }
+  }
+  return bestScore >= 3 ? best : null;
+}
 
 interface BarangPilih {
   id: number;
@@ -37,6 +81,8 @@ interface BahanDraft {
   jumlah_dasar: number;
   pembulatan: Pembulatan;
   komponen: KomponenGizi;
+  harga: number;
+  pasar_ref: string;
 }
 
 function toDraft(b: MenuBahan): BahanDraft {
@@ -47,15 +93,22 @@ function toDraft(b: MenuBahan): BahanDraft {
     jumlah_dasar: b.jumlah_dasar,
     pembulatan: b.pembulatan,
     komponen: b.komponen,
+    harga: b.harga ?? 0,
+    pasar_ref: b.pasar_ref ?? "",
   };
 }
 
 export default function MenuPage() {
   const [menus, setMenus] = useState<MenuLengkap[]>([]);
   const [barang, setBarang] = useState<BarangPilih[]>([]);
+  const [pagu, setPagu] = useState<Pagu>({ besar: 10000, kecil: 8000, b3: 8000 });
   const [selId, setSelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+
+  // Harga pasar SISKAPERBAPO (untuk isi harga bahan otomatis).
+  const [pasar, setPasar] = useState<PasarData | null>(null);
+  const [pasarBusy, setPasarBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +119,7 @@ export default function MenuPage() {
       if (res.ok) {
         setMenus(d.menu || []);
         setBarang(d.barang || []);
+        if (d.pagu) setPagu(d.pagu);
         setSelId((prev) => prev ?? (d.menu?.[0]?.id ?? null));
       } else {
         setErr(d?.error || `Gagal memuat (kode ${res.status}).`);
@@ -79,6 +133,41 @@ export default function MenuPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadPasar = useCallback(async (kabkota?: string) => {
+    setPasarBusy(true);
+    try {
+      const qs = kabkota !== undefined ? `?kabkota=${encodeURIComponent(kabkota)}` : "";
+      const res = await fetch(`/api/admin/harga-pasar${qs}`, { cache: "no-store" });
+      const d = await res.json().catch(() => null);
+      if (res.ok && d) setPasar(d as PasarData);
+    } catch {
+      /* biarkan; fitur ini opsional */
+    } finally {
+      setPasarBusy(false);
+    }
+  }, []);
+  useEffect(() => {
+    loadPasar();
+  }, [loadPasar]);
+
+  // Ganti & simpan lokasi kab/kota, lalu muat ulang harga.
+  const gantiLokasi = useCallback(
+    async (kabkota: string) => {
+      setPasarBusy(true);
+      try {
+        await fetch("/api/admin/harga-pasar", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kabkota }),
+        });
+      } catch {
+        /* abaikan */
+      }
+      await loadPasar(kabkota);
+    },
+    [loadPasar],
+  );
 
   const tambahMenu = async () => {
     const nama = prompt("Nama menu baru:")?.trim();
@@ -172,6 +261,10 @@ export default function MenuPage() {
               key={selected.id}
               menu={selected}
               barang={barang}
+              pagu={pagu}
+              pasar={pasar}
+              pasarBusy={pasarBusy}
+              onGantiLokasi={gantiLokasi}
               onSaved={load}
               onDuplikat={() => duplikatMenu(selected)}
               onDeleted={() => {
@@ -189,12 +282,20 @@ export default function MenuPage() {
 function MenuEditor({
   menu,
   barang,
+  pagu,
+  pasar,
+  pasarBusy,
+  onGantiLokasi,
   onSaved,
   onDuplikat,
   onDeleted,
 }: {
   menu: MenuLengkap;
   barang: BarangPilih[];
+  pagu: Pagu;
+  pasar: PasarData | null;
+  pasarBusy: boolean;
+  onGantiLokasi: (kabkota: string) => void;
   onSaved: () => void;
   onDuplikat: () => void;
   onDeleted: () => void;
@@ -224,9 +325,36 @@ function MenuEditor({
   const addBahan = () =>
     setBahan((prev) => [
       ...prev,
-      { barang_id: null, nama: "", satuan: "kg", jumlah_dasar: 0, pembulatan: "desimal", komponen: "lainnya" },
+      { barang_id: null, nama: "", satuan: "kg", jumlah_dasar: 0, pembulatan: "desimal", komponen: "lainnya", harga: 0, pasar_ref: "" },
     ]);
   const delBahan = (i: number) => setBahan((prev) => prev.filter((_, idx) => idx !== i));
+
+  // Isi harga satu bahan dari komoditas pasar terpilih.
+  const pakaiKomoditas = (i: number, namaKomoditas: string) => {
+    const k = pasar?.komoditas.find((x) => x.nama === namaKomoditas);
+    if (!k) {
+      updBahan(i, { pasar_ref: "" });
+      return;
+    }
+    updBahan(i, { harga: k.harga, pasar_ref: k.nama });
+  };
+
+  // Cocokkan otomatis semua bahan ke komoditas pasar & isi harganya.
+  const cocokkanOtomatis = () => {
+    const list = pasar?.komoditas || [];
+    if (list.length === 0) return;
+    let terisi = 0;
+    setBahan((prev) =>
+      prev.map((b) => {
+        if (!b.nama.trim()) return b;
+        const k = cariKomoditas(b.nama, list);
+        if (!k) return b;
+        terisi += 1;
+        return { ...b, harga: k.harga, pasar_ref: k.nama };
+      }),
+    );
+    setMsg(terisi > 0 ? `${terisi} bahan dicocokkan dengan harga pasar.` : "Tidak ada bahan yang cocok otomatis.");
+  };
 
   const simpan = async () => {
     setSaving(true);
@@ -285,6 +413,21 @@ function MenuEditor({
     [bahan],
   );
 
+  // HPP / food cost: biaya bahan per porsi & perbandingan dengan pagu.
+  const hpp = useMemo(() => {
+    const isi = bahan.filter((b) => b.nama.trim());
+    const perPorsi = hppPerPorsi(isi, porsiDasar);
+    const tanpaHarga = isi.filter((b) => !(b.harga > 0)).length;
+    return {
+      perPorsi,
+      tanpaHarga,
+      totalBahan: isi.length,
+      totalTarget: perPorsi * porsiTarget,
+      marginBesar: pagu.besar - perPorsi,
+      marginBesarPct: pagu.besar > 0 ? ((pagu.besar - perPorsi) / pagu.besar) * 100 : 0,
+    };
+  }, [bahan, porsiDasar, porsiTarget, pagu.besar]);
+
   return (
     <div className="space-y-4">
       {/* Data menu */}
@@ -333,11 +476,51 @@ function MenuEditor({
             + Bahan
           </button>
         </div>
+
+        {/* Harga Pasar SISKAPERBAPO (Jatim) — untuk isi harga bahan otomatis */}
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="grid h-6 w-6 place-items-center rounded bg-emerald-500/15 text-emerald-300">🏷️</span>
+              <p className="text-sm font-semibold">Harga Pasar · SISKAPERBAPO Jatim</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="input py-1 text-xs"
+                value={pasar?.kabkota ?? ""}
+                onChange={(e) => onGantiLokasi(e.target.value)}
+                disabled={pasarBusy || !pasar}
+                title="Pilih lokasi kab/kota (disimpan sebagai default dapur)"
+              >
+                {(pasar?.daftarKabkota || []).map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={cocokkanOtomatis}
+                disabled={!pasar?.tersedia || pasarBusy}
+                className="btn-ghost px-2.5 py-1 text-xs"
+                title="Cocokkan nama bahan ke komoditas pasar & isi harganya otomatis"
+              >
+                🎯 Cocokkan otomatis
+              </button>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">
+            {pasarBusy
+              ? "Memuat harga pasar…"
+              : pasar?.tersedia
+                ? `Harga per ${pasar.tanggal} · ${pasar.label} · ${pasar.komoditas.length} komoditas${pasar.sumber === "cache" ? " (cache)" : ""}. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
+                : pasar?.catatan || "Harga pasar tidak tersedia saat ini — isi harga bahan manual."}
+          </p>
+        </div>
         {bahan.length === 0 ? (
           <p className="text-xs text-slate-500">Belum ada bahan. Klik <b>+ Bahan</b>.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
+            <table className="w-full min-w-[1120px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-2 py-2">Sumber</th>
@@ -346,6 +529,8 @@ function MenuEditor({
                   <th className="px-2 py-2">Jumlah</th>
                   <th className="px-2 py-2">Satuan</th>
                   <th className="px-2 py-2">Pembulatan</th>
+                  <th className="px-2 py-2">Harga/satuan</th>
+                  <th className="px-2 py-2">Acuan pasar</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -412,6 +597,34 @@ function MenuEditor({
                         ))}
                       </select>
                     </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        className="input w-28 py-1"
+                        value={b.harga || ""}
+                        onChange={(e) => updBahan(i, { harga: Math.max(0, Number(e.target.value) || 0), pasar_ref: "" })}
+                        placeholder="0"
+                        title="Harga per satuan bahan (Rp)"
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        className="input w-40 py-1"
+                        value={b.pasar_ref}
+                        onChange={(e) => pakaiKomoditas(i, e.target.value)}
+                        disabled={!pasar?.tersedia}
+                        title="Ambil harga dari komoditas pasar SISKAPERBAPO"
+                      >
+                        <option value="">— manual —</option>
+                        {pasar?.komoditas.map((k) => (
+                          <option key={k.id} value={k.nama}>
+                            {k.nama} ({rupiah(k.harga)}/{k.satuan})
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-2 py-1.5 text-right">
                       <button onClick={() => delBahan(i)} className="btn-ghost px-2 py-1 text-[11px] text-red-400">
                         Hapus
@@ -464,6 +677,53 @@ function MenuEditor({
             Hapus menu
           </button>
           {msg && <span className="text-sm text-slate-300">{msg}</span>}
+        </div>
+      </div>
+
+      {/* HPP / Food Cost — biaya bahan per porsi vs pagu */}
+      <div className="card space-y-3 p-4">
+        <div>
+          <h3 className="text-sm font-semibold">💰 HPP / Food Cost</h3>
+          <p className="text-[11px] text-slate-500">
+            Biaya bahan per porsi dibanding pagu porsi besar ({rupiah(pagu.besar)}).
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[11px] text-slate-400">Biaya bahan / porsi</p>
+            <p className="mt-1 text-lg font-bold text-gold-400">{rupiah(hpp.perPorsi)}</p>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[11px] text-slate-400">Pagu / porsi (besar)</p>
+            <p className="mt-1 text-lg font-bold text-slate-200">{rupiah(pagu.besar)}</p>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[11px] text-slate-400">{hpp.marginBesar >= 0 ? "Sisa pagu / porsi" : "Selisih (rugi) / porsi"}</p>
+            <p className={"mt-1 text-lg font-bold " + (hpp.marginBesar >= 0 ? "text-emerald-400" : "text-red-400")}>
+              {rupiah(Math.abs(hpp.marginBesar))}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-[11px] text-slate-400">Persentase HPP</p>
+            <p className={"mt-1 text-lg font-bold " + (hpp.marginBesar >= 0 ? "text-emerald-400" : "text-red-400")}>
+              {pagu.besar > 0 ? Math.round((hpp.perPorsi / pagu.besar) * 100) : 0}%
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+          <span className="text-slate-400">
+            Untuk {fmtJumlah(porsiTarget)} porsi ≈ <b className="text-slate-200">{rupiah(hpp.totalTarget)}</b> biaya bahan.
+          </span>
+          {hpp.tanpaHarga > 0 && (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-300">
+              ⚠️ {hpp.tanpaHarga} dari {hpp.totalBahan} bahan belum ada harga — HPP masih parsial.
+            </span>
+          )}
+          {hpp.tanpaHarga === 0 && hpp.marginBesar < 0 && (
+            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-300">
+              ⚠️ Biaya bahan melebihi pagu — menu ini rugi.
+            </span>
+          )}
         </div>
       </div>
 

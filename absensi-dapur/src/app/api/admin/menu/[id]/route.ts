@@ -14,6 +14,8 @@ interface BahanIn {
   jumlah_dasar?: number;
   pembulatan?: string;
   komponen?: string;
+  harga?: number;
+  pasar_ref?: string;
 }
 
 // Update data menu + ganti seluruh daftar bahan dalam satu transaksi.
@@ -53,11 +55,13 @@ export const PUT = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
       const jumlah = Math.max(0, Number(row.jumlah_dasar) || 0);
       const pembulatan = normalizePembulatan(row.pembulatan);
       const komponen = normalizeKomponen(row.komponen);
+      const harga = Math.max(0, Number(row.harga) || 0);
+      const pasarRef = String(row.pasar_ref ?? "").trim().slice(0, 120);
       urut += 1;
       await client.query(
-        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [id, barangId, namaB, satuan, jumlah, pembulatan, komponen, urut],
+        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, harga, pasar_ref, urutan)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [id, barangId, namaB, satuan, jumlah, pembulatan, komponen, harga, pasarRef, urut],
       );
     }
     return true;

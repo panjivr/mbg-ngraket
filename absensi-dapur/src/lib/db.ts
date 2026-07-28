@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28e.audit-log";
+const SCHEMA_VERSION = "2026-07-28f.hpp-harga-pasar";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -387,6 +387,8 @@ async function doEnsureSchema(): Promise<void> {
     // Periode papan peringkat yang ditampilkan ke karyawan (2 minggu, Minggu–Sabtu).
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_from DATE`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_to DATE`);
+    // Lokasi kab/kota SISKAPERBAPO (Jatim) untuk referensi harga pasar HPP.
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS siskaperbapo_kabkota TEXT NOT NULL DEFAULT ''`);
 
     // Master penerima (sekolah/SERDIK & kelompok B3 posyandu).
     await client.query(`
@@ -584,6 +586,9 @@ async function doEnsureSchema(): Promise<void> {
     `);
     // Komponen gizi "Isi Piringku" per bahan (untuk cek kelengkapan gizi oleh ahli gizi).
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS komponen TEXT NOT NULL DEFAULT 'lainnya'`);
+    // HPP / food cost: harga satuan bahan + acuan komoditas pasar (SISKAPERBAPO).
+    await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS harga NUMERIC NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS pasar_ref TEXT NOT NULL DEFAULT ''`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_bahan_menu ON menu_bahan (menu_id)`);
 
     // === Fitur HR profesional: Izin/Cuti, Pengumuman, Jadwal, komponen gaji ===

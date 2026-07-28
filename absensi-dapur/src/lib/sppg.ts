@@ -22,6 +22,8 @@ export interface Sppg {
   harga_b3: number;
   ahli_gizi: string;
   koordinator: string;
+  // Lokasi kab/kota SISKAPERBAPO (Jatim) untuk acuan harga pasar HPP ("" = provinsi).
+  siskaperbapo_kabkota: string;
   // Periode papan peringkat yang ditampilkan ke karyawan (YYYY-MM-DD atau null).
   leaderboard_from: string | null;
   leaderboard_to: string | null;

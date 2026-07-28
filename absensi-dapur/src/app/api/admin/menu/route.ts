@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { query, withClient } from "@/lib/db";
 import { requireAkses } from "@/lib/session";
+import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import {
   normalizeKategoriMenu,
@@ -30,7 +31,8 @@ export const GET = route(async () => {
   const bahan = menus.length
     ? await query<MenuBahan>(
         `SELECT id, menu_id, barang_id, nama, satuan,
-                jumlah_dasar::float8 AS jumlah_dasar, pembulatan, komponen, urutan
+                jumlah_dasar::float8 AS jumlah_dasar, pembulatan, komponen,
+                harga::float8 AS harga, pasar_ref, urutan
            FROM menu_bahan
           WHERE menu_id = ANY($1::int[])
           ORDER BY urutan ASC, id ASC`,
@@ -49,7 +51,14 @@ export const GET = route(async () => {
       WHERE sppg_id = $1 AND aktif = TRUE ORDER BY nama ASC`,
     [admin.sppg_id],
   );
-  return ok({ menu, barang });
+  // Pagu (harga per porsi) untuk pembanding HPP/food cost.
+  const sppg = await getSppg(admin.sppg_id as number);
+  const pagu = {
+    besar: sppg?.harga_besar ?? 10000,
+    kecil: sppg?.harga_kecil ?? 8000,
+    b3: sppg?.harga_b3 ?? 8000,
+  };
+  return ok({ menu, barang, pagu });
 });
 
 // Buat menu baru. Jika `duplikat_dari` diisi, salin menu + seluruh bahannya
@@ -92,8 +101,8 @@ export const POST = route(async (req: NextRequest) => {
 
     if (dupId) {
       await client.query(
-        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan)
-         SELECT $1, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, urutan
+        `INSERT INTO menu_bahan (menu_id, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, harga, pasar_ref, urutan)
+         SELECT $1, barang_id, nama, satuan, jumlah_dasar, pembulatan, komponen, harga, pasar_ref, urutan
            FROM menu_bahan WHERE menu_id = $2`,
         [menu.id, dupId],
       );
