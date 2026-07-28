@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { KATEGORI_LABEL, statusStok, type Barang, type Kategori } from "@/lib/gudang";
+import { KATEGORI_LABEL, KATEGORI_INFO, statusStok, type Barang, type Kategori } from "@/lib/gudang";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -72,7 +72,7 @@ export default function KartuStokPage() {
               <tbody>
                 {grup.map(([kat, rows]) => (
                   <Fragment key={kat}>
-                    <tr className="bg-white/5"><td colSpan={4} className="px-3 py-1.5 text-xs font-semibold text-gold-400">{KATEGORI_LABEL[kat]}</td></tr>
+                    <tr className="bg-white/5"><td colSpan={4} className="px-3 py-1.5 text-xs font-semibold text-gold-400" title={KATEGORI_INFO[kat]}>{KATEGORI_LABEL[kat]}</td></tr>
                     {rows.map((b) => {
                       const st = statusStok(b);
                       return (

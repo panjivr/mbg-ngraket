@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  KATEGORI_LABEL, KATEGORI_LIST, TIPE_LABEL, statusStok,
+  KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, TIPE_LABEL, statusStok,
   type Barang, type Kategori, type Mutasi, type TipeMutasi,
 } from "@/lib/gudang";
 
@@ -31,6 +31,7 @@ export default function GudangPage() {
   const [riwayat, setRiwayat] = useState<{ barang: Barang; rows: Mutasi[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [infoKat, setInfoKat] = useState<Kategori | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -115,6 +116,7 @@ export default function GudangPage() {
         <span className="text-slate-400">Kategori:</span>
         {(["all", ...KATEGORI_LIST] as const).map((k) => (
           <button key={k} onClick={() => setFilter(k)}
+            title={k === "all" ? "Semua kategori" : KATEGORI_INFO[k]}
             className={"rounded-lg px-3 py-1.5 " + (filter === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
             {k === "all" ? "Semua" : KATEGORI_LABEL[k]}
           </button>
@@ -137,7 +139,23 @@ export default function GudangPage() {
               <tbody>
                 {grup.map(([kat, rows]) => (
                   <Fragment key={kat}>
-                    <tr className="bg-white/5"><td colSpan={6} className="px-3 py-1.5 text-xs font-semibold text-gold-400">{KATEGORI_LABEL[kat]}</td></tr>
+                    <tr className="bg-white/5">
+                      <td colSpan={6} className="px-3 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setInfoKat(infoKat === kat ? null : kat)}
+                          className="text-xs font-semibold text-gold-400 hover:underline"
+                          title="Klik untuk lihat contoh isi"
+                        >
+                          {KATEGORI_LABEL[kat]} <span className="text-slate-500">ⓘ</span>
+                        </button>
+                        {infoKat === kat && (
+                          <span className="ml-2 text-[11px] font-normal text-slate-400">
+                            Contoh: {KATEGORI_INFO[kat]}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
                     {rows.map((b) => {
                       const st = statusStok(b);
                       return (
@@ -181,6 +199,7 @@ export default function GudangPage() {
                   <select className="input" value={bForm.kategori} onChange={(e) => setBForm({ ...bForm, kategori: e.target.value as Kategori })}>
                     {KATEGORI_LIST.map((k) => <option key={k} value={k}>{KATEGORI_LABEL[k]}</option>)}
                   </select>
+                  <p className="mt-1 text-[11px] text-slate-500">Contoh: {KATEGORI_INFO[bForm.kategori]}</p>
                 </div>
                 <div><label className="label">Satuan</label><input className="input" value={bForm.satuan} onChange={(e) => setBForm({ ...bForm, satuan: e.target.value })} placeholder="pcs, kg, liter, pack" /></div>
               </div>
