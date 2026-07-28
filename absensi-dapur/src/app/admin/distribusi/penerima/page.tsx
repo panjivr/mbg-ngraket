@@ -107,7 +107,11 @@ export default function PenerimaPage() {
   }, [list]);
   const tot = useMemo(() => {
     let besar = 0, kecil = 0, b3 = 0;
-    for (const p of list) if (p.aktif) { besar += p.besar; kecil += p.kecil; b3 += p.b3; }
+    // Hitung per jenis agar konsisten dengan Distribusi (serdik→besar/kecil, B3→b3).
+    for (const p of list) if (p.aktif) {
+      if (p.jenis === "b3") b3 += p.b3;
+      else { besar += p.besar; kecil += p.kecil; }
+    }
     return { besar, kecil, b3 };
   }, [list]);
   // Daftar desa untuk dropdown: gabungan bawaan + yang sudah ada di data B3.
@@ -256,12 +260,19 @@ export default function PenerimaPage() {
                   </p>
                 </div>
               )}
-              <div className="grid grid-cols-4 gap-2">
-                <div><label className="label">Besar</label><input type="number" min={0} className="input" value={form.besar} onChange={(e) => setForm({ ...form, besar: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
-                <div><label className="label">Kecil</label><input type="number" min={0} className="input" value={form.kecil} onChange={(e) => setForm({ ...form, kecil: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
-                <div><label className="label">B3</label><input type="number" min={0} className="input" value={form.b3} onChange={(e) => setForm({ ...form, b3: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
-                <div><label className="label">PJ</label><input type="number" min={0} className="input" value={form.pj} onChange={(e) => setForm({ ...form, pj: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
-              </div>
+              {form.jenis === "b3" ? (
+                // B3 (posyandu): hanya porsi B3 yang relevan.
+                <div className="grid grid-cols-4 gap-2">
+                  <div><label className="label">B3</label><input type="number" min={0} className="input" value={form.b3} onChange={(e) => setForm({ ...form, b3: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
+                </div>
+              ) : (
+                // SERDIK (sekolah): porsi Besar/Kecil + PJ (guru).
+                <div className="grid grid-cols-3 gap-2">
+                  <div><label className="label">Besar</label><input type="number" min={0} className="input" value={form.besar} onChange={(e) => setForm({ ...form, besar: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
+                  <div><label className="label">Kecil</label><input type="number" min={0} className="input" value={form.kecil} onChange={(e) => setForm({ ...form, kecil: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
+                  <div><label className="label">PJ</label><input type="number" min={0} className="input" value={form.pj} onChange={(e) => setForm({ ...form, pj: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Jam Kirim</label><input type="time" className="input" value={form.jam_kirim} onChange={(e) => setForm({ ...form, jam_kirim: e.target.value })} /></div>
                 <label className="flex items-end gap-2 pb-2 text-sm">

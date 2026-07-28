@@ -182,7 +182,7 @@ function Inner() {
           <div className="pt-1">Kepada : {kepada}</div>
           <table className="text-sm">
             <tbody>
-              <tr><td className="pr-4">Hari / Tanggal</td><td>: {tglSlash(tanggal)}</td></tr>
+              <tr><td className="pr-4">Hari / Tanggal</td><td>: {hari(tanggal)} / {tglSlash(tanggal)}</td></tr>
               <tr><td className="pr-4">Waktu Pengiriman</td><td>: {jam}</td></tr>
               <tr><td className="pr-4">Driver</td><td>: {data.distribusi.driver || ""}</td></tr>
             </tbody>
@@ -287,7 +287,7 @@ function Inner() {
           <thead className="font-bold">
             <tr>
               <th rowSpan={3} className="border border-black px-2 py-1">No</th>
-              <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "Balita" : "Sampel"})</th>
+              <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "B3" : "Sampel"})</th>
               <th colSpan={8} className="border border-black px-2 py-1">Indikator Penilaian</th>
             </tr>
             <tr>

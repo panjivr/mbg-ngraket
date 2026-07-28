@@ -69,6 +69,7 @@ export default function DistribusiPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [setel, setSetel] = useState<Pengaturan | null>(null);
+  const [dirty, setDirty] = useState(false); // ada perubahan belum disimpan?
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,6 +84,7 @@ export default function DistribusiPage() {
       setCatatan(d.distribusi?.catatan || "");
       setMenuSekolah(d.distribusi?.menu_sekolah || []);
       setMenuPosyandu(d.distribusi?.menu_posyandu || []);
+      setDirty(false);
     } finally {
       setLoading(false);
     }
@@ -92,14 +94,31 @@ export default function DistribusiPage() {
     load();
   }, [load]);
 
+  // Peringatkan bila menutup/refresh tab dengan perubahan belum disimpan.
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
+  // Ganti tanggal: konfirmasi dulu bila ada perubahan belum disimpan.
+  function gantiTanggal(t: string) {
+    if (dirty && !confirm("Ada perubahan belum disimpan. Pindah tanggal & buang perubahan?")) return;
+    setTanggal(t);
+  }
+
   function upd(id: number, patch: Partial<Baris>) {
     setBaris((prev) => prev.map((b) => (b.penerima_id === id ? { ...b, ...patch } : b)));
+    setDirty(true);
   }
   function pilihSemua(v: boolean) {
     setBaris((prev) => prev.map((b) => ({ ...b, ikut: v })));
+    setDirty(true);
   }
   function pilihGrup(jenjang: string, v: boolean) {
     setBaris((prev) => prev.map((b) => (b.jenjang === jenjang ? { ...b, ikut: v } : b)));
+    setDirty(true);
   }
   const jmlIkut = baris.filter((b) => b.ikut).length;
   const semuaIkut = baris.length > 0 && jmlIkut === baris.length;
@@ -159,6 +178,7 @@ export default function DistribusiPage() {
       const res = await fetch(`/api/admin/distribusi?tanggal=${tanggal}&master=1`, { cache: "no-store" });
       const d: DistData = await res.json();
       setBaris(d.baris || []);
+      setDirty(true);
       setMsg("↻ Porsi dimuat dari Data Penerima. Periksa lalu klik Simpan.");
     } finally {
       setLoading(false);
@@ -202,7 +222,7 @@ export default function DistribusiPage() {
           <p className="text-sm text-slate-400">{fmtTgl(tanggal)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input type="date" className="input" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+          <input type="date" className="input" value={tanggal} onChange={(e) => gantiTanggal(e.target.value)} />
           <Link href="/admin/distribusi/penerima" className="btn-ghost">🏫 Data Penerima</Link>
           <button onClick={muatMaster} className="btn-ghost">↻ Muat dari Master</button>
           <button onClick={bukaSetel} className="btn-ghost">⚙️ Harga & Kepala</button>
@@ -234,22 +254,22 @@ export default function DistribusiPage() {
       <div className="card grid gap-3 p-4 sm:grid-cols-3">
         <div>
           <label className="label">Menu Hari Ini</label>
-          <input className="input" value={menu} onChange={(e) => setMenu(e.target.value)} placeholder="mis. Nasi, Ayam, Sayur, Buah" />
+          <input className="input" value={menu} onChange={(e) => { setMenu(e.target.value); setDirty(true); }} placeholder="mis. Nasi, Ayam, Sayur, Buah" />
         </div>
         <div>
           <label className="label">Driver</label>
-          <input className="input" value={driver} onChange={(e) => setDriver(e.target.value)} />
+          <input className="input" value={driver} onChange={(e) => { setDriver(e.target.value); setDirty(true); }} />
         </div>
         <div>
           <label className="label">Catatan</label>
-          <input className="input" value={catatan} onChange={(e) => setCatatan(e.target.value)} />
+          <input className="input" value={catatan} onChange={(e) => { setCatatan(e.target.value); setDirty(true); }} />
         </div>
       </div>
 
       {/* Menu terstruktur untuk form Uji Organoleptik (bisa diisi & diganti tiap hari) */}
       <div className="grid gap-3 lg:grid-cols-2">
-        <MenuEditor judul="🍚 Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={setMenuSekolah} />
-        <MenuEditor judul="👶 Menu Posyandu / Balita — Uji Organoleptik" warna="text-amber-300" value={menuPosyandu} onChange={setMenuPosyandu} />
+        <MenuEditor judul="🍚 Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={(v) => { setMenuSekolah(v); setDirty(true); }} />
+        <MenuEditor judul="👶 Menu Posyandu / Balita — Uji Organoleptik" warna="text-amber-300" value={menuPosyandu} onChange={(v) => { setMenuPosyandu(v); setDirty(true); }} />
       </div>
 
       {msg && (
@@ -346,6 +366,7 @@ export default function DistribusiPage() {
         <button onClick={simpan} className="btn-gold" disabled={saving}>
           {saving ? "Menyimpan…" : "💾 Simpan Distribusi"}
         </button>
+        {dirty && <span className="text-xs font-semibold text-amber-300">● Ada perubahan belum disimpan</span>}
         <span className="mx-1 text-xs text-slate-500">Cetak dokumen:</span>
         <button onClick={() => cetak("bast")} className="btn-ghost text-sm">🧾 BAST</button>
         <button onClick={() => cetak("surat-jalan")} className="btn-ghost text-sm">🚚 Surat Jalan</button>

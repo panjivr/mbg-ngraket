@@ -37,10 +37,13 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
           : cur.kategori || "balita")
       : "";
   const jenjang = b.jenjang !== undefined ? String(b.jenjang).trim() : cur.jenjang;
-  const besar = num(b.besar, cur.besar);
-  const kecil = num(b.kecil, cur.kecil);
-  const b3 = num(b.b3, cur.b3);
-  const pj = num(b.pj, cur.pj);
+  // Normalisasi porsi sesuai jenis: serdik tak punya B3; B3 tak punya besar/kecil/PJ.
+  // Menjaga total master, distribusi, dan belanja tetap konsisten.
+  const isB3 = jenis === "b3";
+  const besar = isB3 ? 0 : num(b.besar, cur.besar);
+  const kecil = isB3 ? 0 : num(b.kecil, cur.kecil);
+  const b3 = isB3 ? num(b.b3, cur.b3) : 0;
+  const pj = isB3 ? 0 : num(b.pj, cur.pj);
   const jam_kirim = b.jam_kirim !== undefined ? String(b.jam_kirim) : cur.jam_kirim;
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : cur.aktif;
 

@@ -26,10 +26,17 @@ export const POST = route(async (req: NextRequest) => {
   const KAT_B3 = ["balita", "bumil", "busui"];
   const kategori = jenis === "b3" ? (KAT_B3.includes(String(b.kategori)) ? String(b.kategori) : "balita") : "";
   const jenjang = String(b.jenjang ?? "").trim();
-  const besar = Math.max(0, Math.round(Number(b.besar ?? 0)) || 0);
-  const kecil = Math.max(0, Math.round(Number(b.kecil ?? 0)) || 0);
-  const b3 = Math.max(0, Math.round(Number(b.b3 ?? 0)) || 0);
-  const pj = Math.max(0, Math.round(Number(b.pj ?? 0)) || 0);
+  const rawBesar = Math.max(0, Math.round(Number(b.besar ?? 0)) || 0);
+  const rawKecil = Math.max(0, Math.round(Number(b.kecil ?? 0)) || 0);
+  const rawB3 = Math.max(0, Math.round(Number(b.b3 ?? 0)) || 0);
+  const rawPj = Math.max(0, Math.round(Number(b.pj ?? 0)) || 0);
+  // Normalisasi porsi sesuai jenis: serdik tak punya B3; B3 tak punya besar/kecil/PJ.
+  // Ini menjaga total master, distribusi, dan belanja tetap konsisten.
+  const isB3 = jenis === "b3";
+  const besar = isB3 ? 0 : rawBesar;
+  const kecil = isB3 ? 0 : rawKecil;
+  const b3 = isB3 ? rawB3 : 0;
+  const pj = isB3 ? 0 : rawPj;
   const jam_kirim = String(b.jam_kirim ?? "07:00");
   const aktif = b.aktif === false ? false : true;
   const urutRow = await query<{ m: number | null }>(
