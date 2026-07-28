@@ -148,16 +148,8 @@ function Inner() {
   const sppg = data.sppg;
   const serdik = data.baris.filter((b) => b.jenis === "serdik" && b.ikut && b.besar + b.kecil > 0);
   const b3 = data.baris.filter((b) => b.jenis === "b3" && b.ikut && b.b3 > 0);
-  // B3 dikirim ke satu tempat → digabung untuk Surat Jalan & Organoleptik.
+  // Dokumen Posyandu (Surat Jalan & Organoleptik) dibuat per DESA.
   // Porsi dipisah: Balita / Bumil / Busui agar tidak tercampur.
-  const b3Balita = b3.filter((b) => b.kategori === "balita").reduce((a, b) => a + b.b3, 0);
-  const b3Busui = b3.filter((b) => b.kategori === "busui").reduce((a, b) => a + b.b3, 0);
-  const b3Bumil = b3.filter((b) => b.kategori !== "balita" && b.kategori !== "busui").reduce((a, b) => a + b.b3, 0);
-  const b3Rows: { kelas: string; porsi: number }[] = [];
-  if (b3Balita > 0) b3Rows.push({ kelas: "Balita", porsi: b3Balita });
-  if (b3Bumil > 0) b3Rows.push({ kelas: "Ibu Hamil", porsi: b3Bumil });
-  if (b3Busui > 0) b3Rows.push({ kelas: "Ibu Menyusui", porsi: b3Busui });
-  const b3Jam = b3[0]?.jam_kirim || "";
 
   // Organoleptik Posyandu: per DESA, dipisah tipe menu Balita vs B2 (Bumil & Busui).
   const menuBalita = data.distribusi.menu_balita || [];
@@ -168,18 +160,31 @@ function Inner() {
     if (!desaSet.has(d)) desaSet.set(d, []);
     desaSet.get(d)!.push(b);
   }
-  const orgPosyandu = [...desaSet.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, "id"))
-    .flatMap(([desa, rows]) => {
-      const docs: { key: string; nama: string; grup: MenuGrup[]; label: string }[] = [];
-      const adaBalita = rows.some((r) => r.kategori === "balita");
-      const adaB2 = rows.some((r) => r.kategori !== "balita"); // bumil + busui
-      if (adaBalita)
-        docs.push({ key: `org-${desa}-balita`, nama: `Desa ${desa} — Balita`, grup: menuBalita, label: "Balita" });
-      if (adaB2)
-        docs.push({ key: `org-${desa}-b2`, nama: `Desa ${desa} — B2 (Bumil & Busui)`, grup: menuB2, label: "B2" });
-      return docs;
-    });
+  const desaTerurut = [...desaSet.entries()].sort(([a], [b]) => a.localeCompare(b, "id"));
+  const orgPosyandu = desaTerurut.flatMap(([desa, rows]) => {
+    const docs: { key: string; nama: string; grup: MenuGrup[]; label: string }[] = [];
+    const adaBalita = rows.some((r) => r.kategori === "balita");
+    const adaB2 = rows.some((r) => r.kategori !== "balita"); // bumil + busui
+    if (adaBalita)
+      docs.push({ key: `org-${desa}-balita`, nama: `Desa ${desa} — Balita`, grup: menuBalita, label: "Balita" });
+    if (adaB2)
+      docs.push({ key: `org-${desa}-b2`, nama: `Desa ${desa} — B2 (Bumil & Busui)`, grup: menuB2, label: "B2" });
+    return docs;
+  });
+
+  // Surat Jalan Posyandu: satu dokumen per DESA (rincian Balita/Bumil/Busui).
+  const sjPosyandu = desaTerurut.map(([desa, rows]) => {
+    const sum = (k: (r: Baris) => boolean) =>
+      rows.filter(k).reduce((a, r) => a + r.b3, 0);
+    const balita = sum((r) => r.kategori === "balita");
+    const busui = sum((r) => r.kategori === "busui");
+    const bumil = sum((r) => r.kategori !== "balita" && r.kategori !== "busui");
+    const kelas: { kelas: string; porsi: number }[] = [];
+    if (balita > 0) kelas.push({ kelas: "Balita", porsi: balita });
+    if (bumil > 0) kelas.push({ kelas: "Ibu Hamil", porsi: bumil });
+    if (busui > 0) kelas.push({ kelas: "Ibu Menyusui", porsi: busui });
+    return { key: `sj-${desa}`, desa, jam: rows[0]?.jam_kirim || "", kelas };
+  });
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
@@ -358,7 +363,7 @@ function Inner() {
     <div className="min-h-screen bg-white py-6 text-black">
       <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
       <div className="no-print mx-auto mb-4 flex max-w-[760px] flex-wrap items-center justify-between gap-3 px-4">
-        <p className="text-sm text-gray-600">{serdik.length} sekolah · {b3.length} posyandu · {tglLong(tanggal)}</p>
+        <p className="text-sm text-gray-600">{serdik.length} sekolah · {desaSet.size} desa posyandu · {tglLong(tanggal)}</p>
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">Ukuran kertas</label>
           <select value={paper} onChange={(e) => setPaper(e.target.value)}
@@ -437,12 +442,13 @@ function Inner() {
         );
       })}
 
-      {/* ===== Surat Jalan: per sekolah (serdik) + SATU gabungan untuk B3 ===== */}
+      {/* ===== Surat Jalan: per sekolah (serdik) + per DESA untuk Posyandu ===== */}
       {showSJ && serdik.map((s) =>
         suratJalanDoc("sj-" + s.penerima_id, s.nama, s.jam_kirim || "", kelasRows(s), "Sekolah"),
       )}
-      {showSJ && b3Rows.length > 0 &&
-        suratJalanDoc("sj-b3", "Posyandu (Semua Desa)", b3Jam, b3Rows, "Posyandu")}
+      {showSJ && sjPosyandu.map((d) =>
+        suratJalanDoc(d.key, `Posyandu Desa ${d.desa}`, d.jam, d.kelas, "Posyandu"),
+      )}
 
       {/* ===== Uji Organoleptik: per sekolah (serdik) + per DESA untuk Posyandu ===== */}
       {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, data.distribusi.menu_sekolah || [], false, "Sampel"))}
