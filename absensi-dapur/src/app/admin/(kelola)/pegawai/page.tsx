@@ -79,6 +79,10 @@ export default function PegawaiPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Notice ketersediaan username (real-time, dicek ke server saat mengetik).
+  const [unameStatus, setUnameStatus] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid" | "empty"
+  >("idle");
   // Ganti password hanya bila admin membukanya secara sengaja — cegah autofill
   // browser diam-diam menimpa password pegawai saat mengedit data lain.
   const [changePw, setChangePw] = useState(false);
@@ -187,6 +191,54 @@ export default function PegawaiPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Cek ketersediaan username secara real-time (debounce) selama form terbuka.
+  const formOpen = !!form;
+  const formUsername = form?.username ?? "";
+  const formId = form?.id ?? null;
+  useEffect(() => {
+    if (!formOpen) {
+      setUnameStatus("idle");
+      return;
+    }
+    const u = formUsername.trim().toLowerCase();
+    if (!u) {
+      setUnameStatus("empty");
+      return;
+    }
+    if (!/^[a-z0-9._-]+$/.test(u)) {
+      setUnameStatus("invalid");
+      return;
+    }
+    setUnameStatus("checking");
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({ u });
+        if (formId) qs.set("id", String(formId));
+        const res = await fetch(`/api/admin/employees/check-username?${qs}`, {
+          signal: ctrl.signal,
+          cache: "no-store",
+        });
+        const d = await res.json();
+        setUnameStatus(
+          d.available
+            ? "ok"
+            : d.status === "dipakai"
+              ? "taken"
+              : d.status === "format"
+                ? "invalid"
+                : "empty",
+        );
+      } catch {
+        /* dibatalkan / gagal jaringan — biarkan, validasi final tetap di server */
+      }
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [formOpen, formUsername, formId]);
 
   function openNew() {
     setError(null);
@@ -462,12 +514,39 @@ export default function PegawaiPage() {
                 <div>
                   <label className="label">Username</label>
                   <input
-                    className="input"
+                    className={
+                      "input " +
+                      (unameStatus === "taken" || unameStatus === "invalid"
+                        ? "border-red-500/50"
+                        : unameStatus === "ok"
+                          ? "border-emerald-500/50"
+                          : "")
+                    }
                     value={form.username}
+                    autoCapitalize="none"
                     onChange={(e) =>
                       setForm({ ...form, username: e.target.value })
                     }
                   />
+                  {form.username.trim() && (
+                    <p
+                      className={
+                        "mt-1 text-[11px] leading-snug " +
+                        (unameStatus === "ok"
+                          ? "text-emerald-300"
+                          : unameStatus === "checking"
+                            ? "text-slate-400"
+                            : "text-red-300")
+                      }
+                    >
+                      {unameStatus === "checking" && "Memeriksa ketersediaan…"}
+                      {unameStatus === "ok" && "✓ Username tersedia"}
+                      {unameStatus === "taken" &&
+                        "✗ Username sudah dipakai — pilih yang lain"}
+                      {unameStatus === "invalid" &&
+                        "✗ Hanya huruf kecil, angka, titik, _ atau -"}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="label">NIP</label>
@@ -650,7 +729,16 @@ export default function PegawaiPage() {
                 <button onClick={() => setForm(null)} className="btn-ghost flex-1">
                   Batal
                 </button>
-                <button onClick={save} className="btn-gold flex-1" disabled={saving}>
+                <button
+                  onClick={save}
+                  className="btn-gold flex-1"
+                  disabled={
+                    saving ||
+                    unameStatus === "taken" ||
+                    unameStatus === "invalid" ||
+                    unameStatus === "checking"
+                  }
+                >
                   {saving ? "Menyimpan…" : "Simpan"}
                 </button>
               </div>

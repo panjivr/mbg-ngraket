@@ -121,15 +121,24 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   }
   paramsArr.push(id);
 
-  const rows = await query<User>(
-    `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
-            divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
-            akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14, is_hr=$15${passwordClause}
-       WHERE id = $${paramsArr.length}
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-               tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr`,
-    paramsArr,
-  );
+  let rows: User[];
+  try {
+    rows = await query<User>(
+      `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
+              divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
+              akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14, is_hr=$15${passwordClause}
+         WHERE id = $${paramsArr.length}
+       RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
+                 tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr`,
+      paramsArr,
+    );
+  } catch (e) {
+    // Race: username lolos cek di atas tapi keburu dipakai request lain.
+    if ((e as { code?: string })?.code === "23505") {
+      return fail(409, "Username sudah dipakai. Pilih yang lain.");
+    }
+    throw e;
+  }
   const ubah: string[] = [];
   if (existing.nama !== nama) ubah.push("nama");
   if (existing.role !== role) ubah.push(`role→${role}`);

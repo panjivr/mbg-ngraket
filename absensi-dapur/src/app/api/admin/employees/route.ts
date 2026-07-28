@@ -94,12 +94,21 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const hash = await hashPassword(password);
-  const rows = await query<User>(
-    `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin, sppg_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-     RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin`,
-    [nama, username, hash, role, jabatan, nip, aktif, divId, tempat_lahir, tanggal_lahir, jenis_kelamin, admin.sppg_id],
-  );
+  let rows: User[];
+  try {
+    rows = await query<User>(
+      `INSERT INTO users (nama, username, password_hash, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin, sppg_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id, tempat_lahir, tanggal_lahir, jenis_kelamin`,
+      [nama, username, hash, role, jabatan, nip, aktif, divId, tempat_lahir, tanggal_lahir, jenis_kelamin, admin.sppg_id],
+    );
+  } catch (e) {
+    // Race: username lolos cek di atas tapi keburu dipakai request lain.
+    if ((e as { code?: string })?.code === "23505") {
+      return fail(409, "Username sudah dipakai. Pilih yang lain.");
+    }
+    throw e;
+  }
   await catatAudit(admin, "buat", "Pegawai", `${nama} (@${username})${role === "admin" ? " · admin" : ""}`);
   return ok({ employee: rows[0] }, { status: 201 });
 });
