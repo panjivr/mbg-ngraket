@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28h.belanja-ak";
+const SCHEMA_VERSION = "2026-07-28i.menu-b2-balita";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -460,6 +460,14 @@ async function doEnsureSchema(): Promise<void> {
     // Menu terstruktur untuk form Uji Organoleptik (grup + item), per jenis penerima.
     await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_sekolah JSONB NOT NULL DEFAULT '[]'::jsonb`);
     await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_posyandu JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    // Menu Posyandu dipisah: Balita vs B2 (Bumil & Busui) — form organoleptik beda menu.
+    await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_balita JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    await client.query(`ALTER TABLE distribusi ADD COLUMN IF NOT EXISTS menu_b2 JSONB NOT NULL DEFAULT '[]'::jsonb`);
+    // Migrasi sekali: menu_posyandu lama dianggap menu Balita bila Balita masih kosong.
+    await client.query(
+      `UPDATE distribusi SET menu_balita = menu_posyandu
+         WHERE menu_balita = '[]'::jsonb AND menu_posyandu <> '[]'::jsonb`,
+    );
 
     // Laporan Kegiatan Harian (isi terstruktur + foto dokumentasi), per tanggal.
     await client.query(`

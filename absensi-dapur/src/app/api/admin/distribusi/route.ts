@@ -49,9 +49,9 @@ export const GET = route(async (req: NextRequest) => {
   const dist = (
     await query<{
       id: number; driver: string; menu: string; catatan: string;
-      menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[];
+      menu_sekolah: MenuGrup[]; menu_balita: MenuGrup[]; menu_b2: MenuGrup[];
     }>(
-      `SELECT id, driver, menu, catatan, menu_sekolah, menu_posyandu
+      `SELECT id, driver, menu, catatan, menu_sekolah, menu_balita, menu_b2
          FROM distribusi WHERE sppg_id = $1 AND tanggal = $2`,
       [admin.sppg_id, tanggal],
     )
@@ -124,9 +124,10 @@ export const GET = route(async (req: NextRequest) => {
       ? {
           driver: dist.driver, menu: dist.menu, catatan: dist.catatan,
           menu_sekolah: dist.menu_sekolah ?? [],
-          menu_posyandu: dist.menu_posyandu ?? [],
+          menu_balita: dist.menu_balita ?? [],
+          menu_b2: dist.menu_b2 ?? [],
         }
-      : { driver: "", menu: "", catatan: "", menu_sekolah: [], menu_posyandu: [] },
+      : { driver: "", menu: "", catatan: "", menu_sekolah: [], menu_balita: [], menu_b2: [] },
     baris,
     total: {
       besar: tBesar,
@@ -150,7 +151,8 @@ export const POST = route(async (req: NextRequest) => {
   const menu = String(b.menu ?? "").trim();
   const catatan = String(b.catatan ?? "").trim();
   const menuSekolah = cleanMenu(b.menu_sekolah);
-  const menuPosyandu = cleanMenu(b.menu_posyandu);
+  const menuBalita = cleanMenu(b.menu_balita);
+  const menuB2 = cleanMenu(b.menu_b2);
   const items = Array.isArray(b.items) ? (b.items as Record<string, unknown>[]) : [];
 
   await withClient(async (client) => {
@@ -158,13 +160,15 @@ export const POST = route(async (req: NextRequest) => {
     try {
       const dist = (
         await client.query<{ id: number }>(
-          `INSERT INTO distribusi (sppg_id, tanggal, driver, menu, catatan, menu_sekolah, menu_posyandu)
-           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb)
+          `INSERT INTO distribusi (sppg_id, tanggal, driver, menu, catatan, menu_sekolah, menu_balita, menu_b2)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb)
            ON CONFLICT (sppg_id, tanggal) DO UPDATE
              SET driver = EXCLUDED.driver, menu = EXCLUDED.menu, catatan = EXCLUDED.catatan,
-                 menu_sekolah = EXCLUDED.menu_sekolah, menu_posyandu = EXCLUDED.menu_posyandu
+                 menu_sekolah = EXCLUDED.menu_sekolah,
+                 menu_balita = EXCLUDED.menu_balita, menu_b2 = EXCLUDED.menu_b2
            RETURNING id`,
-          [admin.sppg_id, tanggal, driver, menu, catatan, JSON.stringify(menuSekolah), JSON.stringify(menuPosyandu)],
+          [admin.sppg_id, tanggal, driver, menu, catatan,
+           JSON.stringify(menuSekolah), JSON.stringify(menuBalita), JSON.stringify(menuB2)],
         )
       ).rows[0];
 

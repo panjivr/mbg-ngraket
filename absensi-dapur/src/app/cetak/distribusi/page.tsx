@@ -20,7 +20,7 @@ interface Baris {
 interface DistData {
   tanggal: string;
   sppg: { nama: string; kepala_sppg: string; alamat: string; ahli_gizi: string; koordinator: string };
-  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[] };
+  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_balita: MenuGrup[]; menu_b2: MenuGrup[] };
   baris: Baris[];
 }
 
@@ -40,6 +40,11 @@ const D = (t: string) => new Date(t + "T00:00:00");
 const hari = (t: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(D(t));
 const tglLong = (t: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(D(t));
 const tglSlash = (t: string) => new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(D(t)).replace(/\//g, "/");
+/** Ambil nama desa dari nama penerima B3 (mis. "BALITA DESA NGRAKET" → "NGRAKET"). */
+function desaDariNama(nama: string): string {
+  const m = nama.toUpperCase().match(/DESA\s+(.+)$/);
+  return m ? m[1].trim() : "";
+}
 
 /** Rincian "Kelas" pada Surat Jalan: Besar/Kecil/Guru untuk sekolah, B3 untuk posyandu. */
 function kelasRows(s: Baris): { kelas: string; porsi: number }[] {
@@ -153,6 +158,28 @@ function Inner() {
   if (b3Bumil > 0) b3Rows.push({ kelas: "Ibu Hamil", porsi: b3Bumil });
   if (b3Busui > 0) b3Rows.push({ kelas: "Ibu Menyusui", porsi: b3Busui });
   const b3Jam = b3[0]?.jam_kirim || "";
+
+  // Organoleptik Posyandu: per DESA, dipisah tipe menu Balita vs B2 (Bumil & Busui).
+  const menuBalita = data.distribusi.menu_balita || [];
+  const menuB2 = data.distribusi.menu_b2 || [];
+  const desaSet = new Map<string, Baris[]>();
+  for (const b of b3) {
+    const d = desaDariNama(b.nama) || b.nama;
+    if (!desaSet.has(d)) desaSet.set(d, []);
+    desaSet.get(d)!.push(b);
+  }
+  const orgPosyandu = [...desaSet.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, "id"))
+    .flatMap(([desa, rows]) => {
+      const docs: { key: string; nama: string; grup: MenuGrup[]; label: string }[] = [];
+      const adaBalita = rows.some((r) => r.kategori === "balita");
+      const adaB2 = rows.some((r) => r.kategori !== "balita"); // bumil + busui
+      if (adaBalita)
+        docs.push({ key: `org-${desa}-balita`, nama: `Desa ${desa} — Balita`, grup: menuBalita, label: "Balita" });
+      if (adaB2)
+        docs.push({ key: `org-${desa}-b2`, nama: `Desa ${desa} — B2 (Bumil & Busui)`, grup: menuB2, label: "B2" });
+      return docs;
+    });
   const showBast = dok === "bast" || dok === "semua";
   const showSJ = dok === "surat-jalan" || dok === "semua";
   const showOrg = dok === "organoleptik" || dok === "semua";
@@ -254,9 +281,14 @@ function Inner() {
     );
   };
 
-  // Satu dokumen Uji Organoleptik (per sekolah, dan sekali untuk gabungan B3).
-  const orgDoc = (key: string, nama: string, isB3: boolean) => {
-    const grup = isB3 ? data.distribusi.menu_posyandu || [] : data.distribusi.menu_sekolah || [];
+  // Satu dokumen Uji Organoleptik. Sekolah = per sekolah; Posyandu = per desa per tipe.
+  const orgDoc = (
+    key: string,
+    nama: string,
+    grup: MenuGrup[],
+    isPosyandu: boolean,
+    sampelLabel: string,
+  ) => {
     return (
       <div key={key} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
         <KopBGN sppgNama={namaSppg} />
@@ -265,9 +297,9 @@ function Inner() {
         <div className="mt-6 text-sm leading-relaxed">
           {[
             { l: <>Hari/Tanggal</>, v: <>{(hari(tanggal) + " " + tglLong(tanggal)).toUpperCase()}</> },
-            { l: isB3 ? <>Nama Posyandu</> : <>Nama Sekolah</>, v: <b>{nama}</b> },
+            { l: isPosyandu ? <>Nama Posyandu</> : <>Nama Sekolah</>, v: <b>{nama}</b> },
             { l: <>Asal Sampel</>, v: <b>SPPG {namaSppg}</b> },
-            { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isB3 ? "Posyandu" : "sekolah"})</span></>, v: null },
+            { l: <>Petugas Sampel<br /><span className="text-xs">(pihak {isPosyandu ? "Posyandu" : "sekolah"})</span></>, v: null },
             { l: <>Menu</>, v: data.distribusi.menu ? <>{data.distribusi.menu}</> : null },
             { l: <>Instruksi</>, v: <>Isilah dengan memberi tanda centang (✓) pada Indikator Penilaian Uji Organoleptik</> },
           ].map((row, i) => (
@@ -287,7 +319,7 @@ function Inner() {
           <thead className="font-bold">
             <tr>
               <th rowSpan={3} className="border border-black px-2 py-1">No</th>
-              <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({isB3 ? "B3" : "Sampel"})</th>
+              <th rowSpan={3} className="border border-black px-2 py-1">Nama Menu<br />({sampelLabel})</th>
               <th colSpan={8} className="border border-black px-2 py-1">Indikator Penilaian</th>
             </tr>
             <tr>
@@ -314,7 +346,7 @@ function Inner() {
         <div className="mt-8 flex justify-end text-center text-sm">
           <div className="w-64">
             <p>Diperiksa oleh,</p>
-            <p>Pihak {isB3 ? "Posyandu" : "Sekolah"}</p>
+            <p>Pihak {isPosyandu ? "Posyandu" : "Sekolah"}</p>
             <div className="mx-auto mt-20 w-56 border-b border-black" />
           </div>
         </div>
@@ -412,9 +444,9 @@ function Inner() {
       {showSJ && b3Rows.length > 0 &&
         suratJalanDoc("sj-b3", "Posyandu (Semua Desa)", b3Jam, b3Rows, "Posyandu")}
 
-      {/* ===== Uji Organoleptik: per sekolah (serdik) + SATU gabungan untuk B3 ===== */}
-      {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, false))}
-      {showOrg && b3.length > 0 && orgDoc("org-b3", "Posyandu (Semua Desa)", true)}
+      {/* ===== Uji Organoleptik: per sekolah (serdik) + per DESA untuk Posyandu ===== */}
+      {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, data.distribusi.menu_sekolah || [], false, "Sampel"))}
+      {showOrg && orgPosyandu.map((o) => orgDoc(o.key, o.nama, o.grup, true, o.label))}
 
       {serdik.length === 0 && b3.length === 0 && (
         <p className="p-8 text-center text-gray-600">

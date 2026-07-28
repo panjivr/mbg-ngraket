@@ -21,7 +21,7 @@ interface DistData {
   tanggal: string;
   tersimpan: boolean;
   sppg: { nama: string; kepala_sppg: string; harga_besar: number; harga_kecil: number; harga_b3: number };
-  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_posyandu: MenuGrup[] };
+  distribusi: { driver: string; menu: string; catatan: string; menu_sekolah: MenuGrup[]; menu_balita: MenuGrup[]; menu_b2: MenuGrup[] };
   baris: Baris[];
   total: { besar: number; kecil: number; balita: number; bumil: number; busui: number; b3: number; porsi: number; pagu: number };
 }
@@ -64,7 +64,8 @@ export default function DistribusiPage() {
   const [menu, setMenu] = useState("");
   const [catatan, setCatatan] = useState("");
   const [menuSekolah, setMenuSekolah] = useState<MenuGrup[]>([]);
-  const [menuPosyandu, setMenuPosyandu] = useState<MenuGrup[]>([]);
+  const [menuBalita, setMenuBalita] = useState<MenuGrup[]>([]);
+  const [menuB2, setMenuB2] = useState<MenuGrup[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -83,7 +84,8 @@ export default function DistribusiPage() {
       setMenu(d.distribusi?.menu || "");
       setCatatan(d.distribusi?.catatan || "");
       setMenuSekolah(d.distribusi?.menu_sekolah || []);
-      setMenuPosyandu(d.distribusi?.menu_posyandu || []);
+      setMenuBalita(d.distribusi?.menu_balita || []);
+      setMenuB2(d.distribusi?.menu_b2 || []);
       setDirty(false);
     } finally {
       setLoading(false);
@@ -156,7 +158,7 @@ export default function DistribusiPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tanggal, driver, menu, catatan,
-          menu_sekolah: menuSekolah, menu_posyandu: menuPosyandu,
+          menu_sekolah: menuSekolah, menu_balita: menuBalita, menu_b2: menuB2,
           items: baris.map((b) => ({
             penerima_id: b.penerima_id, besar: b.besar, kecil: b.kecil, b3: b.b3, ikut: b.ikut,
           })),
@@ -267,9 +269,10 @@ export default function DistribusiPage() {
       </div>
 
       {/* Menu terstruktur untuk form Uji Organoleptik (bisa diisi & diganti tiap hari) */}
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-3">
         <MenuEditor judul="🍚 Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={(v) => { setMenuSekolah(v); setDirty(true); }} />
-        <MenuEditor judul="👶 Menu Posyandu / Balita — Uji Organoleptik" warna="text-amber-300" value={menuPosyandu} onChange={(v) => { setMenuPosyandu(v); setDirty(true); }} />
+        <MenuEditor judul="👶 Menu Balita — Uji Organoleptik" warna="text-amber-300" value={menuBalita} onChange={(v) => { setMenuBalita(v); setDirty(true); }} />
+        <MenuEditor judul="🤰 Menu B2 (Bumil & Busui) — Uji Organoleptik" warna="text-pink-300" value={menuB2} onChange={(v) => { setMenuB2(v); setDirty(true); }} />
       </div>
 
       {msg && (
