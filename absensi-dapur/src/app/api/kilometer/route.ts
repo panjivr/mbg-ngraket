@@ -58,6 +58,18 @@ export const GET = route(async (req: NextRequest) => {
 export const POST = route(async (req: NextRequest) => {
   const s = await requireSession();
   const sppgId = s.sppg_id;
+  // Hanya sopir / admin distribusi / admin yang boleh mencatat KM kendaraan.
+  if (s.role !== "admin") {
+    const me = (
+      await query<{ is_driver: boolean; akses_distribusi: boolean }>(
+        `SELECT is_driver, akses_distribusi FROM users WHERE id = $1`,
+        [s.uid],
+      )
+    )[0];
+    if (!me?.is_driver && !me?.akses_distribusi) {
+      return fail(403, "Khusus sopir / admin distribusi.");
+    }
+  }
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const tanggal = String(b.tanggal ?? "");
   if (!DATE_RE.test(tanggal)) return fail(400, "Tanggal tidak valid.");
