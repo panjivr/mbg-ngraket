@@ -11,6 +11,8 @@ export interface TemplateAkuntan {
   nomor: string;
   deskripsi: string;
   ikon: string;
+  /** Opsional: label nominal/rupiah yang ditampilkan sebagai chip di kartu hub. */
+  nominal?: string;
 }
 
 export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
@@ -57,6 +59,16 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     ikon: "↩️",
   },
   {
+    slug: "insentif-pm",
+    judul: "BA Insentif Penerima Manfaat",
+    heading: "BERITA ACARA SERAH TERIMA INSENTIF",
+    nomor: "",
+    deskripsi:
+      "Rekap insentif PIC + serah terima per lembaga — sekali cetak untuk semua lembaga.",
+    ikon: "🤝",
+    nominal: "Rp1.000–50.000 / PM",
+  },
+  {
     slug: "gagal-approval",
     judul: "BA Gagal Approval VA",
     heading: "BERITA ACARA GAGAL APPROVAL VA",
@@ -84,4 +96,47 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
 
 export function getTemplate(slug: string): TemplateAkuntan | undefined {
   return TEMPLATE_AKUNTAN.find((t) => t.slug === slug);
+}
+
+/**
+ * Urutan divisi/jabatan resmi SPPG (mengikuti dokumen "Urutan Nama Karyawan").
+ * Dipakai untuk mengurutkan daftar pegawai (mis. BA Lembur) — nama pegawai
+ * menyesuaikan data, tetapi urutan divisinya mengikuti daftar ini.
+ */
+export const URUTAN_DIVISI: string[] = [
+  "Asisten Lapangan",
+  "Koordinator",
+  "Admin",
+  "Persiapan",
+  "Chef",
+  "Pengolahan",
+  "Pemorsian",
+  "Pencucian",
+  "Driver",
+  "Kebersihan",
+  "Keamanan",
+];
+
+// Kata kunci pencocokan (huruf besar) sejajar dengan URUTAN_DIVISI di atas.
+const KUNCI_DIVISI = [
+  "LAPANGAN",
+  "KOORDINATOR",
+  "ADMIN",
+  "PERSIAPAN",
+  "CHEF",
+  "PENGOLAHAN",
+  "PEMORSIAN",
+  "PENCUCIAN",
+  "DRIVER",
+  "KEBERSIHAN",
+  "KEAMANAN",
+];
+
+/** Peringkat urutan sebuah divisi/jabatan; tak dikenal → paling akhir. */
+export function urutanDivisi(nama?: string | null): number {
+  const s = (nama || "").toUpperCase();
+  for (let i = 0; i < KUNCI_DIVISI.length; i++) {
+    if (s.includes(KUNCI_DIVISI[i])) return i;
+  }
+  return KUNCI_DIVISI.length;
 }

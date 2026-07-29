@@ -43,6 +43,12 @@ const AKSEN: Record<
     ring: "hover:ring-violet-500/40 hover:shadow-violet-500/10",
     teks: "group-hover:text-violet-200",
   },
+  "insentif-pm": {
+    ikon: "bg-green-500/15 text-green-300 ring-green-500/30",
+    garis: "from-green-500/70",
+    ring: "hover:ring-green-500/40 hover:shadow-green-500/10",
+    teks: "group-hover:text-green-200",
+  },
   "gagal-approval": {
     ikon: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
     garis: "from-rose-500/70",
@@ -80,6 +86,11 @@ const KELOMPOK: { label: string; ket: string; slugs: string[] }[] = [
       "servis-peralatan",
       "penggantian-operasional",
     ],
+  },
+  {
+    label: "Insentif & Penerima Manfaat",
+    ket: "Rekap & serah terima insentif PIC per lembaga.",
+    slugs: ["insentif-pm"],
   },
   {
     label: "Keuangan & Transfer",
@@ -204,11 +215,18 @@ export default async function AkuntanHubPage() {
                         >
                           {t.judul}
                         </p>
-                        {t.nomor && (
-                          <p className="mt-1 inline-block rounded bg-ink-900 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
-                            {t.nomor}
-                          </p>
-                        )}
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {t.nomor && (
+                            <span className="inline-block rounded bg-ink-900 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">
+                              {t.nomor}
+                            </span>
+                          )}
+                          {t.nominal && (
+                            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/20">
+                              💰 {t.nominal}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <p className="text-xs leading-relaxed text-slate-400">
