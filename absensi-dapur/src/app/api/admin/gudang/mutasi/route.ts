@@ -18,9 +18,11 @@ export const GET = route(async (req: NextRequest) => {
   const params: unknown[] = [admin.sppg_id];
   let extra = "";
   if (bid && Number.isFinite(parseInt(bid, 10))) { params.push(parseInt(bid, 10)); extra = ` AND barang_id = $2`; }
+  // Untuk satu barang (Kartu Stok) ambil riwayat lebih banyak; global tetap 300.
+  const lim = extra ? 3000 : 300;
   const rows = await query<Mutasi>(
     `SELECT id, barang_id, tanggal, tipe, jumlah::float8 AS jumlah, stok_sesudah::float8 AS stok_sesudah, keterangan, oleh, created_at
-       FROM stok_mutasi WHERE sppg_id = $1${extra} ORDER BY created_at DESC LIMIT 300`,
+       FROM stok_mutasi WHERE sppg_id = $1${extra} ORDER BY created_at DESC LIMIT ${lim}`,
     params,
   );
   return ok({ mutasi: rows });

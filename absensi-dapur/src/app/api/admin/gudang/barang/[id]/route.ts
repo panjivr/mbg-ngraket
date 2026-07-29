@@ -14,7 +14,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   const cur = (await query<Barang>(
-    `SELECT id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, catatan, aktif FROM barang WHERE id = $1 AND sppg_id = $2`,
+    `SELECT id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif FROM barang WHERE id = $1 AND sppg_id = $2`,
     [id, admin.sppg_id],
   ))[0];
   if (!cur) return fail(404, "Barang tidak ditemukan.");
@@ -23,13 +23,15 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const kategori = b.kategori !== undefined ? normalizeKategori(b.kategori) : cur.kategori;
   const satuan = b.satuan !== undefined ? (String(b.satuan).trim().slice(0, 20) || "pcs") : cur.satuan;
   const stok_min = b.stok_min !== undefined ? Math.max(0, Number(b.stok_min) || 0) : cur.stok_min;
+  const harga = b.harga !== undefined ? Math.max(0, Number(b.harga) || 0) : cur.harga;
+  const kode_akun = b.kode_akun !== undefined ? String(b.kode_akun).trim().slice(0, 30) : cur.kode_akun;
   const catatan = b.catatan !== undefined ? String(b.catatan).trim().slice(0, 300) : cur.catatan;
   const aktif = b.aktif !== undefined ? b.aktif !== false : cur.aktif;
   // Stok tidak diubah lewat sini (harus lewat mutasi), kecuali edit stok_min/identitas.
   const rows = await query<Barang>(
-    `UPDATE barang SET nama=$1, kategori=$2, satuan=$3, stok_min=$4, catatan=$5, aktif=$6 WHERE id=$7
-     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, catatan, aktif, urutan`,
-    [nama, kategori, satuan, stok_min, catatan, aktif, id],
+    `UPDATE barang SET nama=$1, kategori=$2, satuan=$3, stok_min=$4, harga=$5, kode_akun=$6, catatan=$7, aktif=$8 WHERE id=$9
+     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan`,
+    [nama, kategori, satuan, stok_min, harga, kode_akun, catatan, aktif, id],
   );
   return ok({ barang: rows[0] });
 });

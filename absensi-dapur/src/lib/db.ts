@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-29a.berita-acara";
+const SCHEMA_VERSION = "2026-07-29b.gudang-harga";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -561,12 +561,17 @@ async function doEnsureSchema(): Promise<void> {
         satuan    TEXT NOT NULL DEFAULT 'pcs',
         stok      NUMERIC NOT NULL DEFAULT 0,
         stok_min  NUMERIC NOT NULL DEFAULT 0,
+        harga     NUMERIC NOT NULL DEFAULT 0,
+        kode_akun TEXT NOT NULL DEFAULT '',
         catatan   TEXT NOT NULL DEFAULT '',
         aktif     BOOLEAN NOT NULL DEFAULT TRUE,
         urutan    INTEGER NOT NULL DEFAULT 0
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_barang_sppg ON barang (sppg_id)`);
+    // Harga satuan & kode akun untuk Kartu Stok (nilai persediaan).
+    await client.query(`ALTER TABLE barang ADD COLUMN IF NOT EXISTS harga NUMERIC NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE barang ADD COLUMN IF NOT EXISTS kode_akun TEXT NOT NULL DEFAULT ''`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS stok_mutasi (
         id           SERIAL PRIMARY KEY,
