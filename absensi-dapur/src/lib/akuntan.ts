@@ -11,8 +11,8 @@ export interface TemplateAkuntan {
   nomor: string;
   deskripsi: string;
   ikon: string;
-  /** Opsional: label nominal/rupiah yang ditampilkan sebagai chip di kartu hub. */
-  nominal?: string;
+  /** Opsional: nominal rupiah acuan BA — tampil di kartu & dijumlahkan di hub. */
+  nominal?: number;
 }
 
 export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
@@ -31,6 +31,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "018/BALK-SPPG/VII/2026",
     deskripsi: "Rincian pekerjaan servis/perbaikan peralatan beserta biaya.",
     ikon: "🔧",
+    nominal: 180000,
   },
   {
     slug: "tambahan-bahan-baku",
@@ -40,6 +41,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "002/BAPPBB-SPPG/VII/2026",
     deskripsi: "Pembelian bahan baku mendesak di luar PO memakai petty cash.",
     ikon: "🛒",
+    nominal: 70000,
   },
   {
     slug: "penggantian-operasional",
@@ -49,6 +51,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "003/BAPDPPDO-SPPG/VII/2026",
     deskripsi: "Pengajuan penggantian dana operasional (petty cash) ke mitra.",
     ikon: "💵",
+    nominal: 301800,
   },
   {
     slug: "kelebihan-insentif-pic",
@@ -57,6 +60,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "020/BAKTF-SPPG/VII/2026",
     deskripsi: "Pernyataan kelebihan transfer insentif PIC & penarikan kembali.",
     ikon: "↩️",
+    nominal: 160000,
   },
   {
     slug: "insentif-pm",
@@ -66,7 +70,6 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     deskripsi:
       "Rekap insentif PIC + serah terima per lembaga — sekali cetak untuk semua lembaga.",
     ikon: "🤝",
-    nominal: "Rp1.000–50.000 / PM",
   },
   {
     slug: "gagal-approval",
@@ -83,6 +86,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "",
     deskripsi: "Pernyataan kelebihan transfer dana ke supplier & pengembalian.",
     ikon: "📈",
+    nominal: 11000,
   },
   {
     slug: "kekurangan-transfer",
@@ -91,6 +95,7 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     nomor: "",
     deskripsi: "Pernyataan kekurangan transfer dana ke supplier & pelunasan.",
     ikon: "📉",
+    nominal: 1000000,
   },
 ];
 

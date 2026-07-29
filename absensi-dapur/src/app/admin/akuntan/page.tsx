@@ -116,6 +116,9 @@ export default async function AkuntanHubPage() {
   if (session.role !== "admin") redirect("/dapur");
 
   const byslug = new Map(TEMPLATE_AKUNTAN.map((t) => [t.slug, t]));
+  // Jumlah otomatis nominal acuan dari BA yang memiliki nominal.
+  const berNominal = TEMPLATE_AKUNTAN.filter((t) => t.nominal != null);
+  const totalNominal = berNominal.reduce((a, t) => a + (t.nominal ?? 0), 0);
 
   return (
     <div className="space-y-8">
@@ -221,9 +224,9 @@ export default async function AkuntanHubPage() {
                               {t.nomor}
                             </span>
                           )}
-                          {t.nominal && (
+                          {t.nominal != null && (
                             <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300 ring-1 ring-emerald-500/20">
-                              💰 {t.nominal}
+                              💰 Rp {t.nominal.toLocaleString("id-ID")}
                             </span>
                           )}
                         </div>
@@ -243,6 +246,24 @@ export default async function AkuntanHubPage() {
           </section>
         );
       })}
+
+      {/* Total nominal — dijumlahkan otomatis dari BA yang bernominal */}
+      {totalNominal > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-ink-900 to-ink-900 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-emerald-200">
+              💰 Total Nominal BA
+            </p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Penjumlahan otomatis nominal acuan dari {berNominal.length} BA yang
+              bernominal.
+            </p>
+          </div>
+          <p className="shrink-0 text-2xl font-bold tabular-nums text-emerald-300">
+            Rp {totalNominal.toLocaleString("id-ID")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
