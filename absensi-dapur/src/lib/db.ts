@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-28i.menu-b2-balita";
+const SCHEMA_VERSION = "2026-07-29a.berita-acara";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -481,6 +481,26 @@ async function doEnsureSchema(): Promise<void> {
         UNIQUE (sppg_id, tanggal)
       );
     `);
+
+    // Berita Acara Akuntan tersimpan (arsip per tanggal). Menyimpan konten HTML
+    // dokumen yang sudah diisi supaya bisa dibuka/cetak ulang & terdokumentasi.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS berita_acara (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        slug        TEXT NOT NULL DEFAULT '',
+        judul       TEXT NOT NULL DEFAULT '',
+        nomor       TEXT NOT NULL DEFAULT '',
+        tanggal     DATE NOT NULL,
+        konten_html TEXT NOT NULL DEFAULT '',
+        dibuat_oleh TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_ba_sppg_tanggal ON berita_acara (sppg_id, tanggal DESC, id DESC)`,
+    );
 
     // Dokumentasi Foto Kegiatan (9 foto per kegiatan), per tanggal + nama kegiatan.
     await client.query(`

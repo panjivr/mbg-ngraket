@@ -1,13 +1,13 @@
-import { Ed, TTD, TabelEditable, PrintFrame } from "../_components";
+import { Ed, Tgl, TTD, TabelEditable, PrintFrame } from "../_components";
 import { getTemplate } from "@/lib/akuntan";
 
 const t = getTemplate("gagal-approval")!;
 
 export default function Page() {
   return (
-    <PrintFrame heading={t.heading} nomor={t.nomor}>
+    <PrintFrame heading={t.heading} nomor={t.nomor} slug={t.slug} judul={t.judul}>
       <p className="text-justify">
-        Pada hari ini <Ed>Selasa</Ed> tanggal <Ed>21 April 2026</Ed> bertempat di
+        Pada hari ini <Tgl mode="hari" /> tanggal <Tgl mode="tanggal" /> bertempat di
         SPPG Ngraket Balong Ponorogo, telah dilakukan proses pemeriksaan dan
         pengajuan persetujuan (approval) atas pembayaran dengan rincian sebagai
         berikut:
@@ -38,7 +38,7 @@ export default function Page() {
       </p>
 
       <p className="mt-4 text-right">
-        Ponorogo, <Ed>21 April 2026</Ed>
+        Ponorogo, <Tgl mode="tanggal" />
       </p>
 
       <TTD

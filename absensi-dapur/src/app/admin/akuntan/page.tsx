@@ -13,12 +13,21 @@ export default async function AkuntanHubPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">🧮 Berita Acara Akuntan</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Pilih template, isi bidang yang disorot, lalu cetak atau simpan sebagai
-          PDF. Template mengikuti format resmi SPPG Ngraket Balong Ponorogo.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold">🧮 Berita Acara Akuntan</h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Pilih template, isi bidang yang disorot, lalu cetak atau simpan
+            sebagai PDF. Template mengikuti format resmi SPPG Ngraket Balong
+            Ponorogo.
+          </p>
+        </div>
+        <Link
+          href="/admin/akuntan/arsip"
+          className="shrink-0 rounded-lg border border-gold-500/40 px-3 py-2 text-sm font-semibold text-gold-300 transition hover:bg-gold-500/10"
+        >
+          🗓️ Arsip BA
+        </Link>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

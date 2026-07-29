@@ -1,13 +1,13 @@
-import { Ed, TTD, TabelEditable, PrintFrame } from "../_components";
+import { Ed, Tgl, TTD, TabelEditable, PrintFrame } from "../_components";
 import { getTemplate } from "@/lib/akuntan";
 
 const t = getTemplate("penggantian-operasional")!;
 
 export default function Page() {
   return (
-    <PrintFrame heading={t.heading} nomor={t.nomor}>
+    <PrintFrame heading={t.heading} nomor={t.nomor} slug={t.slug} judul={t.judul}>
       <p className="text-justify">
-        Pada hari ini, <Ed>Senin</Ed> <Ed>13 Juli 2026</Ed>, bertempat di SPPG
+        Pada hari ini, <Tgl mode="hari" /> <Tgl mode="tanggal" />, bertempat di SPPG
         Ngraket Balong 2026, telah dilakukan pembelian barang untuk kebutuhan
         operasional dengan rincian sebagai berikut:
       </p>
@@ -57,7 +57,7 @@ export default function Page() {
       </p>
 
       <p className="mt-4 text-right">
-        Ponorogo, <Ed>13 Juli 2026</Ed>
+        Ponorogo, <Tgl mode="tanggal" />
       </p>
 
       <TTD

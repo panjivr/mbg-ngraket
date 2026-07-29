@@ -1,14 +1,15 @@
-import { Ed, TTD, TabelEditable, PrintFrame } from "../_components";
+import { Ed, Tgl, TTD, TabelEditable, PrintFrame } from "../_components";
 import { getTemplate } from "@/lib/akuntan";
 
 const t = getTemplate("tambahan-bahan-baku")!;
 
 export default function Page() {
   return (
-    <PrintFrame heading={t.heading} nomor={t.nomor}>
+    <PrintFrame heading={t.heading} nomor={t.nomor} slug={t.slug} judul={t.judul}>
       <p className="text-justify">
-        Pada hari ini, <Ed>Senin</Ed> tanggal <Ed>13</Ed> bulan <Ed>Juli</Ed> tahun{" "}
-        <Ed>2026</Ed>, bertempat di SPPG Ngraket Balong, telah dilakukan penambahan
+        Pada hari ini, <Tgl mode="hari" /> tanggal <Tgl mode="tgl" /> bulan{" "}
+        <Tgl mode="bulan" /> tahun <Tgl mode="tahun" />, bertempat di SPPG Ngraket
+        Balong, telah dilakukan penambahan
         pembelian bahan baku di luar Purchase Order (PO) Supplier.
       </p>
 
@@ -53,7 +54,7 @@ export default function Page() {
       </p>
 
       <p className="mt-4 text-right">
-        Ponorogo, <Ed>13 Juli 2026</Ed>
+        Ponorogo, <Tgl mode="tanggal" />
       </p>
 
       <TTD

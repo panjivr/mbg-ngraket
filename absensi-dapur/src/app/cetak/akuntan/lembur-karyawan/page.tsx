@@ -1,19 +1,20 @@
-import { Ed, TTD, TabelEditable, PrintFrame } from "../_components";
+import { Tgl, TTD, PrintFrame } from "../_components";
+import { LemburPicker } from "../LemburPicker";
 import { getTemplate } from "@/lib/akuntan";
 
 const t = getTemplate("lembur-karyawan")!;
 
 export default function Page() {
   return (
-    <PrintFrame heading={t.heading} nomor={t.nomor}>
+    <PrintFrame heading={t.heading} nomor={t.nomor} slug={t.slug} judul={t.judul}>
       <p className="text-justify">
-        Pada hari <Ed>Senin</Ed>, <Ed>27 Juli 2026</Ed> menyatakan bahwa karyawan
-        berikut telah melaksanakan lembur kerja guna menyelesaikan pekerjaan yang
-        belum selesai di luar jam kerja.
+        Pada hari <Tgl mode="hari" />, <Tgl mode="tanggal" /> menyatakan bahwa
+        karyawan berikut telah melaksanakan lembur kerja guna menyelesaikan
+        pekerjaan yang belum selesai di luar jam kerja.
       </p>
 
       <div className="mt-3">
-        <TabelEditable headers={["NAMA", "JABATAN"]} autoNo={false} baris={8} />
+        <LemburPicker />
       </div>
 
       <p className="mt-4 text-justify">
@@ -22,7 +23,7 @@ export default function Page() {
       </p>
 
       <p className="mt-4 text-right">
-        Ponorogo, <Ed>27 Juli 2026</Ed>
+        Ponorogo, <Tgl mode="tanggal" />
       </p>
 
       <TTD

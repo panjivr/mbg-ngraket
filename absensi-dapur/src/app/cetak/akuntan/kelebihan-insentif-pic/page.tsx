@@ -1,13 +1,13 @@
-import { Ed, TTD, PrintFrame } from "../_components";
+import { Ed, Tgl, TTD, PrintFrame } from "../_components";
 import { getTemplate } from "@/lib/akuntan";
 
 const t = getTemplate("kelebihan-insentif-pic")!;
 
 export default function Page() {
   return (
-    <PrintFrame heading={t.heading} nomor={t.nomor}>
+    <PrintFrame heading={t.heading} nomor={t.nomor} slug={t.slug} judul={t.judul}>
       <p className="text-justify">
-        Pada hari ini <Ed>Jumat</Ed> tanggal <Ed>24 Juli 2026</Ed>, kami yang
+        Pada hari ini <Tgl mode="hari" /> tanggal <Tgl mode="tanggal" />, kami yang
         bertanda tangan di bawah ini :
       </p>
 
@@ -40,7 +40,7 @@ export default function Page() {
       </p>
 
       <p className="mt-4 text-right">
-        Ponorogo, <Ed>24 Juli 2026</Ed>
+        Ponorogo, <Tgl mode="tanggal" />
       </p>
 
       <TTD
