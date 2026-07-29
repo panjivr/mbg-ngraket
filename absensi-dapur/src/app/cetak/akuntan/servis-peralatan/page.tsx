@@ -19,14 +19,14 @@ export default function Page() {
 
       <div className="mt-3">
         <TabelEditable
-          headers={["No", "Jenis Pekerjaan", "Biaya"]}
+          headers={["No", "Jenis Pekerjaan", "Biaya (Rp)"]}
           baris={3}
           lastRowLabel="TOTAL"
         />
       </div>
 
       <p className="mt-3 text-justify">
-        Total biaya pekerjaan servis dan perbaikan sebesar Rp<Ed>180.000</Ed> (
+        Total biaya pekerjaan servis dan perbaikan sebesar Rp <Ed>180.000</Ed> (
         <Ed>seratus delapan puluh ribu rupiah</Ed>).
       </p>
       <p className="mt-2 text-justify">

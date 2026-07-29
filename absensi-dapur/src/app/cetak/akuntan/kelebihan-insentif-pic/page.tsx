@@ -30,7 +30,7 @@ export default function Page() {
 
       <p className="mt-3 text-justify">
         Dengan ini menyatakan bahwa telah terjadi kelebihan transfer dana Insentif
-        PIC Periode <Ed>13-25 Juli 2026</Ed> sebesar Rp<Ed>160.000</Ed> (
+        PIC Periode <Ed>13-25 Juli 2026</Ed> sebesar Rp <Ed>160.000</Ed> (
         <Ed>seratus enam puluh ribu rupiah</Ed>). Atas kelebihan transfer tersebut,
         dana akan ditarik/dikembalikan kembali sesuai dengan ketentuan yang berlaku.
       </p>
