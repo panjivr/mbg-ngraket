@@ -104,6 +104,8 @@ function printCss(paper: string): string {
       .fld { background: transparent !important; }
       [contenteditable] { outline: none !important; }
       .sheet { box-shadow: none !important; margin: 0 !important; }
+      .doc { page-break-after: always; }
+      .doc:last-child { page-break-after: auto; }
       body { background: #fff !important; }
     }
     .fld { background: #fff7cc; min-width: 1ch; }

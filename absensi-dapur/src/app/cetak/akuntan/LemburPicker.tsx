@@ -7,12 +7,23 @@
  * hanyalah tabel No | Nama | Divisi berisi pegawai terpilih.
  */
 import { useEffect, useState } from "react";
+import { urutanDivisi } from "@/lib/akuntan";
 
 interface Pegawai {
   id: number;
   nama: string;
   jabatan: string | null;
   divisi_nama: string | null;
+}
+
+/** Urutkan pegawai mengikuti urutan divisi resmi SPPG, lalu nama. */
+function urutkanPegawai(list: Pegawai[]): Pegawai[] {
+  return [...list].sort((a, b) => {
+    const ra = urutanDivisi(a.divisi_nama || a.jabatan);
+    const rb = urutanDivisi(b.divisi_nama || b.jabatan);
+    if (ra !== rb) return ra - rb;
+    return a.nama.localeCompare(b.nama, "id");
+  });
 }
 
 export function LemburPicker() {
@@ -31,7 +42,7 @@ export function LemburPicker() {
           error?: string;
         };
         if (!res.ok) throw new Error(data.error || "Gagal memuat pegawai.");
-        if (!batal) setList(data.employees ?? []);
+        if (!batal) setList(urutkanPegawai(data.employees ?? []));
       } catch (e) {
         if (!batal) setError(e instanceof Error ? e.message : "Gagal memuat.");
       } finally {
