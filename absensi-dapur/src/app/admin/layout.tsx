@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
-import NavLink from "@/components/NavLink";
+import AdminNav from "@/components/AdminNav";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
@@ -70,25 +70,13 @@ export default async function AdminLayout({
             <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
           </div>
         </div>
-        <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
-          {fullAdmin && <NavLink href="/admin" label="Dashboard" exact />}
-          {fullAdmin && (
-            <NavLink href="/admin/pegawai" label="👥 Pegawai"
-              also={["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"]} />
-          )}
-          {fullAdmin && <NavLink href="/admin/rekap" label="📊 Rekap" also={["/admin/gaji", "/admin/slip"]} />}
-          {aksesDistribusi && <NavLink href="/admin/distribusi" label="🚚 Distribusi" />}
-          {aksesDistribusi && <NavLink href="/admin/menu" label="🍱 Menu" />}
-          {aksesDistribusi && <NavLink href="/admin/jadwal-menu" label="📅 Jadwal & Belanja" also={["/admin/belanja"]} />}
-          {aksesLaporan && <NavLink href="/admin/laporan" label="📋 Laporan Harian" />}
-          {(fullAdmin || aksesLaporan) && <NavLink href="/admin/gudang" label="📦 Gudang" />}
-          {isHr && <NavLink href="/admin/hr" label="🧾 HR / Gaji" />}
-          {fullAdmin && <NavLink href="/admin/akuntan" label="🧮 Akuntan" />}
-          {fullAdmin && <NavLink href="/admin/audit" label="🧾 Aktivitas" />}
-          {fullAdmin && <NavLink href="/admin/pengaturan" label="Pengaturan" />}
-          {isSuper && <NavLink href="/admin/pusat" label="🌐 Semua Dapur" />}
-          {isSuper && <NavLink href="/admin/sppg" label="🏢 Kelola Dapur" />}
-        </nav>
+        <AdminNav
+          fullAdmin={fullAdmin}
+          aksesDistribusi={aksesDistribusi}
+          aksesLaporan={aksesLaporan}
+          isHr={isHr}
+          isSuper={isSuper}
+        />
       </header>
       <BirthdayGreeting />
       {children}
