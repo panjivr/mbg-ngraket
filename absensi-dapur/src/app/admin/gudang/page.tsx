@@ -5,14 +5,16 @@ import {
   KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, TIPE_LABEL, statusStok,
   type Barang, type Kategori, type Mutasi, type TipeMutasi,
 } from "@/lib/gudang";
+import DashboardGudang from "@/components/gudang/DashboardGudang";
+import KartuStok from "@/components/gudang/KartuStok";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
 
-type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; catatan: string; aktif: boolean };
-const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, catatan: "", aktif: true };
+type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; harga: number; kode_akun: string; catatan: string; aktif: boolean };
+const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, harga: 0, kode_akun: "", catatan: "", aktif: true };
 type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: number; keterangan: string; tanggal: string };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -32,6 +34,7 @@ export default function GudangPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [infoKat, setInfoKat] = useState<Kategori | null>(null);
+  const [tab, setTab] = useState<"dashboard" | "kelola" | "kartu">("dashboard");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,12 +101,28 @@ export default function GudangPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📦 Gudang / Stok Opname</h1>
-          <p className="text-sm text-slate-400">Kelola stok operasional &amp; bahan baku. Catat barang masuk, pemakaian, &amp; opname agar tidak salah beli.</p>
+          <h1 className="text-xl font-bold">📦 Gudang</h1>
+          <p className="text-sm text-slate-400">Dashboard nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
         </div>
-        <button onClick={() => { setMsg(null); setBForm({ ...emptyB }); }} className="btn-gold">+ Tambah Barang</button>
+        {tab === "kelola" && (
+          <button onClick={() => { setMsg(null); setBForm({ ...emptyB }); }} className="btn-gold">+ Tambah Barang</button>
+        )}
       </div>
 
+      <div className="scroll-x flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-ink-900/50 p-1">
+        {([["dashboard", "📊 Dashboard"], ["kelola", "🗃️ Kelola Stok"], ["kartu", "🧾 Kartu Stok"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={"shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition " + (tab === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "dashboard" && <DashboardGudang />}
+      {tab === "kartu" && <KartuStok />}
+
+      {tab === "kelola" && (
+      <>
       <div className="grid grid-cols-3 gap-3">
         <div className="card p-3"><p className="text-xs text-slate-400">Total Barang</p><p className="mt-0.5 text-2xl font-bold">{stat.total}</p></div>
         <div className="card p-3"><p className="text-xs text-slate-400">Menipis</p><p className="mt-0.5 text-2xl font-bold text-amber-300">{stat.menipis}</p></div>
@@ -171,7 +190,7 @@ export default function GudangPage() {
                               <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: 0, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-sky-300">− Keluar</button>
                               <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: b.stok, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-amber-300">✓ Opname</button>
                               <button onClick={() => bukaRiwayat(b)} className="btn-ghost px-2 py-0.5 text-xs">Riwayat</button>
-                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: b.stok_min, catatan: b.catatan, aktif: b.aktif })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
+                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: b.stok_min, harga: b.harga, kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={() => hapusBarang(b)} className="btn-danger px-2 py-0.5 text-xs">Hapus</button>
                             </div>
                           </td>
@@ -185,6 +204,8 @@ export default function GudangPage() {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* Modal tambah/edit barang */}
@@ -202,6 +223,10 @@ export default function GudangPage() {
                   <p className="mt-1 text-[11px] text-slate-500">Contoh: {KATEGORI_INFO[bForm.kategori]}</p>
                 </div>
                 <div><label className="label">Satuan</label><input className="input" value={bForm.satuan} onChange={(e) => setBForm({ ...bForm, satuan: e.target.value })} placeholder="pcs, kg, liter, pack" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="label">Kode Akun (opsional)</label><input className="input" value={bForm.kode_akun} onChange={(e) => setBForm({ ...bForm, kode_akun: e.target.value })} placeholder="mis. 2115" /></div>
+                <div><label className="label">Harga Satuan (Rp)</label><input type="number" min={0} step="0.01" className="input" value={bForm.harga} onChange={(e) => setBForm({ ...bForm, harga: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               </div>
               <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" className="input" value={bForm.stok_min} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               <div><label className="label">Catatan (opsional)</label><input className="input" value={bForm.catatan} onChange={(e) => setBForm({ ...bForm, catatan: e.target.value })} /></div>

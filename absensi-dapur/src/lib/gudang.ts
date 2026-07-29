@@ -20,6 +20,8 @@ export interface Barang {
   satuan: string;
   stok: number;
   stok_min: number;
+  harga: number;
+  kode_akun: string;
   catatan: string;
   aktif: boolean;
   urutan: number;

@@ -8,7 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SELECT = `SELECT id, sppg_id, nama, kategori, satuan,
-  stok::float8 AS stok, stok_min::float8 AS stok_min, catatan, aktif, urutan FROM barang`;
+  stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun,
+  catatan, aktif, urutan FROM barang`;
 
 export const GET = route(async () => {
   const admin = await requireGudang("read");
@@ -28,13 +29,15 @@ export const POST = route(async (req: NextRequest) => {
   const satuan = String(b.satuan ?? "pcs").trim().slice(0, 20) || "pcs";
   const stok = Math.max(0, Number(b.stok) || 0);
   const stok_min = Math.max(0, Number(b.stok_min) || 0);
+  const harga = Math.max(0, Number(b.harga) || 0);
+  const kode_akun = String(b.kode_akun ?? "").trim().slice(0, 30);
   const catatan = String(b.catatan ?? "").trim().slice(0, 300);
   const maxUrut = (await query<{ m: number }>(`SELECT COALESCE(MAX(urutan),0) AS m FROM barang WHERE sppg_id = $1`, [admin.sppg_id]))[0]?.m ?? 0;
   const rows = await query<Barang>(
-    `INSERT INTO barang (sppg_id, nama, kategori, satuan, stok, stok_min, catatan, aktif, urutan)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE,$8)
-     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, catatan, aktif, urutan`,
-    [admin.sppg_id, nama, kategori, satuan, stok, stok_min, catatan, maxUrut + 1],
+    `INSERT INTO barang (sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, aktif, urutan)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,TRUE,$10)
+     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan`,
+    [admin.sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, maxUrut + 1],
   );
   return ok({ barang: rows[0] });
 });

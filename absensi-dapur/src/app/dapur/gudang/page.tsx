@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { KATEGORI_LABEL, KATEGORI_INFO, statusStok, type Barang, type Kategori } from "@/lib/gudang";
+import KartuStok from "@/components/gudang/KartuStok";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -17,6 +18,7 @@ export default function KartuStokPage() {
   const [form, setForm] = useState<{ barang: Barang; jumlah: number; keterangan: string; tanggal: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [tab, setTab] = useState<"keluar" | "kartu">("keluar");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,10 +55,23 @@ export default function KartuStokPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold">🗄️ Kartu Stok — Barang Keluar</h1>
-        <p className="text-sm text-slate-400">Catat pemakaian barang dari gudang (barang keluar) agar stok selalu ter-update.</p>
+        <h1 className="text-xl font-bold">🗄️ Gudang</h1>
+        <p className="text-sm text-slate-400">Catat barang keluar (pemakaian) &amp; lihat kartu stok bertanggal per bahan.</p>
       </div>
 
+      <div className="scroll-x flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-ink-900/50 p-1">
+        {([["keluar", "➖ Barang Keluar"], ["kartu", "🧾 Kartu Stok"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={"shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition " + (tab === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "kartu" && <KartuStok />}
+
+      {tab === "keluar" && (
+      <>
       <input className="input" placeholder="Cari barang…" value={q} onChange={(e) => setQ(e.target.value)} />
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{msg}</p>}
 
@@ -94,6 +109,8 @@ export default function KartuStokPage() {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {form && (
