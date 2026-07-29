@@ -308,7 +308,7 @@ export default function InsentifPmPage() {
                     <input inputMode="numeric" value={r.nominal} onChange={(e) => upd(r.id, { nominal: e.target.value })} className={inp + " w-20 text-right"} />
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right tabular-nums text-gray-700">
-                    {fmtRibuan(r.total)}
+                    Rp {fmtRibuan(r.total)}
                   </td>
                   <td className="border border-gray-300 px-1 py-1">
                     <input value={r.pic} onChange={(e) => upd(r.id, { pic: e.target.value })} className={inp} />
@@ -440,8 +440,8 @@ function RekapDoc({
               <td className={td}>{r.nama}</td>
               <td className={td + " text-right tabular-nums"}>{r.pmN || ""}</td>
               <td className={td + " text-center tabular-nums"}>{r.hariN || ""}</td>
-              <td className={td + " text-right tabular-nums"}>{fmtRibuan(r.nominalN)}</td>
-              <td className={td + " text-right tabular-nums"}>{fmtRibuan(r.total)}</td>
+              <td className={td + " text-right tabular-nums"}>Rp {fmtRibuan(r.nominalN)}</td>
+              <td className={td + " text-right tabular-nums"}>Rp {fmtRibuan(r.total)}</td>
               <td className={td}>{r.pic}</td>
               <td className={td + " text-center"}>{r.bank}</td>
               <td className={td}>{r.rekening}</td>
@@ -454,7 +454,7 @@ function RekapDoc({
             <td className={td + " text-right tabular-nums"}>{sumPM || ""}</td>
             <td className={td} />
             <td className={td} />
-            <td className={td + " text-right tabular-nums"}>{fmtRibuan(sumTotal)}</td>
+            <td className={td + " text-right tabular-nums"}>Rp {fmtRibuan(sumTotal)}</td>
             <td className={td} colSpan={3} />
           </tr>
         </tbody>

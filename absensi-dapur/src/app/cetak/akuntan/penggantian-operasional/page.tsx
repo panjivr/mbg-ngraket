@@ -28,7 +28,7 @@ export default function Page() {
           </tr>
           <tr>
             <td className="pr-3 align-top">Total Pengeluaran</td>
-            <td className="align-top">: Rp<Ed>0</Ed></td>
+            <td className="align-top">: Rp <Ed>0</Ed></td>
           </tr>
         </tbody>
       </table>

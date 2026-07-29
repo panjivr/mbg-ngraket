@@ -32,7 +32,7 @@ export default function Page() {
       <p className="mt-2">Rincian Barang:</p>
       <div className="mt-1">
         <TabelEditable
-          headers={["No", "Nama Barang", "Jumlah", "Harga", "Satuan", "Total"]}
+          headers={["No", "Nama Barang", "Jumlah", "Harga (Rp)", "Satuan", "Total (Rp)"]}
           baris={3}
         />
       </div>

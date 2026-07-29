@@ -21,7 +21,7 @@ export default function Page() {
             "Nama Penerima",
             "No. Rekening",
             "Bank",
-            "Jumlah",
+            "Jumlah (Rp)",
           ]}
           baris={3}
         />
