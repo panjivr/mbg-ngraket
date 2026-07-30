@@ -491,13 +491,20 @@ export default function PegawaiPage() {
 
       {form && (
         <div
-          className="fixed inset-0 z-20 grid place-items-center bg-black/60 p-4"
+          className="fixed inset-0 z-20 overflow-y-auto bg-black/60"
           onClick={() => setForm(null)}
         >
-          <div
-            className="card w-full max-w-md p-6"
-            onClick={(ev) => ev.stopPropagation()}
-          >
+          {/*
+           * Wrapper flex + min-h-full: kartu tetap di tengah saat pendek,
+           * tapi bisa di-scroll (dan tombol Simpan tercapai) saat form lebih
+           * tinggi dari layar HP. Sebelumnya `grid place-items-center` tanpa
+           * overflow membuat bagian atas/bawah terpotong di HP.
+           */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="card w-full max-w-md p-6"
+              onClick={(ev) => ev.stopPropagation()}
+            >
             <h2 className="text-lg font-bold">
               {form.id ? "Edit Pegawai" : "Tambah Pegawai"}
             </h2>
@@ -742,6 +749,7 @@ export default function PegawaiPage() {
                   {saving ? "Menyimpan…" : "Simpan"}
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
