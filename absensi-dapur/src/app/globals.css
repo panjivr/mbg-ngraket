@@ -14,12 +14,25 @@ html {
 
 body {
   @apply bg-ink-950 text-slate-100 antialiased;
+  min-height: 100dvh;
+}
+
+/*
+ * Latar dekoratif dipasang sebagai lapisan fixed terpisah (bukan
+ * `background-attachment: fixed` pada body) supaya tidak memicu repaint
+ * latar penuh tiap frame scroll — penyebab scroll macet/patah di browser
+ * HP & in-app browser. pointer-events: none agar tidak menghalangi sentuhan.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(1200px 600px at 85% -10%, rgba(52, 100, 230, 0.18), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(56, 189, 248, 0.10), transparent 55%),
     linear-gradient(180deg, #0a1740 0%, #070f29 100%);
-  background-attachment: fixed;
-  min-height: 100dvh;
 }
 
 @layer components {
