@@ -371,6 +371,128 @@ export function DaftarPenerima() {
 }
 
 /**
+ * Tabel "Jenis Menu MBG" mingguan. Bila diberi tanggal mulai, menu & jumlah
+ * penerima manfaat (PM) tiap hari diambil dari master distribusi
+ * (GET /api/admin/distribusi?tanggal=YYYY-MM-DD) untuk 5 hari kerja berturut.
+ * Semua sel tetap contentEditable (isi-lalu-cetak) agar bisa disesuaikan.
+ */
+interface BarisMenu {
+  tanggal: string;
+  hari: string;
+  menu: string;
+  pm: number | null;
+}
+
+const HARI_ID = [
+  "Minggu",
+  "Senin",
+  "Selasa",
+  "Rabu",
+  "Kamis",
+  "Jumat",
+  "Sabtu",
+];
+
+const isoLokal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+
+export function TabelMenuMingguan() {
+  const [mulai, setMulai] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<BarisMenu[]>(() =>
+    Array.from({ length: 5 }, () => ({
+      tanggal: "",
+      hari: "",
+      menu: "",
+      pm: null,
+    })),
+  );
+
+  const muat = async (start: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
+    setLoading(true);
+    const base = new Date(start + "T00:00:00");
+    const out: BarisMenu[] = [];
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      const iso = isoLokal(d);
+      let menu = "";
+      let pm: number | null = null;
+      try {
+        const res = await fetch(`/api/admin/distribusi?tanggal=${iso}`);
+        const j = (await res.json().catch(() => ({}))) as {
+          distribusi?: { menu?: string };
+          total?: { porsi?: number };
+        };
+        if (res.ok) {
+          menu = String(j?.distribusi?.menu ?? "");
+          pm = typeof j?.total?.porsi === "number" ? j.total.porsi : null;
+        }
+      } catch {
+        /* biarkan kosong bila gagal memuat satu hari */
+      }
+      out.push({ tanggal: iso, hari: HARI_ID[d.getDay()], menu, pm });
+    }
+    setRows(out);
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="no-print mb-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+        <span>Muat menu &amp; jumlah PM dari distribusi mulai tanggal:</span>
+        <input
+          type="date"
+          value={mulai}
+          onChange={(e) => setMulai(e.target.value)}
+          className="rounded border border-gray-300 px-2 py-1"
+        />
+        <button
+          type="button"
+          onClick={() => muat(mulai)}
+          disabled={loading}
+          className="rounded border border-emerald-400 bg-emerald-50 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+        >
+          {loading ? "Memuat…" : "Muat 5 hari"}
+        </button>
+        <span className="italic">
+          (Senin–Jumat berurutan; nilai tetap bisa diedit)
+        </span>
+      </div>
+      <table className="w-full border-collapse text-[10px]">
+        <thead>
+          <tr style={{ backgroundColor: "#D9E1F2" }}>
+            <th className={th + " w-[6%]"}>No.</th>
+            <th className={th + " w-[24%]"}>Hari / Tanggal</th>
+            <th className={th}>Menu MBG</th>
+            <th className={th + " w-[16%]"}>Jumlah PM</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={`${i}-${r.tanggal}-${r.menu.length}-${r.pm ?? ""}`}>
+              <td className={cell + " text-center"}>{i + 1}</td>
+              <td className={cell}>
+                <Ed>{r.hari ? `${r.hari}, ${r.tanggal}` : "………"}</Ed>
+              </td>
+              <td className={cell}>
+                <Ed block>{r.menu || "………"}</Ed>
+              </td>
+              <td className={cell + " text-center"}>
+                <Ed>{r.pm != null ? String(r.pm) : "…"}</Ed>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
  * Satu kotak foto 1:1 (square). File dipilih lalu dikompres di sisi klien
  * (canvas, crop tengah ke 360px, JPEG 0.6) supaya ukuran base64 kecil dan aman
  * disimpan di konten_html. Kontrol pilih berkelas .no-print (tidak ikut cetak).
