@@ -4,7 +4,7 @@ import {
   DokumentasiMingguan,
   TabelMenuMingguan,
 } from "../_components";
-import { getTemplateGizi } from "@/lib/ahli-gizi";
+import { getTemplateGizi, sppgKopLine } from "@/lib/ahli-gizi";
 import { getSession } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 
@@ -38,6 +38,7 @@ export default async function Page() {
   const session = await getSession();
   const sppg = session?.sppg_id ? await getSppg(session.sppg_id) : null;
   const nama = sppg?.nama || "SPPG";
+  const namaSppg = sppgKopLine(sppg?.nama);
   const alamat = sppg?.alamat || "";
 
   return (
@@ -67,9 +68,7 @@ export default async function Page() {
             <p className="mt-1 text-[14px] font-semibold uppercase">
               Satuan Pelayanan Pemenuhan Gizi
             </p>
-            <p className="text-[14px] font-semibold uppercase">
-              Kabupaten Ponorogo Balong Ngraket
-            </p>
+            <p className="text-[14px] font-semibold uppercase">{namaSppg}</p>
           </div>
           <div className="mt-3 border-b-4 border-black" />
         </div>

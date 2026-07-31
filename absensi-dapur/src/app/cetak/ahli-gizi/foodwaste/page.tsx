@@ -1,5 +1,6 @@
 import { PrintFrame, Tgl, TTD, TabelEditable } from "../../akuntan/_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
+import { KopGizi } from "../_kop";
 
 const t = getTemplateGizi("foodwaste")!;
 
@@ -7,11 +8,13 @@ export default function Page() {
   return (
     <PrintFrame
       heading={t.heading}
-      nomor={t.nomor}
       slug={t.slug}
       judul={t.judul}
       landscape={t.landscape}
+      hideKop
     >
+      <KopGizi heading={t.heading} />
+
       <p className="text-justify">
         Pencatatan sisa/limbah makanan (food waste) sebagai indikator penerimaan
         menu dan efisiensi produksi. Ditimbang dalam kilogram (kg) per komponen

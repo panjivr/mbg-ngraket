@@ -113,6 +113,18 @@ export function getTemplateGizi(slug: string): TemplateGizi | undefined {
   return TEMPLATE_GIZI.find((t) => t.slug === slug);
 }
 
+/**
+ * Baris identitas SPPG untuk kop dokumen: uppercase & dijamin berawalan "SPPG"
+ * (tanpa menggandakan bila nama dapur sudah memuat "SPPG"). Nama diambil dari
+ * konfigurasi dapur yang sedang login sehingga tiap dapur tampil otomatis.
+ */
+export function sppgKopLine(nama: string | null | undefined): string {
+  const n = (nama || "").trim();
+  if (!n) return "SPPG";
+  const up = n.toUpperCase();
+  return up.startsWith("SPPG") ? up : `SPPG ${up}`;
+}
+
 /** Pengelompokan template supaya hub lebih terstruktur/profesional. */
 export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = [
   {

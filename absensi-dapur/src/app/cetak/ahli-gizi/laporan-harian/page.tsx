@@ -1,6 +1,7 @@
 import { PrintFrame, Tgl, TTD, Ed } from "../../akuntan/_components";
 import { TabelGizi } from "../_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
+import { KopGizi } from "../_kop";
 
 const t = getTemplateGizi("laporan-harian")!;
 
@@ -15,11 +16,13 @@ export default function Page() {
   return (
     <PrintFrame
       heading={t.heading}
-      nomor={t.nomor}
       slug={t.slug}
       judul={t.judul}
       landscape={t.landscape}
+      hideKop
     >
+      <KopGizi heading={t.heading} />
+
       <p className="text-justify">
         Rencana standar porsi menu untuk penyelenggaraan makan pada hari{" "}
         <Tgl mode="hari" />, <Tgl mode="tanggal" />. Rincian per kelompok sasaran

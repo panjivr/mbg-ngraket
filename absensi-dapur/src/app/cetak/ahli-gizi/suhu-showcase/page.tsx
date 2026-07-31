@@ -1,6 +1,7 @@
 import { PrintFrame, Tgl, TTD, Ed } from "../../akuntan/_components";
 import { GridBulanan } from "../_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
+import { KopGizi } from "../_kop";
 
 const t = getTemplateGizi("suhu-showcase")!;
 
@@ -8,11 +9,13 @@ export default function Page() {
   return (
     <PrintFrame
       heading={t.heading}
-      nomor={t.nomor}
       slug={t.slug}
       judul={t.judul}
       landscape={t.landscape}
+      hideKop
     >
+      <KopGizi heading={t.heading} />
+
       <div className="mb-3 flex flex-wrap justify-between gap-2 text-sm">
         <span>
           Bulan: <Ed>………</Ed>
