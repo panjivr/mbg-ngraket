@@ -1,8 +1,9 @@
-import { PrintFrame, Tgl, TTD, Ed } from "../../akuntan/_components";
+import { PrintFrame, Tgl, Ed } from "../../akuntan/_components";
 import {
   DaftarPenerima,
   DokumentasiMingguan,
   TabelMenuMingguan,
+  TTDGiziAuto,
 } from "../_components";
 import { getTemplateGizi, sppgKopLine } from "@/lib/ahli-gizi";
 import { getSession } from "@/lib/session";
@@ -202,10 +203,7 @@ ${nama} mengajukan order bahan baku kepada supplier terpilih. Bahan baku datang 
         <Ed>Ponorogo</Ed>, <Tgl mode="tanggal" />
       </p>
 
-      <TTD
-        kiri={{ peran: "Mengetahui,\nKepala SPPG", nama: "(………………………)" }}
-        kanan={{ peran: "Ahli Gizi SPPG", nama: "(………………………)" }}
-      />
+      <TTDGiziAuto />
     </PrintFrame>
   );
 }
