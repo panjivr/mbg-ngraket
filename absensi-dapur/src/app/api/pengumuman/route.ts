@@ -10,6 +10,7 @@ interface Row {
   id: number;
   judul: string;
   isi: string;
+  gambar: string;
   pinned: boolean;
   created_at: string;
   dibaca: boolean;
@@ -19,7 +20,7 @@ interface Row {
 export const GET = route(async () => {
   const s = await requireSession();
   const rows = await query<Row>(
-    `SELECT p.id, p.judul, p.isi, p.pinned, p.created_at,
+    `SELECT p.id, p.judul, p.isi, p.gambar, p.pinned, p.created_at,
             (b.user_id IS NOT NULL) AS dibaca
        FROM pengumuman p
        LEFT JOIN pengumuman_baca b ON b.pengumuman_id = p.id AND b.user_id = $2

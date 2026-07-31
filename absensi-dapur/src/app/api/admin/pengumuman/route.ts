@@ -12,14 +12,20 @@ export interface PengumumanRow {
   isi: string;
   pinned: boolean;
   aktif: boolean;
+  gambar?: string;
   created_at: string;
   dibaca?: number;
+}
+
+/** Terima hanya data URL gambar berukuran wajar; selain itu kosongkan. */
+function normGambar(v: unknown): string {
+  return typeof v === "string" && v.startsWith("data:image/") && v.length <= 5_000_000 ? v : "";
 }
 
 export const GET = route(async () => {
   const admin = await requireAdmin();
   const rows = await query<PengumumanRow>(
-    `SELECT p.id, p.judul, p.isi, p.pinned, p.aktif, p.created_at,
+    `SELECT p.id, p.judul, p.isi, p.gambar, p.pinned, p.aktif, p.created_at,
             (SELECT COUNT(*) FROM pengumuman_baca b WHERE b.pengumuman_id = p.id)::int AS dibaca
        FROM pengumuman p
       WHERE p.sppg_id = $1
@@ -35,11 +41,12 @@ export const POST = route(async (req: NextRequest) => {
   const judul = String(b.judul ?? "").trim();
   const isi = String(b.isi ?? "").trim();
   const pinned = Boolean(b.pinned);
+  const gambar = normGambar(b.gambar);
   if (!judul) return fail(400, "Judul wajib diisi.");
   const r = await query<{ id: number }>(
-    `INSERT INTO pengumuman (sppg_id, judul, isi, pinned, created_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [admin.sppg_id, judul, isi, pinned, admin.uid],
+    `INSERT INTO pengumuman (sppg_id, judul, isi, gambar, pinned, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [admin.sppg_id, judul, isi, gambar, pinned, admin.uid],
   );
   return ok({ id: r[0].id });
 });
@@ -61,6 +68,10 @@ export const PATCH = route(async (req: NextRequest) => {
   if (b.isi !== undefined) {
     sets.push(`isi = $${n++}`);
     params.push(String(b.isi).trim());
+  }
+  if (b.gambar !== undefined) {
+    sets.push(`gambar = $${n++}`);
+    params.push(normGambar(b.gambar));
   }
   if (b.pinned !== undefined) {
     sets.push(`pinned = $${n++}`);

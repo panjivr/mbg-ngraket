@@ -6,6 +6,7 @@ interface Pengumuman {
   id: number;
   judul: string;
   isi: string;
+  gambar?: string;
   pinned: boolean;
   created_at: string;
   dibaca: boolean;
@@ -69,6 +70,14 @@ export default function PengumumanCard() {
                   </span>
                 </div>
                 {p.isi && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-300">{p.isi}</p>}
+                {p.gambar && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.gambar}
+                    alt="Lampiran pengumuman"
+                    className="mt-2 max-h-72 w-auto max-w-full rounded-lg border border-white/10 object-contain"
+                  />
+                )}
                 <p className="mt-1 text-xs text-slate-500">{fmt(p.created_at)}</p>
               </div>
               <button
