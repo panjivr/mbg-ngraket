@@ -1,5 +1,9 @@
 import { PrintFrame, Tgl, TTD, Ed } from "../../akuntan/_components";
-import { DaftarPenerima, DokHari, TabelMenuMingguan } from "../_components";
+import {
+  DaftarPenerima,
+  DokumentasiMingguan,
+  TabelMenuMingguan,
+} from "../_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
 import { getSession } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
@@ -29,15 +33,6 @@ function Sub({ judul, isi }: { judul: string; isi: string }) {
     </div>
   );
 }
-
-/** 5 hari pemberian (Senin–Jumat), tiap hari 2 foto 1:1. */
-const HARI: { ke: string; hari: string }[] = [
-  { ke: "01", hari: "Senin" },
-  { ke: "02", hari: "Selasa" },
-  { ke: "03", hari: "Rabu" },
-  { ke: "04", hari: "Kamis" },
-  { ke: "05", hari: "Jumat" },
-];
 
 export default async function Page() {
   const session = await getSession();
@@ -149,9 +144,7 @@ ${nama} mengajukan order bahan baku kepada supplier terpilih. Bahan baku datang 
             Lima hari pemberian (Senin–Jumat), masing-masing dua foto
             dokumentasi.
           </p>
-          {HARI.map((h) => (
-            <DokHari key={h.ke} ke={h.ke} hari={h.hari} />
-          ))}
+          <DokumentasiMingguan />
         </div>
       </Bab>
 

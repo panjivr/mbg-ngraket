@@ -398,6 +398,37 @@ const isoLokal = (d: Date) =>
     d.getDate(),
   ).padStart(2, "0")}`;
 
+/**
+ * Ambil menu & jumlah PM 5 hari kerja berturut mulai dari `start` (YYYY-MM-DD)
+ * dari master distribusi. Dipakai bersama oleh tabel menu & dokumentasi harian.
+ */
+async function ambilMenu5Hari(start: string): Promise<BarisMenu[]> {
+  const base = new Date(start + "T00:00:00");
+  const out: BarisMenu[] = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    const iso = isoLokal(d);
+    let menu = "";
+    let pm: number | null = null;
+    try {
+      const res = await fetch(`/api/admin/distribusi?tanggal=${iso}`);
+      const j = (await res.json().catch(() => ({}))) as {
+        distribusi?: { menu?: string };
+        total?: { porsi?: number };
+      };
+      if (res.ok) {
+        menu = String(j?.distribusi?.menu ?? "");
+        pm = typeof j?.total?.porsi === "number" ? j.total.porsi : null;
+      }
+    } catch {
+      /* biarkan kosong bila gagal memuat satu hari */
+    }
+    out.push({ tanggal: iso, hari: HARI_ID[d.getDay()], menu, pm });
+  }
+  return out;
+}
+
 export function TabelMenuMingguan() {
   const [mulai, setMulai] = useState("");
   const [loading, setLoading] = useState(false);
@@ -413,30 +444,7 @@ export function TabelMenuMingguan() {
   const muat = async (start: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
     setLoading(true);
-    const base = new Date(start + "T00:00:00");
-    const out: BarisMenu[] = [];
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i);
-      const iso = isoLokal(d);
-      let menu = "";
-      let pm: number | null = null;
-      try {
-        const res = await fetch(`/api/admin/distribusi?tanggal=${iso}`);
-        const j = (await res.json().catch(() => ({}))) as {
-          distribusi?: { menu?: string };
-          total?: { porsi?: number };
-        };
-        if (res.ok) {
-          menu = String(j?.distribusi?.menu ?? "");
-          pm = typeof j?.total?.porsi === "number" ? j.total.porsi : null;
-        }
-      } catch {
-        /* biarkan kosong bila gagal memuat satu hari */
-      }
-      out.push({ tanggal: iso, hari: HARI_ID[d.getDay()], menu, pm });
-    }
-    setRows(out);
+    setRows(await ambilMenu5Hari(start));
     setLoading(false);
   };
 
@@ -550,27 +558,101 @@ export function KotakFoto() {
  * Blok dokumentasi satu hari pemberian: nomor pemberian, hari/tanggal & menu
  * (bisa diedit) + 2 kotak foto 1:1 bersebelahan.
  */
+/** Format ISO (YYYY-MM-DD) → "31 Juli 2026". Kosong bila tak valid. */
+const tglIndo = (iso: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  const bln = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  ];
+  return `${d} ${bln[m - 1]} ${y}`;
+};
+
 export function DokHari({
   ke,
   hari,
+  tanggal = "",
   menu = "………",
 }: {
   ke: string;
   hari: string;
+  /** ISO YYYY-MM-DD; ditampilkan sebagai "31 Juli 2026". */
+  tanggal?: string;
   menu?: string;
 }) {
   return (
     <div className="mt-3 break-inside-avoid">
       <p className="font-semibold">
-        Pemberian Ke-{ke} — <Ed>{hari}</Ed>, <Ed>………</Ed>
+        Pemberian Ke-{ke} — <Ed>{hari}</Ed>, <Ed>{tglIndo(tanggal) || "………"}</Ed>
       </p>
       <p className="text-[12px]">
-        Menu: <Ed block>{menu}</Ed>
+        Menu: <Ed block>{menu || "………"}</Ed>
       </p>
       <div className="mt-1 grid grid-cols-2 gap-2">
         <KotakFoto />
         <KotakFoto />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Blok dokumentasi 5 hari (Senin–Jumat) untuk BAB II.C laporan mingguan.
+ * Sama seperti TabelMenuMingguan: pilih tanggal awal → "Muat 5 hari" mengisi
+ * hari, tanggal, dan menu otomatis dari distribusi. Tiap hari punya 2 kotak foto.
+ * Blok di-remount lewat `key` agar isi Ed ikut ter-refresh setelah data dimuat.
+ */
+export function DokumentasiMingguan() {
+  const [mulai, setMulai] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<BarisMenu[]>(() =>
+    ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"].map((hari) => ({
+      tanggal: "",
+      hari,
+      menu: "",
+      pm: null,
+    })),
+  );
+
+  const muat = async (start: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
+    setLoading(true);
+    setRows(await ambilMenu5Hari(start));
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="no-print mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-emerald-400 bg-emerald-50 px-3 py-2 text-[12px]">
+        <span className="font-semibold text-emerald-800">Muat dokumentasi:</span>
+        <input
+          type="date"
+          value={mulai}
+          onChange={(e) => setMulai(e.target.value)}
+          className="rounded border border-emerald-300 px-2 py-1"
+        />
+        <button
+          type="button"
+          onClick={() => muat(mulai)}
+          disabled={loading || !mulai}
+          className="rounded bg-emerald-600 px-3 py-1 font-semibold text-white disabled:opacity-50"
+        >
+          {loading ? "Memuat…" : "Muat 5 hari"}
+        </button>
+        <span className="text-emerald-700">
+          Tanggal &amp; menu terisi otomatis dari distribusi (Senin–Jumat).
+        </span>
+      </div>
+      {rows.map((r, i) => (
+        <DokHari
+          key={`${i}-${r.tanggal}-${r.menu.length}`}
+          ke={String(i + 1).padStart(2, "0")}
+          hari={r.hari}
+          tanggal={r.tanggal}
+          menu={r.menu}
+        />
+      ))}
     </div>
   );
 }
