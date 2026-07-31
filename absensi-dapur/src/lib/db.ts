@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-31.laporan-gizi";
+const SCHEMA_VERSION = "2026-07-31b.pengumuman-gambar";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -720,6 +720,7 @@ async function doEnsureSchema(): Promise<void> {
         sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
         judul       TEXT NOT NULL,
         isi         TEXT NOT NULL DEFAULT '',
+        gambar      TEXT NOT NULL DEFAULT '',
         pinned      BOOLEAN NOT NULL DEFAULT FALSE,
         aktif       BOOLEAN NOT NULL DEFAULT TRUE,
         created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -727,6 +728,7 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_pengumuman_sppg ON pengumuman (sppg_id, aktif)`);
+    await client.query(`ALTER TABLE pengumuman ADD COLUMN IF NOT EXISTS gambar TEXT NOT NULL DEFAULT ''`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS pengumuman_baca (
         pengumuman_id INTEGER NOT NULL REFERENCES pengumuman(id) ON DELETE CASCADE,
