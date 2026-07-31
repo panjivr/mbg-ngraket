@@ -1,0 +1,51 @@
+import { PrintFrame, Tgl, TTD, TabelEditable } from "../../akuntan/_components";
+import { getTemplateGizi } from "@/lib/ahli-gizi";
+
+const t = getTemplateGizi("suhu-makanan")!;
+
+export default function Page() {
+  return (
+    <PrintFrame
+      heading={t.heading}
+      nomor={t.nomor}
+      slug={t.slug}
+      judul={t.judul}
+      landscape={t.landscape}
+    >
+      <p className="text-justify">
+        Pemeriksaan suhu makanan matang dan pada saat diporsi guna memastikan
+        keamanan pangan. Standar: makanan matang panas ≥ 60℃, penyajian tidak
+        lebih dari 4 jam pada suhu ruang.
+      </p>
+
+      <p className="mt-3">
+        Bulan / Periode: <span className="font-semibold">………………</span>
+      </p>
+
+      <div className="mt-3">
+        <TabelEditable
+          headers={[
+            "No",
+            "Tanggal",
+            "Menu",
+            "Suhu Matang (℃)",
+            "Waktu Cek",
+            "Suhu Diporsi (℃)",
+            "Waktu Porsi",
+            "Paraf",
+          ]}
+          baris={8}
+        />
+      </div>
+
+      <p className="mt-6 text-right">
+        Ponorogo, <Tgl mode="tanggal" />
+      </p>
+
+      <TTD
+        kiri={{ peran: "Mengetahui,\nKepala SPPG", nama: "(………………………)" }}
+        kanan={{ peran: "Ahli Gizi SPPG", nama: "(………………………)" }}
+      />
+    </PrintFrame>
+  );
+}

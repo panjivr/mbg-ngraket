@@ -96,10 +96,13 @@ export function Tgl({ mode = "tanggal" }: { mode?: TglMode }) {
 }
 
 /** CSS cetak bersama untuk PrintFrame & SavedViewer. */
-function printCss(paper: string): string {
+function printCss(paper: string, landscape = false): string {
+  const dim = PAPERS[paper]?.size || PAPERS.A4.size;
+  // Untuk formulir lebar (grid tanggal 1–31) putar kertas jadi mendatar.
+  const size = landscape ? `${dim} landscape` : dim;
   return `
     @media print {
-      @page { size: ${PAPERS[paper]?.size || PAPERS.A4.size}; margin: 16mm; }
+      @page { size: ${size}; margin: ${landscape ? "10mm" : "16mm"}; }
       .no-print { display: none !important; }
       .fld { background: transparent !important; }
       [contenteditable] { outline: none !important; }
@@ -291,12 +294,18 @@ export function PrintFrame({
   slug,
   judul,
   children,
+  saveUrl = "/api/admin/akuntan/ba",
+  landscape = false,
 }: {
   heading: string;
   nomor: string;
   slug: string;
   judul: string;
   children: ReactNode;
+  /** Endpoint POST untuk arsip. Default akuntan; gizi mengirim ke endpoint-nya. */
+  saveUrl?: string;
+  /** Kertas mendatar untuk formulir lebar (grid tanggal 1–31). */
+  landscape?: boolean;
 }) {
   const [paper, setPaper] = useState("A4");
   const [tanggal, setTanggal] = useState("");
@@ -318,7 +327,7 @@ export function PrintFrame({
       // Serialisasi isi dokumen tanpa elemen kontrol (.no-print).
       const clone = node.cloneNode(true) as HTMLElement;
       clone.querySelectorAll(".no-print").forEach((el) => el.remove());
-      const res = await fetch("/api/admin/akuntan/ba", {
+      const res = await fetch(saveUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -339,11 +348,15 @@ export function PrintFrame({
     }
   };
 
+  const sheetW = landscape ? "max-w-[1180px]" : "max-w-[820px]";
+
   return (
     <div className="min-h-screen bg-gray-200 py-6 text-black">
-      <style>{printCss(paper)}</style>
+      <style>{printCss(paper, landscape)}</style>
 
-      <div className="no-print mx-auto mb-4 flex max-w-[820px] flex-wrap items-center justify-between gap-3 px-4">
+      <div
+        className={`no-print mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 px-4 ${sheetW}`}
+      >
         <p className="text-sm text-gray-700">
           Isi bidang kuning. Klik <b>Simpan</b> untuk arsip, atau <b>Cetak</b>{" "}
           untuk PDF.
@@ -391,7 +404,7 @@ export function PrintFrame({
       <TanggalContext.Provider value={tanggal}>
         <div
           ref={sheetRef}
-          className="sheet mx-auto max-w-[820px] bg-white p-10 font-serif text-[13px] leading-relaxed text-black shadow-lg"
+          className={`sheet mx-auto ${sheetW} bg-white ${landscape ? "p-6" : "p-10"} font-serif text-[13px] leading-relaxed text-black shadow-lg`}
         >
           <Kop heading={heading} nomor={nomor} />
           <div className="mt-5">{children}</div>
@@ -406,14 +419,27 @@ export function PrintFrame({
  * di dalam kertas putih dengan toolbar cetak. Dipakai halaman
  * /cetak/akuntan/tersimpan/[id].
  */
-export function SavedViewer({ html }: { html: string }) {
+export function SavedViewer({
+  html,
+  backUrl = "/admin/akuntan/arsip",
+  landscape = false,
+}: {
+  html: string;
+  /** Tautan kembali ke arsip (akuntan atau gizi). */
+  backUrl?: string;
+  /** Render mendatar untuk formulir lebar. */
+  landscape?: boolean;
+}) {
   const [paper, setPaper] = useState("A4");
+  const sheetW = landscape ? "max-w-[1180px]" : "max-w-[820px]";
   return (
     <div className="min-h-screen bg-gray-200 py-6 text-black">
-      <style>{printCss(paper)}</style>
+      <style>{printCss(paper, landscape)}</style>
 
-      <div className="no-print mx-auto mb-4 flex max-w-[820px] flex-wrap items-center justify-between gap-3 px-4">
-        <a href="/admin/akuntan/arsip" className="text-sm text-gray-700 underline">
+      <div
+        className={`no-print mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 px-4 ${sheetW}`}
+      >
+        <a href={backUrl} className="text-sm text-gray-700 underline">
           ← Kembali ke arsip
         </a>
         <div className="flex items-center gap-2">
@@ -439,7 +465,7 @@ export function SavedViewer({ html }: { html: string }) {
       </div>
 
       <div
-        className="sheet mx-auto max-w-[820px] bg-white p-10 font-serif text-[13px] leading-relaxed text-black shadow-lg"
+        className={`sheet mx-auto ${sheetW} bg-white ${landscape ? "p-6" : "p-10"} font-serif text-[13px] leading-relaxed text-black shadow-lg`}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>

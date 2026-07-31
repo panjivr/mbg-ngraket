@@ -42,6 +42,7 @@ function buildGroups(f: Flags): Group[] {
         { label: "🍱 Menu", href: "/admin/menu", show: f.aksesDistribusi },
         { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: f.aksesDistribusi },
         { label: "📋 Laporan Harian", href: "/admin/laporan", show: f.aksesLaporan },
+        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: f.fullAdmin },
         { label: "📦 Gudang", href: "/admin/gudang", show: f.fullAdmin || f.aksesLaporan },
       ],
     },
