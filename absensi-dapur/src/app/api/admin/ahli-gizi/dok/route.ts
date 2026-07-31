@@ -62,7 +62,9 @@ export const POST = route(async (req: NextRequest) => {
   const slug = str(b.slug, 60);
   const judul = str(b.judul, 200);
   const nomor = str(b.nomor, 120);
-  const konten = sanitizeBaHtml(str(b.konten_html, 400_000));
+  // Laporan mingguan bisa memuat foto (base64 terkompres 1:1) → beri ambang
+  // besar agar dokumen berfoto tetap bisa disimpan.
+  const konten = sanitizeBaHtml(str(b.konten_html, 8_000_000));
   if (!konten.trim()) return fail(400, "Konten kosong.");
   const idRaw = Number(b.id);
   const id = Number.isInteger(idRaw) && idRaw > 0 ? idRaw : null;
