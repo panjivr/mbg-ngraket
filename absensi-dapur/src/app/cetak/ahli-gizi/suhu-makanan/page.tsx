@@ -1,5 +1,5 @@
-import { PrintFrame, Tgl, TabelEditable } from "../../akuntan/_components";
-import { TTDGiziAuto } from "../_components";
+import { PrintFrame, Tgl } from "../../akuntan/_components";
+import { TTDGiziAuto, TabelSuhuMakanan } from "../_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
 import { KopGizi } from "../_kop";
 
@@ -27,19 +27,7 @@ export default function Page() {
       </p>
 
       <div className="mt-3">
-        <TabelEditable
-          headers={[
-            "No",
-            "Tanggal",
-            "Menu",
-            "Suhu Matang (℃)",
-            "Waktu Cek",
-            "Suhu Diporsi (℃)",
-            "Waktu Porsi",
-            "Paraf",
-          ]}
-          baris={8}
-        />
+        <TabelSuhuMakanan />
       </div>
 
       <p className="mt-6 text-right">

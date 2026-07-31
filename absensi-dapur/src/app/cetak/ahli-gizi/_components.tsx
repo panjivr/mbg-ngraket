@@ -9,7 +9,7 @@
  * Semua kontrol tambah/hapus baris ber-kelas `.no-print` sehingga tidak ikut
  * tersimpan/tercetak (PrintFrame membuang elemen .no-print saat menyimpan).
  */
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl } from "../akuntan/_components";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 
@@ -30,6 +30,7 @@ export function GridBulanan({
   editLabel = false,
   ket = false,
   bisaTambah = false,
+  nomor = false,
   fontSize = "text-[8px]",
 }: {
   /** Judul kolom pertama (label baris). */
@@ -42,21 +43,50 @@ export function GridBulanan({
   ket?: boolean;
   /** Tampilkan tombol tambah baris. */
   bisaTambah?: boolean;
+  /** Tampilkan kolom nomor urut di paling kiri. */
+  nomor?: boolean;
   fontSize?: string;
 }) {
   const [rows, setRows] = useState<{ id: number; label: string }[]>(() =>
     barisAwal.map((label, i) => ({ id: i, label })),
   );
   const nextId = useRef(barisAwal.length);
+  // Rentang tanggal kolom yang ditampilkan (default 1–31, bisa diatur).
+  const [dari, setDari] = useState(1);
+  const [sampai, setSampai] = useState(31);
+  const hariTampil = DAYS.filter((d) => d >= dari && d <= sampai);
+  const clampHari = (v: number) => Math.min(31, Math.max(1, v || 1));
 
   return (
     <div>
+      <div className="no-print mb-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+        <span>Rentang tanggal kolom:</span>
+        <input
+          type="number"
+          min={1}
+          max={31}
+          value={dari}
+          onChange={(e) => setDari(clampHari(parseInt(e.target.value, 10)))}
+          className="w-16 rounded border border-gray-300 px-2 py-1"
+        />
+        <span>s.d</span>
+        <input
+          type="number"
+          min={1}
+          max={31}
+          value={sampai}
+          onChange={(e) => setSampai(clampHari(parseInt(e.target.value, 10)))}
+          className="w-16 rounded border border-gray-300 px-2 py-1"
+        />
+        <span className="italic">(atur tanggal berapa sampai berapa yang ditampilkan)</span>
+      </div>
       <table className={`w-full border-collapse ${fontSize}`}>
         <thead>
           <tr style={{ backgroundColor: "#D9E1F2" }}>
+            {nomor && <th className={th + " w-[3%]"}>No</th>}
             <th className={th + " min-w-[110px] text-left"}>{labelKolom}</th>
-            {DAYS.map((d) => (
-              <th key={d} className={th + " w-[2.4%]"}>
+            {hariTampil.map((d) => (
+              <th key={d} className={th}>
                 {d}
               </th>
             ))}
@@ -69,12 +99,13 @@ export function GridBulanan({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {rows.map((r, idx) => (
             <tr key={r.id}>
+              {nomor && <td className={cell + " text-center"}>{idx + 1}</td>}
               <td className={cell + " text-left"}>
                 {editLabel ? <Ed>{r.label}</Ed> : r.label}
               </td>
-              {DAYS.map((d) => (
+              {hariTampil.map((d) => (
                 <td key={d} className={cell + " text-center"}>
                   <Ed block />
                 </td>
@@ -697,7 +728,7 @@ export function TTDGiziAuto({
   }, []);
   const Kolom = ({ peran, nama }: { peran: string; nama: string }) => (
     <td className="w-1/2 text-center align-top">
-      <p className="whitespace-pre-line">
+      <p className="min-h-[2.6em] whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
       <div className="h-14" />
@@ -715,53 +746,6 @@ export function TTDGiziAuto({
         </tr>
       </tbody>
     </table>
-  );
-}
-
-/** Grid bulanan tanggal 1–31 dengan sub-kolom Sebelum (S) & Sesudah (SS). */
-function GridSubkolom({ kegiatan }: { kegiatan: string[] }) {
-  const h = "border border-black px-0.5 py-0.5 text-center font-bold align-middle";
-  const c = "border border-black p-0 text-center align-middle";
-  return (
-    <div className="scroll-x overflow-x-auto">
-      <table className="w-full border-collapse text-[7px]">
-        <thead>
-          <tr style={{ backgroundColor: "#D9E1F2" }}>
-            <th className={h + " w-[2%]"} rowSpan={2}>No</th>
-            <th className={h + " min-w-[140px] text-left"} rowSpan={2}>Kegiatan</th>
-            {DAYS.map((d) => (
-              <th key={d} className={h} colSpan={2}>{d}</th>
-            ))}
-          </tr>
-          <tr style={{ backgroundColor: "#D9E1F2" }}>
-            {DAYS.map((d) => (
-              <Fragment key={d}>
-                <th className={h}>S</th>
-                <th className={h}>SS</th>
-              </Fragment>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {kegiatan.map((k, i) => (
-            <tr key={i}>
-              <td className={c}>{i + 1}</td>
-              <td className="border border-black px-1 py-0.5 text-left align-top">{k}</td>
-              {DAYS.map((d) => (
-                <Fragment key={d}>
-                  <td className={c}>
-                    <Ed block />
-                  </td>
-                  <td className={c}>
-                    <Ed block />
-                  </td>
-                </Fragment>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -805,11 +789,162 @@ export function MonitorKebersihanArea() {
         </span>
       </div>
 
-      <GridSubkolom key={areaKey} kegiatan={area.kegiatan} />
+      <GridBulanan
+        key={areaKey}
+        labelKolom="Kegiatan"
+        barisAwal={area.kegiatan}
+        editLabel
+        nomor
+        bisaTambah
+      />
 
       <p className="mt-2 text-[10px] italic">
-        Keterangan: S = Sebelum · SS = Sesudah · ✔ = Sudah dilakukan · ✘ = Belum/tidak dilakukan
+        Keterangan: ✔ = Sudah dilakukan · ✘ = Belum/tidak dilakukan. Centang tiap
+        tanggal bila kegiatan sudah dilakukan.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Tabel Pengecekan Suhu Makanan Matang & Diporsi. Tombol "Muat" mengisi kolom
+ * Tanggal & Menu otomatis dari master distribusi untuk rentang tanggal terpilih;
+ * kolom suhu/waktu/paraf tetap diisi manual. Semua sel bisa diedit.
+ */
+export function TabelSuhuMakanan() {
+  const HEAD = [
+    "No",
+    "Tanggal",
+    "Menu",
+    "Suhu Matang (℃)",
+    "Waktu Cek",
+    "Suhu Diporsi (℃)",
+    "Waktu Porsi",
+    "Paraf",
+  ];
+  const [dari, setDari] = useState("");
+  const [sampai, setSampai] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<{ id: number; tanggal: string; menu: string }[]>(
+    () => Array.from({ length: 8 }, (_, i) => ({ id: i, tanggal: "", menu: "" })),
+  );
+  const nextId = useRef(8);
+
+  const muat = async () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dari) || !/^\d{4}-\d{2}-\d{2}$/.test(sampai) || dari > sampai)
+      return;
+    setLoading(true);
+    const out: { id: number; tanggal: string; menu: string }[] = [];
+    let d = new Date(dari + "T00:00:00Z");
+    const end = new Date(sampai + "T00:00:00Z");
+    let guard = 0;
+    let id = 0;
+    while (d <= end && guard < 40) {
+      const iso = d.toISOString().slice(0, 10);
+      let menu = "";
+      try {
+        const r = await fetch(`/api/admin/distribusi?tanggal=${iso}`);
+        const j = (await r.json().catch(() => ({}))) as { distribusi?: { menu?: string } };
+        if (r.ok) menu = String(j?.distribusi?.menu ?? "");
+      } catch {
+        /* biarkan kosong bila satu hari gagal dimuat */
+      }
+      out.push({ id: id++, tanggal: iso, menu });
+      d.setUTCDate(d.getUTCDate() + 1);
+      guard++;
+    }
+    nextId.current = id;
+    setRows(out);
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <div className="no-print mb-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+        <span>Muat tanggal &amp; menu dari distribusi:</span>
+        <input
+          type="date"
+          value={dari}
+          onChange={(e) => setDari(e.target.value)}
+          className="rounded border border-gray-300 px-2 py-1"
+        />
+        <span>s.d</span>
+        <input
+          type="date"
+          value={sampai}
+          onChange={(e) => setSampai(e.target.value)}
+          className="rounded border border-gray-300 px-2 py-1"
+        />
+        <button
+          type="button"
+          onClick={muat}
+          disabled={loading || !dari || !sampai}
+          className="rounded border border-emerald-400 bg-emerald-50 px-2 py-1 font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+        >
+          {loading ? "Memuat…" : "Muat"}
+        </button>
+        <span className="italic">(menu terisi otomatis; tetap bisa diedit)</span>
+      </div>
+      <table className="w-full border-collapse text-[10px]">
+        <thead>
+          <tr style={{ backgroundColor: "#D9E1F2" }}>
+            {HEAD.map((h) => (
+              <th key={h} className={th}>
+                {h}
+              </th>
+            ))}
+            <th className="no-print border border-black px-1 text-center">·</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, idx) => (
+            <tr key={r.id}>
+              <td className={cell + " text-center"}>{idx + 1}</td>
+              <td className={cell}>
+                <Ed>{r.tanggal ? tglIndo(r.tanggal) : ""}</Ed>
+              </td>
+              <td className={cell}>
+                <Ed block>{r.menu}</Ed>
+              </td>
+              <td className={cell}>
+                <Ed block />
+              </td>
+              <td className={cell}>
+                <Ed block />
+              </td>
+              <td className={cell}>
+                <Ed block />
+              </td>
+              <td className={cell}>
+                <Ed block />
+              </td>
+              <td className={cell}>
+                <Ed block />
+              </td>
+              <td className="no-print border border-black text-center">
+                <button
+                  type="button"
+                  onClick={() => setRows((s) => s.filter((x) => x.id !== r.id))}
+                  className="px-1 text-red-600"
+                  title="Hapus baris"
+                >
+                  ×
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button
+        type="button"
+        onClick={() => {
+          const id = nextId.current++;
+          setRows((s) => [...s, { id, tanggal: "", menu: "" }]);
+        }}
+        className="no-print mt-1 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+      >
+        ＋ Tambah baris
+      </button>
     </div>
   );
 }
