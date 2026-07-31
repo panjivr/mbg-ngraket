@@ -78,6 +78,16 @@ export const TEMPLATE_GIZI: TemplateGizi[] = [
     ikon: "🧽",
     landscape: true,
   },
+  {
+    slug: "kebersihan-ruang",
+    judul: "Monitoring Kebersihan per Area",
+    heading: "FORM MONITORING KEBERSIHAN",
+    nomor: "",
+    deskripsi:
+      "Checklist kebersihan detail per area (Persiapan, Pengolahan, Pemorsian, Pencucian, Gudang, Loker, Toilet) — tanggal 1–31 × Sebelum/Sesudah.",
+    ikon: "🧴",
+    landscape: true,
+  },
   // — Limbah & Bahan —
   {
     slug: "foodwaste",
@@ -114,6 +124,130 @@ export function getTemplateGizi(slug: string): TemplateGizi | undefined {
 }
 
 /**
+ * Daftar kegiatan kebersihan per area (mengikuti Form Monitoring Kebersihan
+ * SPPG). Dipakai form "Monitoring Kebersihan per Area" — pilih area lalu
+ * checklist per tanggal (Sebelum/Sesudah).
+ */
+export interface AreaKebersihan {
+  key: string;
+  nama: string;
+  kegiatan: string[];
+}
+
+export const AREA_KEBERSIHAN: AreaKebersihan[] = [
+  {
+    key: "persiapan",
+    nama: "Persiapan",
+    kegiatan: [
+      "Pastikan tidak ada sisa bahan tercecer",
+      "Bersihkan meja",
+      "Bersihkan wadah penyajian",
+      "Cuci peralatan seperti pisau, talenan, wadah setelah digunakan lalu simpan sesuai tempatnya",
+      "Pastikan bahan disimpan sesuai tempatnya menurut karakteristik bahan",
+      "Bersihkan rak penyimpanan",
+      "Kosongkan tempat sampah dan ganti plastik",
+      "Sapu dan pel lantai",
+      "Pastikan wastafel bersih dan tidak tersumbat",
+    ],
+  },
+  {
+    key: "pengolahan",
+    nama: "Pengolahan",
+    kegiatan: [
+      "Pastikan tidak ada sisa bahan tercecer",
+      "Bersihkan meja",
+      "Bersihkan kompor, steamer, cooking hook, exhaust",
+      "Cuci peralatan masak setelah digunakan lalu simpan sesuai tempatnya",
+      "Pastikan bahan disimpan sesuai tempatnya menurut karakteristik bahan",
+      "Pastikan tidak ada genangan dan saluran air tidak tersumbat",
+      "Kosongkan tempat sampah dan ganti plastik",
+      "Sapu dan pel lantai",
+      "Kembalikan bahan sisa pakai ke gudang dengan rapih (tertutup, terorganisir dan sesuai tempatnya)",
+    ],
+  },
+  {
+    key: "pemorsian",
+    nama: "Pemorsian",
+    kegiatan: [
+      "Pastikan tidak ada sisa bahan tercecer",
+      "Bersihkan meja",
+      "Bersihkan kompor, steamer, cooking hook, exhaust",
+      "Cuci peralatan masak setelah digunakan lalu simpan sesuai tempatnya",
+      "Pastikan bahan disimpan sesuai tempatnya menurut karakteristik bahan",
+      "Pastikan tidak ada genangan dan saluran air tidak tersumbat",
+      "Kosongkan tempat sampah dan ganti plastik",
+      "Sapu dan pel lantai",
+      "Kembalikan bahan sisa pakai ke gudang dengan rapih (tertutup, terorganisir dan sesuai tempatnya)",
+    ],
+  },
+  {
+    key: "pencucian",
+    nama: "Pencucian Ompreng",
+    kegiatan: [
+      "Bersihkan ompreng dari sisa makanan",
+      "Bersihkan sink pencucian dan rak",
+      "Cuci lap yang telah digunakan lalu keringkan, simpan di tempat yang bersih",
+      "Periksa peralatan untuk memastikan tidak ada kerusakan atau kontaminasi",
+      "Lap dinding dan permukaan logam",
+      "Kosongkan tempat sampah dan ganti plastik",
+      "Bersihkan lantai, pastikan tidak ada genangan air",
+      "Membersihkan keset",
+      "Mengecek ketersediaan sabun pada wastafel",
+    ],
+  },
+  {
+    key: "gudang_kering",
+    nama: "Gudang Kering",
+    kegiatan: [
+      "Sapu dan pel lantai",
+      "Membersihkan dan merapihkan rak penyimpanan",
+      "Periksa masa simpan bahan secara berkala, buang bahan kadaluarsa",
+      "Pastikan tidak ada tanda-tanda hama seperti serangga/tikus",
+    ],
+  },
+  {
+    key: "gudang_basah",
+    nama: "Gudang Basah",
+    kegiatan: [
+      "Bebas dari sisa bahan yang jatuh, lantai dan dinding bebas dari noda bahan",
+      "Periksa masa simpan bahan secara berkala, buang bahan kadaluarsa",
+      "Bersihkan rak dan wadah penyimpanan",
+      "Bersihkan pintu lemari pendingin, pastikan seal karet menutup rapat",
+      "Pastikan tidak ada tanda-tanda hama seperti serangga/tikus",
+      "Sapu dan pel lantai",
+      "Freezer cleaning",
+    ],
+  },
+  {
+    key: "loker",
+    nama: "Loker",
+    kegiatan: [
+      "Menyapu lantai",
+      "Mengepel lantai",
+      "Membersihkan rak sepatu",
+      "Membersihkan dinding",
+      "Membersihkan langit-langit",
+      "Mengecek fungsi sakelar dan lampu loker",
+    ],
+  },
+  {
+    key: "toilet",
+    nama: "Toilet",
+    kegiatan: [
+      "Menyikat lantai",
+      "Membersihkan lantai dengan cairan pembersih",
+      "Membersihkan saringan air",
+      "Membersihkan dinding",
+      "Mengecek kelayakan fungsi keran air",
+      "Mengecek kelengkapan toilet",
+      "Mengecek fungsi saklar dan lampu toilet",
+      "Membersihkan keset",
+      "Mengecek ketersediaan sabun pada wastafel",
+    ],
+  },
+];
+
+/**
  * Baris identitas SPPG untuk kop dokumen: uppercase & dijamin berawalan "SPPG"
  * (tanpa menggandakan bila nama dapur sudah memuat "SPPG"). Nama diambil dari
  * konfigurasi dapur yang sedang login sehingga tiap dapur tampil otomatis.
@@ -140,7 +274,7 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
   {
     label: "Kebersihan & Sanitasi",
     ket: "Checklist kebersihan area dapur & fasilitas.",
-    slugs: ["kebersihan-area"],
+    slugs: ["kebersihan-area", "kebersihan-ruang"],
   },
   {
     label: "Limbah & Kebutuhan Bahan",

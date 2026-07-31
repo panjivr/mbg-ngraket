@@ -1,5 +1,5 @@
-import { PrintFrame, Tgl, TTD, Ed } from "../../akuntan/_components";
-import { TabelGizi } from "../_components";
+import { PrintFrame, Tgl, Ed } from "../../akuntan/_components";
+import { TabelGizi, TTDGiziAuto } from "../_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
 import { KopGizi } from "../_kop";
 
@@ -43,10 +43,7 @@ export default function Page() {
         Ponorogo, <Tgl mode="tanggal" />
       </p>
 
-      <TTD
-        kiri={{ peran: "Mengetahui,\nKepala SPPG", nama: "(………………………)" }}
-        kanan={{ peran: "Ahli Gizi SPPG", nama: "(………………………)" }}
-      />
+      <TTDGiziAuto />
     </PrintFrame>
   );
 }

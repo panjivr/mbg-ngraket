@@ -9,8 +9,9 @@
  * Semua kontrol tambah/hapus baris ber-kelas `.no-print` sehingga tidak ikut
  * tersimpan/tercetak (PrintFrame membuang elemen .no-print saat menyimpan).
  */
-import { useEffect, useRef, useState } from "react";
-import { Ed } from "../akuntan/_components";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Ed, Tgl } from "../akuntan/_components";
+import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 
 /** Angka tanggal 1..31 untuk header grid bulanan. */
 export const DAYS: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -662,6 +663,153 @@ export function DokumentasiMingguan() {
           menu={r.menu}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Blok tanda tangan Ahli Gizi dengan nama Kepala SPPG & Ahli Gizi terisi
+ * OTOMATIS dari Pengaturan dapur (GET /api/admin/distribusi/pengaturan) — tak
+ * perlu ketik nama tiap dokumen. Nama tetap bisa diedit bila perlu.
+ */
+export function TTDGiziAuto({
+  kiriPeran = "Mengetahui,\nKepala SPPG",
+  kananPeran = "Ahli Gizi SPPG",
+}: {
+  kiriPeran?: string;
+  kananPeran?: string;
+}) {
+  const [kepala, setKepala] = useState("");
+  const [ahli, setAhli] = useState("");
+  useEffect(() => {
+    let batal = false;
+    fetch("/api/admin/distribusi/pengaturan")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (batal || !d?.pengaturan) return;
+        setKepala(String(d.pengaturan.kepala_sppg || ""));
+        setAhli(String(d.pengaturan.ahli_gizi || ""));
+      })
+      .catch(() => {});
+    return () => {
+      batal = true;
+    };
+  }, []);
+  const Kolom = ({ peran, nama }: { peran: string; nama: string }) => (
+    <td className="w-1/2 text-center align-top">
+      <p className="whitespace-pre-line">
+        <Ed>{peran}</Ed>
+      </p>
+      <div className="h-14" />
+      <p className="font-bold underline">
+        <Ed>{nama ? `(${nama})` : "(………………………)"}</Ed>
+      </p>
+    </td>
+  );
+  return (
+    <table className="mt-6 w-full text-sm">
+      <tbody>
+        <tr>
+          <Kolom peran={kiriPeran} nama={kepala} />
+          <Kolom peran={kananPeran} nama={ahli} />
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/** Grid bulanan tanggal 1–31 dengan sub-kolom Sebelum (S) & Sesudah (SS). */
+function GridSubkolom({ kegiatan }: { kegiatan: string[] }) {
+  const h = "border border-black px-0.5 py-0.5 text-center font-bold align-middle";
+  const c = "border border-black p-0 text-center align-middle";
+  return (
+    <div className="scroll-x overflow-x-auto">
+      <table className="w-full border-collapse text-[7px]">
+        <thead>
+          <tr style={{ backgroundColor: "#D9E1F2" }}>
+            <th className={h + " w-[2%]"} rowSpan={2}>No</th>
+            <th className={h + " min-w-[140px] text-left"} rowSpan={2}>Kegiatan</th>
+            {DAYS.map((d) => (
+              <th key={d} className={h} colSpan={2}>{d}</th>
+            ))}
+          </tr>
+          <tr style={{ backgroundColor: "#D9E1F2" }}>
+            {DAYS.map((d) => (
+              <Fragment key={d}>
+                <th className={h}>S</th>
+                <th className={h}>SS</th>
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {kegiatan.map((k, i) => (
+            <tr key={i}>
+              <td className={c}>{i + 1}</td>
+              <td className="border border-black px-1 py-0.5 text-left align-top">{k}</td>
+              {DAYS.map((d) => (
+                <Fragment key={d}>
+                  <td className={c}>
+                    <Ed block />
+                  </td>
+                  <td className={c}>
+                    <Ed block />
+                  </td>
+                </Fragment>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Formulir monitoring kebersihan per area: pilih area → daftar kegiatan otomatis
+ * (dari AREA_KEBERSIHAN) + grid tanggal 1–31 (Sebelum/Sesudah). Bulan & tahun
+ * mengikuti tanggal dokumen. Cetak per area (ulangi untuk area lain).
+ */
+export function MonitorKebersihanArea() {
+  const [areaKey, setAreaKey] = useState(AREA_KEBERSIHAN[0].key);
+  const area = AREA_KEBERSIHAN.find((a) => a.key === areaKey) || AREA_KEBERSIHAN[0];
+  return (
+    <div>
+      <div className="no-print mb-3 flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-medium text-gray-700">Pilih Area:</span>
+        <select
+          value={areaKey}
+          onChange={(e) => setAreaKey(e.target.value)}
+          className="rounded border border-gray-300 px-2 py-1"
+        >
+          {AREA_KEBERSIHAN.map((a) => (
+            <option key={a.key} value={a.key}>
+              {a.nama}
+            </option>
+          ))}
+        </select>
+        <span className="italic text-gray-500">(pilih area lalu cetak; ulangi untuk area lain)</span>
+      </div>
+
+      <p className="mb-2 text-center text-[13px] font-bold uppercase">Area: {area.nama}</p>
+
+      <div className="mb-2 flex flex-wrap gap-x-8 gap-y-1 text-[12px]">
+        <span>
+          Bulan: <Tgl mode="bulan" />
+        </span>
+        <span>
+          Tahun: <Tgl mode="tahun" />
+        </span>
+        <span>
+          Lokasi: <Ed>…………………………</Ed>
+        </span>
+      </div>
+
+      <GridSubkolom key={areaKey} kegiatan={area.kegiatan} />
+
+      <p className="mt-2 text-[10px] italic">
+        Keterangan: S = Sebelum · SS = Sesudah · ✔ = Sudah dilakukan · ✘ = Belum/tidak dilakukan
+      </p>
     </div>
   );
 }
