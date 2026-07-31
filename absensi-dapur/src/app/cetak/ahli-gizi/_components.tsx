@@ -501,9 +501,9 @@ export function TabelMenuMingguan() {
 }
 
 /**
- * Satu kotak foto 1:1 (square). File dipilih lalu dikompres di sisi klien
- * (canvas, crop tengah ke 360px, JPEG 0.6) supaya ukuran base64 kecil dan aman
- * disimpan di konten_html. Kontrol pilih berkelas .no-print (tidak ikut cetak).
+ * Satu kotak foto potret 4:5. File dipilih lalu dikompres di sisi klien
+ * (canvas 288×360, crop tengah ke rasio 4:5, JPEG 0.6) supaya ukuran base64
+ * kecil dan aman disimpan di konten_html. Kontrol pilih berkelas .no-print.
  */
 export function KotakFoto() {
   const [src, setSrc] = useState("");
@@ -514,16 +514,25 @@ export function KotakFoto() {
     const url = URL.createObjectURL(file);
     const img = new window.Image();
     img.onload = () => {
-      const S = 360;
+      // Target potret 4:5 (lebar:tinggi = 4/5 = 0.8).
+      const W = 288;
+      const H = 360;
+      const RATIO = W / H;
       const canvas = document.createElement("canvas");
-      canvas.width = S;
-      canvas.height = S;
+      canvas.width = W;
+      canvas.height = H;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        const m = Math.min(img.width, img.height);
-        const sx = (img.width - m) / 2;
-        const sy = (img.height - m) / 2;
-        ctx.drawImage(img, sx, sy, m, m, 0, 0, S, S);
+        // Crop tengah ke rasio 4:5 dari sumber.
+        let cw = img.width;
+        let ch = img.width / RATIO;
+        if (ch > img.height) {
+          ch = img.height;
+          cw = img.height * RATIO;
+        }
+        const sx = (img.width - cw) / 2;
+        const sy = (img.height - ch) / 2;
+        ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
         setSrc(canvas.toDataURL("image/jpeg", 0.6));
       }
       URL.revokeObjectURL(url);
@@ -532,7 +541,7 @@ export function KotakFoto() {
   };
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded border border-black bg-gray-50">
+    <div className="relative aspect-[4/5] w-full overflow-hidden rounded border border-black bg-gray-50">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="Dokumentasi" className="h-full w-full object-cover" />

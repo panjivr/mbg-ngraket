@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 
 const t = getTemplateGizi("laporan-mingguan")!;
 
-/** Bab bernomor (judul tebal kapital + isi). */
+/** Bab bernomor (judul tebal kapital + isi). Setiap bab mulai di halaman baru saat dicetak. */
 function Bab({ judul, children }: { judul: string; children: React.ReactNode }) {
   return (
-    <div className="mt-6">
+    <div className="mt-6 break-before-page">
       <p className="text-center font-bold uppercase">{judul}</p>
       <div className="mt-2 space-y-2">{children}</div>
     </div>
@@ -43,30 +43,58 @@ export default async function Page() {
   return (
     <PrintFrame
       heading={t.heading}
-      nomor={t.nomor}
       slug={t.slug}
       judul={t.judul}
       landscape={t.landscape}
+      saveUrl="/api/admin/ahli-gizi/dok"
+      hideKop
     >
-      {/* ===== SAMPUL ===== */}
-      <div className="border-b-2 border-black pb-4 text-center">
-        <p className="text-lg font-bold leading-snug">
-          LAPORAN PELAKSANAAN
-          <br />
-          PROGRAM MAKAN BERGIZI GRATIS
-        </p>
-        <p className="mt-1 font-semibold">BADAN GIZI NASIONAL R.I.</p>
-        <p className="font-semibold">
-          SATUAN PELAYANAN PEMENUHAN GIZI (SPPG)
-        </p>
-        <p className="mt-2 text-base font-bold uppercase tracking-wide">
-          {nama}
-        </p>
-        {alamat && <p className="text-[12px] text-gray-700">{alamat}</p>}
-        <p className="mt-3 text-[13px]">
-          Periode Pemberian: <Ed>………</Ed> s.d. <Ed>………</Ed> Tahun{" "}
-          <Ed>2026</Ed>
-        </p>
+      {/* ===== SAMPUL (halaman 1) ===== */}
+      <div className="flex min-h-[240mm] flex-col">
+        {/* Kop: logo kiri + identitas lembaga di tengah */}
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bgn-logo.webp"
+            alt="Logo BGN"
+            className="absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain"
+          />
+          <div className="px-24 text-center leading-snug">
+            <p className="text-[17px] font-bold uppercase">
+              BADAN GIZI NASIONAL
+            </p>
+            <p className="text-[12px] italic">(National Nutrition Agency)</p>
+            <p className="mt-1 text-[14px] font-semibold uppercase">
+              Satuan Pelayanan Pemenuhan Gizi
+            </p>
+            <p className="text-[14px] font-semibold uppercase">
+              Kabupaten Ponorogo Balong Ngraket
+            </p>
+          </div>
+          <div className="mt-3 border-b-4 border-black" />
+        </div>
+
+        {/* Judul laporan di tengah halaman sampul */}
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <p className="text-2xl font-bold uppercase leading-snug tracking-wide">
+            Laporan Mingguan Ahli Gizi
+          </p>
+          <p className="mt-1 text-lg font-semibold uppercase">
+            Program Makan Bergizi Gratis
+          </p>
+          <p className="mt-6 text-[14px]">
+            Periode Pemberian : <Ed>…….</Ed> s.d <Ed>…….</Ed> Tahun{" "}
+            <Ed>2026</Ed>
+          </p>
+        </div>
+
+        {/* Identitas SPPG di kaki sampul */}
+        <div className="text-center">
+          <p className="text-base font-bold uppercase tracking-wide">{nama}</p>
+          {alamat && (
+            <p className="text-[12px] text-gray-700">{alamat}</p>
+          )}
+        </div>
       </div>
 
       {/* ===== BAB I ===== */}

@@ -290,15 +290,17 @@ export function TabelEditable({
  */
 export function PrintFrame({
   heading,
-  nomor,
+  nomor = "",
   slug,
   judul,
   children,
   saveUrl = "/api/admin/akuntan/ba",
   landscape = false,
+  hideKop = false,
 }: {
   heading: string;
-  nomor: string;
+  /** Nomor surat/BA. Fitur ahli gizi tidak memakai nomor → kosongkan. */
+  nomor?: string;
   slug: string;
   judul: string;
   children: ReactNode;
@@ -306,6 +308,8 @@ export function PrintFrame({
   saveUrl?: string;
   /** Kertas mendatar untuk formulir lebar (grid tanggal 1–31). */
   landscape?: boolean;
+  /** Sembunyikan kop bawaan (dokumen menyediakan sampul/kop sendiri). */
+  hideKop?: boolean;
 }) {
   const [paper, setPaper] = useState("A4");
   const [tanggal, setTanggal] = useState("");
@@ -406,8 +410,8 @@ export function PrintFrame({
           ref={sheetRef}
           className={`sheet mx-auto ${sheetW} bg-white ${landscape ? "p-6" : "p-10"} font-serif text-[13px] leading-relaxed text-black shadow-lg`}
         >
-          <Kop heading={heading} nomor={nomor} />
-          <div className="mt-5">{children}</div>
+          {!hideKop && <Kop heading={heading} nomor={nomor} />}
+          <div className={hideKop ? "" : "mt-5"}>{children}</div>
         </div>
       </TanggalContext.Provider>
     </div>
