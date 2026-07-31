@@ -17,26 +17,30 @@ export async function KopGizi({ heading }: { heading: string }) {
 
   return (
     <div>
-      {/* Kop lembaga: logo kiri + identitas di tengah */}
-      <div className="relative pb-1">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/bgn-logo.webp"
-          alt="Logo BGN"
-          className="absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain"
-        />
-        <div className="px-24 text-center leading-snug">
-          <p className="text-[17px] font-bold uppercase tracking-wide">
-            Badan Gizi Nasional
-          </p>
-          <p className="text-[12px] italic">(National Nutrition Agency)</p>
-          <p className="text-[13px] font-semibold uppercase">
-            Satuan Pelayanan Pemenuhan Gizi
-          </p>
-          <p className="text-[13px] font-semibold uppercase">{namaSppg}</p>
-          {alamat && <p className="text-[11px] text-gray-700">{alamat}</p>}
+      {/* Kop lembaga: logo kiri + identitas melebar ke samping (bukan menumpuk di tengah) */}
+      <div className="pb-1">
+        <div className="flex items-center gap-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/bgn-logo.webp"
+            alt="Logo BGN"
+            className="h-20 w-20 shrink-0 object-contain"
+          />
+          <div className="flex-1 text-center leading-snug">
+            <p className="text-[20px] font-bold uppercase tracking-[0.18em]">
+              Badan Gizi Nasional
+            </p>
+            <p className="text-[12px] italic tracking-wide">(National Nutrition Agency)</p>
+            <p className="text-[15px] font-semibold uppercase tracking-[0.12em]">
+              Satuan Pelayanan Pemenuhan Gizi
+            </p>
+            <p className="text-[15px] font-semibold uppercase tracking-[0.12em]">{namaSppg}</p>
+            {alamat && <p className="mt-0.5 text-[11px] tracking-wide text-gray-700">{alamat}</p>}
+          </div>
+          {/* penyeimbang lebar logo agar teks tetap center terhadap halaman */}
+          <div className="h-20 w-20 shrink-0" aria-hidden />
         </div>
-        <div className="mt-4 border-b-4 border-black" />
+        <div className="mt-3 border-b-4 border-black" />
       </div>
 
       {/* Judul dokumen di tengah, di bawah garis kop */}
