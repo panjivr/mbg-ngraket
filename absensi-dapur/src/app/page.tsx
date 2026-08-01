@@ -80,44 +80,60 @@ const waPaket = (nama: string) =>
     `Halo, saya tertarik dengan Paket ${nama} untuk dapur MBG kami. Boleh minta detail fitur & penawaran harganya?`,
   )}`;
 
+// Selaras dengan sistem paket berjenjang di lib/paket.ts (Bronze → Silver → Gold → Pro).
 const paket = [
   {
-    nama: "Dapur Tunggal",
-    ikon: "🍳",
-    ringkas: "Untuk satu dapur SPPG yang ingin langsung digital.",
+    nama: "Bronze",
+    ikon: "🥉",
+    aksen: "from-amber-600 to-amber-800",
+    ringkas: "Fondasi absensi & kepegawaian untuk mulai digital.",
     unggulan: false,
     fitur: [
       "Absensi wajah + GPS & shift per divisi",
-      "Distribusi harian + BAST, Surat Jalan, Organoleptik",
-      "Laporan harian & manajemen gudang",
-      "Ekspor rekap Excel / CSV / PDF",
-      "Pendampingan setup & pelatihan tim",
+      "Manajemen pegawai & divisi",
+      "Jadwal kerja & pengajuan izin",
+      "Papan pengumuman internal",
+      "Rekap kehadiran + ekspor Excel/CSV/PDF",
     ],
   },
   {
-    nama: "Dapur Lengkap",
-    ikon: "🍱",
-    ringkas: "Semua modul aktif — operasional dapur end-to-end.",
-    unggulan: true,
-    fitur: [
-      "Semua fitur Paket Dapur Tunggal",
-      "Bank Menu, Resep & HPP / Food Cost",
-      "Jadwal menu periode + generator belanja",
-      "HR & penggajian: gaji, slip, leaderboard",
-      "Notifikasi, audit log & peran akses terpisah",
-    ],
-  },
-  {
-    nama: "Multi-Dapur SPPG",
-    ikon: "🌐",
-    ringkas: "Untuk yayasan/mitra yang mengelola banyak dapur.",
+    nama: "Silver",
+    ikon: "🥈",
+    aksen: "from-slate-300 to-slate-500",
+    ringkas: "Bronze + pembukuan & berita acara resmi.",
     unggulan: false,
     fitur: [
-      "Semua fitur Paket Dapur Lengkap",
-      "Super admin lintas banyak dapur",
-      "Pusat kendali & rekap gabungan antar dapur",
-      "Kop dokumen resmi per dapur otomatis",
-      "Prioritas dukungan & onboarding tim",
+      "Semua fitur Bronze",
+      "Modul Akuntan / pembukuan",
+      "Berita Acara (BAST) berkop resmi",
+      "Dokumentasi keuangan rapi",
+    ],
+  },
+  {
+    nama: "Gold",
+    ikon: "🥇",
+    aksen: "from-gold-300 to-ember-400",
+    ringkas: "Silver + distribusi, menu & laporan harian.",
+    unggulan: true,
+    fitur: [
+      "Semua fitur Silver",
+      "Distribusi porsi + Surat Jalan & Organoleptik",
+      "Bank Menu, resep & jadwal menu",
+      "Laporan kegiatan harian + foto",
+    ],
+  },
+  {
+    nama: "Pro",
+    ikon: "💎",
+    aksen: "from-sky-300 to-indigo-400",
+    ringkas: "Semua fitur aktif — operasional dapur end-to-end.",
+    unggulan: false,
+    fitur: [
+      "Semua fitur Gold",
+      "HR & penggajian: gaji + slip",
+      "Gudang & manajemen stok bahan",
+      "Ahli Gizi & analisis menu",
+      "Multi-dapur, audit log & prioritas dukungan",
     ],
   },
 ];
@@ -709,20 +725,21 @@ export default function Home() {
             💎 Paket & Harga
           </span>
           <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Pilih Paket yang Pas untuk Dapur Anda
+            Paket Berjenjang, Sesuai Skala Dapur Anda
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            Harga menyesuaikan skala dapur Anda. Pilih paket, klik tombolnya, dan
-            langsung terhubung ke WhatsApp kami untuk penawaran resmi.
+            Dari Bronze sampai Pro — makin tinggi paket, makin banyak fitur
+            terbuka. Pilih paket, klik tombolnya, dan langsung terhubung ke
+            WhatsApp kami untuk penawaran resmi.
           </p>
         </div>
 
-        <div className="mt-10 grid items-start gap-5 lg:grid-cols-3">
+        <div className="mt-10 grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {paket.map((p) => (
             <div
               key={p.nama}
               className={
-                "card relative flex h-full flex-col p-6 sm:p-7 " +
+                "card relative flex h-full flex-col p-6 " +
                 (p.unggulan
                   ? "border-gold-500/50 ring-1 ring-gold-500/30 lg:-mt-3 lg:mb-3"
                   : "")
@@ -734,7 +751,9 @@ export default function Home() {
                 </span>
               )}
               <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-gold-500/15 text-2xl">
+                <span
+                  className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${p.aksen} text-2xl shadow-inner`}
+                >
                   {p.ikon}
                 </span>
                 <h3 className="text-lg font-extrabold">{p.nama}</h3>
