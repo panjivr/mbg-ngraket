@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import AdminNav from "@/components/AdminNav";
+import PaketGuard from "@/components/PaketGuard";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 import NotifBell from "@/components/NotifBell";
+import { paketEfektif, paketExpired, fiturAktif, SEMUA_FITUR, PAKET_LABEL } from "@/lib/paket";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +21,8 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
 
   const me = (
-    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; is_hr: boolean }>(
-      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.is_hr, s.nama AS sppg_nama
+    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; is_hr: boolean; paket: string | null; paket_until: string | null }>(
+      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.is_hr, s.nama AS sppg_nama, s.paket, s.paket_until
          FROM users u LEFT JOIN sppg s ON s.id = u.sppg_id
         WHERE u.id = $1`,
       [session.uid],
@@ -34,6 +36,10 @@ export default async function AdminLayout({
   if (!fullAdmin && !aksesDistribusi && !aksesLaporan && !isHr) redirect("/dapur");
   const isSuper = fullAdmin && !!me?.is_super;
   const dapurNama = me?.sppg_nama || "Dapur";
+  // Paket langganan → fitur aktif. Super admin (pemilik) selalu penuh.
+  const paket = paketEfektif(me?.paket, me?.paket_until);
+  const paketExp = paketExpired(me?.paket_until);
+  const fitur: string[] = isSuper ? SEMUA_FITUR : fiturAktif(paket);
 
   return (
     <div className="mx-auto min-h-dvh max-w-6xl px-4 pb-12">
@@ -59,6 +65,16 @@ export default async function AdminLayout({
                         : "HR"}
                   </span>
                 )}
+                <span
+                  className={
+                    "ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold " +
+                    (paketExp ? "bg-amber-500/20 text-amber-300" : "bg-white/10 text-slate-300")
+                  }
+                  title={paketExp ? "Masa aktif langganan berakhir" : "Paket langganan"}
+                >
+                  {PAKET_LABEL[paket]}
+                  {paketExp ? " · berakhir" : ""}
+                </span>
               </p>
             </div>
           </div>
@@ -76,9 +92,16 @@ export default async function AdminLayout({
           aksesLaporan={aksesLaporan}
           isHr={isHr}
           isSuper={isSuper}
+          fitur={fitur}
         />
       </header>
       <BirthdayGreeting />
+      <PaketGuard fitur={fitur} />
+      {paketExp && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          ⏳ Masa aktif langganan dapur ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.
+        </div>
+      )}
       {children}
     </div>
   );

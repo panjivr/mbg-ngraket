@@ -15,6 +15,8 @@ interface Flags {
   aksesLaporan: boolean;
   isHr: boolean;
   isSuper: boolean;
+  /** Fitur yang dibuka paket langganan dapur ini. */
+  fitur: string[];
 }
 interface Item {
   label: string;
@@ -32,26 +34,27 @@ interface Group {
 }
 
 function buildGroups(f: Flags): Group[] {
+  const has = (k: string) => f.fitur.includes(k);
   return [
     { key: "dash", label: "Dashboard", solo: { label: "Dashboard", href: "/admin", exact: true, show: f.fullAdmin } },
     {
       key: "ops",
       label: "Operasional",
       items: [
-        { label: "🚚 Distribusi", href: "/admin/distribusi", show: f.aksesDistribusi },
-        { label: "🍱 Menu", href: "/admin/menu", show: f.aksesDistribusi },
-        { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: f.aksesDistribusi },
-        { label: "📋 Laporan Harian", href: "/admin/laporan", show: f.aksesLaporan },
-        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: f.fullAdmin },
-        { label: "📦 Gudang", href: "/admin/gudang", show: f.fullAdmin || f.aksesLaporan },
+        { label: "🚚 Distribusi", href: "/admin/distribusi", show: f.aksesDistribusi && has("distribusi") },
+        { label: "🍱 Menu", href: "/admin/menu", show: f.aksesDistribusi && has("distribusi") },
+        { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: f.aksesDistribusi && has("distribusi") },
+        { label: "📋 Laporan Harian", href: "/admin/laporan", show: f.aksesLaporan && has("distribusi") },
+        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: f.fullAdmin && has("ahli_gizi") },
+        { label: "📦 Gudang", href: "/admin/gudang", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
       ],
     },
     {
       key: "peg",
       label: "Kepegawaian",
       items: [
-        { label: "👥 Pegawai", href: "/admin/pegawai", also: ["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"], show: f.fullAdmin },
-        { label: "🧾 HR / Gaji", href: "/admin/hr", show: f.isHr },
+        { label: "👥 Pegawai", href: "/admin/pegawai", also: ["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"], show: f.fullAdmin && has("pegawai") },
+        { label: "🧾 HR / Gaji", href: "/admin/hr", show: f.isHr && has("hr") },
       ],
     },
     {
@@ -59,7 +62,7 @@ function buildGroups(f: Flags): Group[] {
       label: "Keuangan",
       items: [
         { label: "📊 Rekap", href: "/admin/rekap", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
-        { label: "🧮 Akuntan", href: "/admin/akuntan", show: f.fullAdmin },
+        { label: "🧮 Akuntan", href: "/admin/akuntan", show: f.fullAdmin && has("akuntan") },
       ],
     },
     {

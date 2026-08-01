@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PAKET_LIST, PAKET_LABEL, PAKET_DESKRIPSI, normalizePaket, paketExpired } from "@/lib/paket";
 
 interface SppgRow {
   id: number;
@@ -10,6 +11,8 @@ interface SppgRow {
   jam_masuk: string;
   jam_pulang: string;
   aktif: boolean;
+  paket?: string;
+  paket_until?: string | null;
   jumlah_staf?: number;
   jumlah_admin?: number;
 }
@@ -34,6 +37,9 @@ export default function SppgPage() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  const [editS, setEditS] = useState<SppgRow | null>(null);
+  const [ep, setEp] = useState("pro");
+  const [eu, setEu] = useState("");
 
   async function load() {
     setLoading(true);
@@ -97,6 +103,27 @@ export default function SppgPage() {
     await load();
   }
 
+  function openPaket(s: SppgRow) {
+    setEditS(s);
+    setEp(normalizePaket(s.paket));
+    setEu(s.paket_until ? String(s.paket_until).slice(0, 10) : "");
+  }
+  async function simpanPaket() {
+    if (!editS) return;
+    const res = await fetch(`/api/admin/sppg/${editS.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paket: ep, paket_until: eu || null }),
+    });
+    if (res.ok) {
+      setEditS(null);
+      await load();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || "Gagal menyimpan paket.");
+    }
+  }
+
   if (denied) {
     return (
       <div className="card p-6 text-center text-slate-400">
@@ -141,6 +168,7 @@ export default function SppgPage() {
                   <th className="px-4 py-2.5">Zona Waktu</th>
                   <th className="px-4 py-2.5">Admin</th>
                   <th className="px-4 py-2.5">Staf</th>
+                  <th className="px-4 py-2.5">Paket / Masa Aktif</th>
                   <th className="px-4 py-2.5 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -158,7 +186,27 @@ export default function SppgPage() {
                     <td className="px-4 py-2.5 text-slate-300">{s.jumlah_admin ?? 0}</td>
                     <td className="px-4 py-2.5 text-slate-300">{s.jumlah_staf ?? 0}</td>
                     <td className="px-4 py-2.5">
-                      <div className="flex justify-end">
+                      <span className="font-medium">{PAKET_LABEL[normalizePaket(s.paket)]}</span>
+                      <span
+                        className={
+                          "ml-1.5 text-xs " +
+                          (paketExpired(s.paket_until) ? "text-amber-400" : "text-slate-500")
+                        }
+                      >
+                        {s.paket_until
+                          ? String(s.paket_until).slice(0, 10) +
+                            (paketExpired(s.paket_until) ? " (berakhir)" : "")
+                          : "tanpa batas"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => openPaket(s)}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                        >
+                          Paket
+                        </button>
                         <button
                           onClick={() => remove(s)}
                           className="btn-danger px-2.5 py-1 text-xs"
@@ -275,6 +323,44 @@ export default function SppgPage() {
                 <button onClick={save} disabled={saving} className="btn-gold flex-1">
                   {saving ? "Menyimpan…" : "Buat Dapur"}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editS && (
+        <div className="fixed inset-0 z-20 grid place-items-center bg-black/60 p-4" onClick={() => setEditS(null)}>
+          <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold">Paket — {editS.nama}</h2>
+            <p className="mt-1 text-sm text-slate-400">Atur paket langganan &amp; masa aktif dapur ini.</p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="label">Paket</label>
+                <select className="input" value={ep} onChange={(e) => setEp(e.target.value)}>
+                  {PAKET_LIST.map((p) => (
+                    <option key={p} value={p}>{PAKET_LABEL[p]}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500">{PAKET_DESKRIPSI[normalizePaket(ep)]}</p>
+              </div>
+              <div>
+                <label className="label">Masa aktif s.d (opsional)</label>
+                <div className="flex gap-2">
+                  <input type="date" className="input" value={eu} onChange={(e) => setEu(e.target.value)} />
+                  {eu && (
+                    <button type="button" onClick={() => setEu("")} className="btn-ghost shrink-0 px-3 text-xs">
+                      Tanpa batas
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Kosongkan = tanpa batas. Lewat tanggal → fitur terkunci (turun ke Bronze) sampai diperpanjang.
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setEditS(null)} className="btn-ghost flex-1">Batal</button>
+                <button onClick={simpanPaket} className="btn-gold flex-1">Simpan</button>
               </div>
             </div>
           </div>
