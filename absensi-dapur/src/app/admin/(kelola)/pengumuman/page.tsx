@@ -21,16 +21,6 @@ function fmt(iso: string): string {
   });
 }
 
-/**
- * Buka share-sheet WhatsApp dengan teks pengumuman terisi.
- * Admin tinggal memilih grup/daftar broadcast tujuan — tanpa gateway berbayar,
- * tanpa mengubah data/skema. Gambar tidak ikut (WA share teks tidak dukung file).
- */
-function waShare(judul: string, isi: string): void {
-  const teks = isi.trim() ? `*${judul.trim()}*\n\n${isi.trim()}` : `*${judul.trim()}*`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(teks)}`, "_blank", "noopener,noreferrer");
-}
-
 /** Kompres gambar di sisi klien → data URL JPEG kecil (maks sisi 1000px). */
 function kompresGambar(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -164,23 +154,9 @@ export default function PengumumanPage() {
           <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
           📌 Sematkan di atas
         </label>
-        <div className="flex gap-2">
-          <button onClick={submit} disabled={saving || !judul.trim()} className="btn-primary flex-1">
-            {saving ? "Menyimpan…" : "Terbitkan"}
-          </button>
-          <button
-            type="button"
-            onClick={() => waShare(judul, isi)}
-            disabled={!judul.trim()}
-            title="Bagikan teks ini ke grup / daftar broadcast WhatsApp"
-            className="btn-ghost inline-flex items-center gap-1.5 px-3 text-emerald-300 disabled:opacity-40"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.38a9.85 9.85 0 0 0 4.74 1.2h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.13-2.9-7A9.82 9.82 0 0 0 12.04 2Zm0 1.8c2.16 0 4.19.84 5.72 2.37a8.04 8.04 0 0 1 2.37 5.72c0 4.46-3.63 8.09-8.1 8.09-1.48 0-2.93-.4-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.03 8.03 0 0 1-1.24-4.32c0-4.46 3.63-8.09 8.1-8.09Zm4.68 10.24c-.26-.13-1.51-.75-1.75-.83-.24-.09-.4-.13-.58.13-.17.26-.66.83-.81 1-.15.17-.3.2-.55.07-.26-.13-1.08-.4-2.06-1.27-.76-.68-1.28-1.52-1.43-1.78-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.46.13-.15.17-.26.26-.44.09-.17.04-.33-.02-.46-.07-.13-.58-1.4-.8-1.92-.21-.5-.42-.43-.58-.44l-.5-.01c-.17 0-.44.07-.67.33-.24.26-.9.88-.9 2.15 0 1.27.92 2.5 1.05 2.67.13.17 1.8 2.76 4.37 3.87.61.26 1.09.42 1.46.54.61.2 1.17.17 1.62.1.49-.07 1.51-.62 1.72-1.21.21-.6.21-1.1.15-1.21-.06-.11-.24-.17-.5-.3Z" />
-            </svg>
-            WA
-          </button>
-        </div>
+        <button onClick={submit} disabled={saving || !judul.trim()} className="btn-primary w-full">
+          {saving ? "Menyimpan…" : "Terbitkan"}
+        </button>
       </div>
 
       <div className="card overflow-hidden">
@@ -215,9 +191,6 @@ export default function PengumumanPage() {
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <button onClick={() => waShare(p.judul, p.isi)} className="btn-ghost px-2 py-1 text-emerald-300" title="Bagikan ke grup / broadcast WhatsApp">
-                    💬 Bagikan WA
-                  </button>
                   <button onClick={() => patch(p.id, { pinned: !p.pinned })} className="btn-ghost px-2 py-1">
                     {p.pinned ? "Lepas sematan" : "📌 Sematkan"}
                   </button>

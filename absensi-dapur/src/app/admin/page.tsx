@@ -187,6 +187,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const [cari, setCari] = useState("");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -215,6 +216,59 @@ export default function AdminDashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Filter tabel kehadiran hari ini berdasarkan pencarian nama/divisi/jabatan.
+  const rowsTampil = useMemo(() => {
+    const q = cari.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.nama.toLowerCase().includes(q) ||
+        (r.divisi_nama || "").toLowerCase().includes(q) ||
+        (r.jabatan || "").toLowerCase().includes(q),
+    );
+  }, [rows, cari]);
+
+  // Ekspor tabel kehadiran hari ini ke CSV (murni sisi klien, tanpa server).
+  function exportCsv() {
+    const head = [
+      "Nama",
+      "Jabatan",
+      "Divisi",
+      "Lokasi",
+      "Shift",
+      "Masuk",
+      "Status",
+      "Pulang",
+      "Jarak (m)",
+    ];
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const baris = rowsTampil.map((r) =>
+      [
+        r.nama,
+        r.jabatan || "",
+        r.divisi_nama || "",
+        r.lokasi || "",
+        r.shift_masuk && r.shift_pulang
+          ? `${r.shift_masuk}-${r.shift_pulang}`
+          : "",
+        fmtTime(r.check_in),
+        r.status_masuk || "",
+        fmtTime(r.check_out),
+        r.check_in_jarak != null ? String(r.check_in_jarak) : "",
+      ]
+        .map((c) => esc(String(c)))
+        .join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...baris].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kehadiran-${tanggal || jakartaToday()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // Tutup absen pulang pegawai yang lupa menekan tombol pulang.
   async function tutupAbsen(id: number, nama: string) {
@@ -702,15 +756,35 @@ export default function AdminDashboard() {
 
       {/* Tabel kehadiran */}
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-4 py-3">
           <p className="text-sm font-semibold">Kehadiran Shift Hari Ini</p>
-          <span className="text-xs text-slate-400">{rows.length} entri</span>
+          <div className="flex items-center gap-2">
+            <input
+              value={cari}
+              onChange={(e) => setCari(e.target.value)}
+              placeholder="Cari nama / divisi…"
+              className="input h-8 w-40 py-1 text-xs sm:w-48"
+            />
+            <button
+              onClick={exportCsv}
+              disabled={rowsTampil.length === 0}
+              className="btn-ghost px-2.5 py-1 text-xs text-gold-400 disabled:opacity-40"
+              title="Unduh tabel ini sebagai CSV (buka di Excel)"
+            >
+              ⬇ CSV
+            </button>
+            <span className="text-xs text-slate-400">{rowsTampil.length} entri</span>
+          </div>
         </div>
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
         ) : rows.length === 0 ? (
           <p className="p-6 text-center text-slate-400">
             Belum ada yang absen hari ini.
+          </p>
+        ) : rowsTampil.length === 0 ? (
+          <p className="p-6 text-center text-slate-400">
+            Tidak ada yang cocok dengan pencarian “{cari}”.
           </p>
         ) : (
           <div className="scroll-x overflow-x-auto">
@@ -730,7 +804,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {rows.map((r) => {
+                {rowsTampil.map((r) => {
                   const masihBekerja = r.check_in && !r.check_out;
                   return (
                     <tr key={r.id} className="hover:bg-white/[0.025]">
