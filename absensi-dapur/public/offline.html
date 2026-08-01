@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — Absensi Dapur MBG</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100dvh; display: grid; place-items: center;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #e2e8f0; text-align: center; padding: 24px;
+        background:
+          radial-gradient(1000px 500px at 85% -10%, rgba(52,100,230,0.18), transparent 60%),
+          linear-gradient(180deg, #0a1740 0%, #070f29 100%);
+      }
+      .box { max-width: 360px; }
+      img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 16px; }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 20px; }
+      button {
+        border: 0; border-radius: 12px; padding: 12px 20px; font-size: 14px;
+        font-weight: 600; color: #fff; background: #3464e6; cursor: pointer;
+      }
+      button:active { transform: scale(0.98); }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <img src="/bgn-logo.webp" alt="BGN" />
+      <h1>Tidak ada koneksi</h1>
+      <p>
+        Anda sedang offline. Periksa sinyal atau Wi-Fi dapur, lalu coba muat
+        ulang halaman.
+      </p>
+      <button onclick="location.reload()">Coba lagi</button>
+    </div>
+  </body>
+</html>
