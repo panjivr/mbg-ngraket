@@ -46,6 +46,7 @@ export default async function DapurLayout({
           <NavLink href="/dapur/peringkat" label="🏆 Peringkat" />
           <NavLink href="/dapur/jadwal" label="🗓️ Jadwal" />
           <NavLink href="/dapur/izin" label="📝 Izin" />
+          <NavLink href="/dapur/pengaduan" label="📮 Aspirasi" />
           <NavLink href="/dapur/slip" label="🧾 Slip Gaji" />
           <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
           <NavLink href="/dapur/sop" label="📋 SOP" />

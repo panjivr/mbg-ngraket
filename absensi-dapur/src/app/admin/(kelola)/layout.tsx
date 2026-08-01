@@ -9,6 +9,7 @@ export default function KelolaLayout({ children }: { children: React.ReactNode }
         <NavLink href="/admin/jadwal" label="🗓️ Jadwal" />
         <NavLink href="/admin/izin" label="📝 Izin" />
         <NavLink href="/admin/pengumuman" label="📢 Pengumuman" />
+        <NavLink href="/admin/pengaduan" label="📮 Aspirasi" />
         <NavLink href="/admin/leaderboard" label="🏆 Leaderboard" />
         <NavLink href="/admin/event" label="Event" />
         <NavLink href="/admin/sop" label="📋 SOP" />

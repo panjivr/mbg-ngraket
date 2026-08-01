@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-31c.paket-langganan";
+const SCHEMA_VERSION = "2026-08-01a.pengaduan";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -823,6 +823,26 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_kasbon_user ON kasbon (user_id)`);
+
+    // Pengaduan/aspirasi pegawai → manajemen (keluh kesah, penilaian, masalah).
+    // user_id NULL = dikirim anonim. status: baru | dibaca | selesai.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pengaduan (
+        id           SERIAL PRIMARY KEY,
+        sppg_id      INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        anonim       BOOLEAN NOT NULL DEFAULT FALSE,
+        kategori     TEXT NOT NULL DEFAULT 'lainnya',
+        isi          TEXT NOT NULL,
+        status       TEXT NOT NULL DEFAULT 'baru',
+        balasan      TEXT,
+        dibalas_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        dibalas_at   TIMESTAMPTZ,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pengaduan_sppg ON pengaduan (sppg_id, status, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pengaduan_user ON pengaduan (user_id, created_at DESC)`);
 
     await client.query(
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS sppg_id INTEGER REFERENCES sppg(id) ON DELETE SET NULL`,
