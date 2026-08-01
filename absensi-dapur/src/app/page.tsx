@@ -132,6 +132,55 @@ const langkah = [
   },
 ];
 
+const testimoni = [
+  {
+    isi: "Rekap absensi yang dulu makan waktu seharian sekarang beres dalam hitungan menit. Dokumen BAST & Surat Jalan tinggal cetak — rapi dan resmi.",
+    nama: "Kepala SPPG",
+    peran: "Dapur MBG Kabupaten",
+    inisial: "KS",
+  },
+  {
+    isi: "Absensi wajah + GPS bikin kehadiran tim jadi jujur dan tercatat. Laporan harian lengkap dengan foto sangat membantu saat audit.",
+    nama: "Admin Dapur",
+    peran: "Operasional Harian",
+    inisial: "AD",
+  },
+  {
+    isi: "Menu, resep, dan daftar belanja otomatis dari porsi. HPP per porsi langsung kelihatan, jadi belanja lebih terkontrol.",
+    nama: "Ahli Gizi",
+    peran: "Perencanaan Menu",
+    inisial: "AG",
+  },
+];
+
+const faq = [
+  {
+    tanya: "Apakah bisa dipakai untuk lebih dari satu dapur?",
+    jawab:
+      "Bisa. Sistem mendukung multi-dapur (SPPG) — satu super admin dapat memantau dan mengelola banyak dapur dari satu pusat kendali, tanpa perlu ganti aplikasi saat berkembang.",
+  },
+  {
+    tanya: "Apakah data kami aman?",
+    jawab:
+      "Aman. Data terenkripsi, sesi login memakai JWT, hak akses dipisah per peran (admin, HR, staf), dan seluruh sistem berjalan di infrastruktur cloud modern.",
+  },
+  {
+    tanya: "Kami tidak paham teknologi, apakah repot memasangnya?",
+    jawab:
+      "Tidak. Kami bantu pasang, migrasi data penerima & menu, lalu latih tim Anda sampai bisa. Anda tinggal pakai dan fokus mengurus dapur.",
+  },
+  {
+    tanya: "Dokumen yang dicetak apakah sudah resmi?",
+    jawab:
+      "Ya. BAST, Surat Jalan, dan Uji Organoleptik otomatis berkop resmi BGN dan rapi — tinggal cetak dan tanda tangan.",
+  },
+  {
+    tanya: "Berapa biayanya?",
+    jawab:
+      "Menyesuaikan skala dapur Anda. Konsultasi awal gratis — hubungi kami via WhatsApp, ceritakan kebutuhan, dan kami bantu tentukan paket yang paling pas.",
+  },
+];
+
 const berita = [
   {
     tag: "Program",
@@ -235,6 +284,7 @@ export default function Home() {
             <a href="#fitur" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Fitur</a>
             <a href="#keunggulan" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Keunggulan</a>
             <a href="#cara" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Cara Mulai</a>
+            <a href="#faq" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">FAQ</a>
             <a href="#berita" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Berita</a>
           </div>
           <Link href="/login" className="btn-gold px-5">
@@ -398,6 +448,48 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Testimoni */}
+      <section id="testimoni" className="mt-20 scroll-mt-24">
+        <div className="text-center">
+          <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
+            💬 Kata Mereka
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
+            Dipercaya Tim Dapur MBG
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-slate-400">
+            Pengalaman nyata dari peran-peran yang setiap hari menjalankan
+            operasional dapur.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {testimoni.map((t) => (
+            <figure
+              key={t.nama}
+              className="card flex flex-col justify-between p-6"
+            >
+              <blockquote className="text-sm leading-relaxed text-slate-200">
+                <span className="mb-2 block text-3xl leading-none text-emas-400/60">
+                  &ldquo;
+                </span>
+                {t.isi}
+              </blockquote>
+              <figcaption className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold-300 to-ember-400 text-sm font-bold text-ink-950">
+                  {t.inisial}
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-slate-100">
+                    {t.nama}
+                  </span>
+                  <span className="block text-xs text-slate-400">{t.peran}</span>
+                </span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
       {/* CTA penutup */}
       <section className="mt-20">
         <div className="card relative overflow-hidden p-8 text-center sm:p-12">
@@ -436,6 +528,33 @@ export default function Home() {
               </a>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="mt-20 scroll-mt-24">
+        <div className="text-center">
+          <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
+            ❓ Pertanyaan Umum
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
+            Yang Sering Ditanyakan
+          </h2>
+        </div>
+        <div className="mx-auto mt-8 max-w-3xl divide-y divide-white/10">
+          {faq.map((f) => (
+            <details key={f.tanya} className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-slate-100 transition-colors hover:text-emas-300">
+                {f.tanya}
+                <span className="shrink-0 text-emas-400 transition-transform group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                {f.jawab}
+              </p>
+            </details>
+          ))}
         </div>
       </section>
 
