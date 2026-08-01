@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-07-31b.pengumuman-gambar";
+const SCHEMA_VERSION = "2026-07-31c.paket-langganan";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -384,6 +384,9 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS harga_b3 INTEGER NOT NULL DEFAULT 8000`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS ahli_gizi TEXT NOT NULL DEFAULT 'Dyah Paramita Ratna Muda'`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS koordinator TEXT NOT NULL DEFAULT 'Panji Vatorrohman'`);
+    // Paket langganan + masa aktif (monetisasi). Dapur lama default 'pro' (penuh).
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS paket TEXT NOT NULL DEFAULT 'pro'`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS paket_until DATE`);
     // Periode papan peringkat yang ditampilkan ke karyawan (2 minggu, Minggu–Sabtu).
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_from DATE`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_to DATE`);

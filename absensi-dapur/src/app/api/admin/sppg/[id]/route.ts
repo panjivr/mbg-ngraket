@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { requireSuper } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import { invalidateSppg, type Sppg } from "@/lib/sppg";
+import { normalizePaket } from "@/lib/paket";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,11 +22,16 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const nama = b.nama !== undefined ? String(b.nama).trim() : cur.nama;
   const alamat = b.alamat !== undefined ? String(b.alamat).trim() : cur.alamat;
   const aktif = b.aktif !== undefined ? Boolean(b.aktif) : cur.aktif;
+  const paket = b.paket !== undefined ? normalizePaket(b.paket) : cur.paket;
+  const paket_until =
+    b.paket_until !== undefined
+      ? (typeof b.paket_until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.paket_until) ? b.paket_until : null)
+      : cur.paket_until;
   if (!nama) return fail(400, "Nama dapur wajib diisi.");
 
   const rows = await query<Sppg>(
-    `UPDATE sppg SET nama=$1, alamat=$2, aktif=$3 WHERE id=$4 RETURNING *`,
-    [nama, alamat, aktif, id],
+    `UPDATE sppg SET nama=$1, alamat=$2, aktif=$3, paket=$4, paket_until=$5 WHERE id=$6 RETURNING *`,
+    [nama, alamat, aktif, paket, paket_until, id],
   );
   invalidateSppg(id);
   return ok({ sppg: rows[0] });
