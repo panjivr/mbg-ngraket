@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import AdminNav from "@/components/AdminNav";
+import CommandPalette from "@/components/CommandPalette";
+import CommandPaletteTrigger from "@/components/CommandPaletteTrigger";
 import PaketGuard from "@/components/PaketGuard";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
@@ -79,6 +81,7 @@ export default async function AdminLayout({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <CommandPaletteTrigger />
             <NotifBell />
             <Link href="/dapur" className="btn-ghost px-3 py-1.5 text-xs">
               Mode Absen
@@ -95,6 +98,14 @@ export default async function AdminLayout({
           fitur={fitur}
         />
       </header>
+      <CommandPalette
+        fullAdmin={fullAdmin}
+        aksesDistribusi={aksesDistribusi}
+        aksesLaporan={aksesLaporan}
+        isHr={isHr}
+        isSuper={isSuper}
+        fitur={fitur}
+      />
       <BirthdayGreeting />
       <PaketGuard fitur={fitur} />
       {paketExp && (
