@@ -74,6 +74,54 @@ const PESAN_WA =
   "Halo, saya tertarik memakai aplikasi manajemen dapur MBG untuk dapur kami. Boleh minta info & penawaran?";
 const WA_LINK = `https://wa.me/${KONTAK_WA}?text=${encodeURIComponent(PESAN_WA)}`;
 
+// Bangun link WhatsApp dengan pesan spesifik per paket.
+const waPaket = (nama: string) =>
+  `https://wa.me/${KONTAK_WA}?text=${encodeURIComponent(
+    `Halo, saya tertarik dengan Paket ${nama} untuk dapur MBG kami. Boleh minta detail fitur & penawaran harganya?`,
+  )}`;
+
+const paket = [
+  {
+    nama: "Dapur Tunggal",
+    ikon: "🍳",
+    ringkas: "Untuk satu dapur SPPG yang ingin langsung digital.",
+    unggulan: false,
+    fitur: [
+      "Absensi wajah + GPS & shift per divisi",
+      "Distribusi harian + BAST, Surat Jalan, Organoleptik",
+      "Laporan harian & manajemen gudang",
+      "Ekspor rekap Excel / CSV / PDF",
+      "Pendampingan setup & pelatihan tim",
+    ],
+  },
+  {
+    nama: "Dapur Lengkap",
+    ikon: "🍱",
+    ringkas: "Semua modul aktif — operasional dapur end-to-end.",
+    unggulan: true,
+    fitur: [
+      "Semua fitur Paket Dapur Tunggal",
+      "Bank Menu, Resep & HPP / Food Cost",
+      "Jadwal menu periode + generator belanja",
+      "HR & penggajian: gaji, slip, leaderboard",
+      "Notifikasi, audit log & peran akses terpisah",
+    ],
+  },
+  {
+    nama: "Multi-Dapur SPPG",
+    ikon: "🌐",
+    ringkas: "Untuk yayasan/mitra yang mengelola banyak dapur.",
+    unggulan: false,
+    fitur: [
+      "Semua fitur Paket Dapur Lengkap",
+      "Super admin lintas banyak dapur",
+      "Pusat kendali & rekap gabungan antar dapur",
+      "Kop dokumen resmi per dapur otomatis",
+      "Prioritas dukungan & onboarding tim",
+    ],
+  },
+];
+
 const statistik = [
   { angka: "6", label: "Modul Terintegrasi" },
   { angka: "20+", label: "Fitur Siap Pakai" },
@@ -285,6 +333,7 @@ export default function Home() {
             <a href="#keunggulan" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Keunggulan</a>
             <a href="#cara" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Cara Mulai</a>
             <a href="#faq" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">FAQ</a>
+            <a href="#paket" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Paket</a>
             <a href="#berita" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Berita</a>
           </div>
           <Link href="/login" className="btn-gold px-5">
@@ -523,8 +572,8 @@ export default function Home() {
               >
                 💬 Chat via WhatsApp
               </a>
-              <a href="#fitur" className="btn-ghost px-7 py-3 text-base">
-                Lihat Semua Fitur
+              <a href="#paket" className="btn-ghost px-7 py-3 text-base">
+                Lihat Paket &amp; Harga
               </a>
             </div>
           </div>
@@ -651,6 +700,92 @@ export default function Home() {
             </Link>
           </div>
         </div>
+      </section>
+
+      {/* Paket & Harga */}
+      <section id="paket" className="mt-20 scroll-mt-24">
+        <div className="text-center">
+          <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">
+            💎 Paket & Harga
+          </span>
+          <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Pilih Paket yang Pas untuk Dapur Anda
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Harga menyesuaikan skala dapur Anda. Pilih paket, klik tombolnya, dan
+            langsung terhubung ke WhatsApp kami untuk penawaran resmi.
+          </p>
+        </div>
+
+        <div className="mt-10 grid items-start gap-5 lg:grid-cols-3">
+          {paket.map((p) => (
+            <div
+              key={p.nama}
+              className={
+                "card relative flex h-full flex-col p-6 sm:p-7 " +
+                (p.unggulan
+                  ? "border-gold-500/50 ring-1 ring-gold-500/30 lg:-mt-3 lg:mb-3"
+                  : "")
+              }
+            >
+              {p.unggulan && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-gold-400 to-ember-400 px-4 py-1 text-xs font-bold text-ink-950 shadow-lg">
+                  ★ Paling Populer
+                </span>
+              )}
+              <div className="flex items-center gap-3">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-gold-500/15 text-2xl">
+                  {p.ikon}
+                </span>
+                <h3 className="text-lg font-extrabold">{p.nama}</h3>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                {p.ringkas}
+              </p>
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <p className="bg-gradient-to-r from-gold-300 to-ember-400 bg-clip-text text-2xl font-extrabold text-transparent">
+                  Hubungi untuk Penawaran
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Konsultasi awal gratis · tanpa biaya tersembunyi
+                </p>
+              </div>
+              <ul className="mt-5 flex-1 space-y-2.5 text-sm text-slate-300">
+                {p.fitur.map((f) => (
+                  <li key={f} className="flex gap-2.5">
+                    <span className="mt-0.5 shrink-0 text-emerald-400" aria-hidden="true">
+                      ✓
+                    </span>
+                    <span className="leading-relaxed">{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <a
+                href={waPaket(p.nama)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  "mt-6 w-full px-6 py-3 text-center text-base " +
+                  (p.unggulan ? "btn-gold" : "btn-ghost")
+                }
+              >
+                💬 Pesan Paket {p.nama}
+              </a>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-6 text-center text-xs text-slate-500">
+          Butuh kebutuhan khusus?{" "}
+          <a
+            href={WA_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-gold-400 underline underline-offset-2 hover:text-gold-300"
+          >
+            Chat langsung untuk paket custom →
+          </a>
+        </p>
       </section>
 
       <footer className="mt-16 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
