@@ -12,14 +12,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Latar navy BGN
+        // Latar navy BGN — kini berbasis CSS variable (kanal RGB) supaya tema
+        // terang bisa menimpa lewat [data-theme="light"] tanpa mengubah kelas di
+        // ratusan halaman. Format `rgb(var(--ink-N) / <alpha-value>)` menjaga
+        // modifier opasitas Tailwind (mis. `bg-ink-900/40`) tetap berfungsi.
         ink: {
-          950: "#070f29",
-          900: "#0a1740",
-          850: "#0e1f55",
-          800: "#16306e",
-          700: "#1f3f8a",
-          600: "#2b53ab",
+          950: "rgb(var(--ink-950) / <alpha-value>)",
+          900: "rgb(var(--ink-900) / <alpha-value>)",
+          850: "rgb(var(--ink-850) / <alpha-value>)",
+          800: "rgb(var(--ink-800) / <alpha-value>)",
+          700: "rgb(var(--ink-700) / <alpha-value>)",
+          600: "rgb(var(--ink-600) / <alpha-value>)",
         },
         // Aksen biru utama BGN (tombol, tautan, sorotan)
         gold: {

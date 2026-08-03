@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import NavLink from "@/components/NavLink";
 import LogoutButton from "@/components/LogoutButton";
+import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 
@@ -39,7 +40,10 @@ export default async function DapurLayout({
               <p className="text-xs text-slate-400">Halo, {session.nama}</p>
             </div>
           </div>
-          <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
+          <div className="flex items-center gap-2">
+            <SettingsMenu />
+            <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
+          </div>
         </div>
         <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
           <NavLink href="/dapur" label="Absen" exact />

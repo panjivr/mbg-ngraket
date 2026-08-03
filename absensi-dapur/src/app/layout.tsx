@@ -2,6 +2,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import MusicPlayer from "@/components/MusicPlayer";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import ThemeLangProvider from "@/components/ThemeLangProvider";
+
+// Skrip pra-paint: setel data-theme & data-lang dari localStorage sebelum React
+// hydrate, supaya tidak ada kedip (FOUC) saat pengguna memilih tema terang.
+const PREFS_BOOTSTRAP = `(function(){try{var t=localStorage.getItem("mbg-theme");if(t!=="light"&&t!=="dark")t="dark";var l=localStorage.getItem("mbg-lang");if(l!=="en"&&l!=="id")l="id";var e=document.documentElement;e.dataset.theme=t;e.dataset.lang=l;e.lang=l;}catch(_){}})();`;
 
 export const metadata: Metadata = {
   title: "Absensi Dapur MBG",
@@ -32,11 +37,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREFS_BOOTSTRAP }} />
+      </head>
       <body>
-        {children}
-        <MusicPlayer src="/audio/musik-latar.mp3" />
-        <ServiceWorkerRegistrar />
+        <ThemeLangProvider>
+          {children}
+          <MusicPlayer src="/audio/musik-latar.mp3" />
+          <ServiceWorkerRegistrar />
+        </ThemeLangProvider>
       </body>
     </html>
   );

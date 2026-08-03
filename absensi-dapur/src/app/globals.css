@@ -5,6 +5,61 @@
 :root {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  /* Palet latar navy BGN (default: tema gelap). Nilai = kanal RGB agar
+     dipakai lewat rgb(var(--ink-N) / alpha) di tailwind.config.ts. */
+  --ink-950: 7 15 41;
+  --ink-900: 10 23 64;
+  --ink-850: 14 31 85;
+  --ink-800: 22 48 110;
+  --ink-700: 31 63 138;
+  --ink-600: 43 83 171;
+}
+
+/*
+ * TEMA TERANG — hanya menimpa token permukaan + segelintir utilitas teks/tepi
+ * yang di-hardcode di komponen. Aksen (gold/ember/emas) sengaja tetap sama di
+ * kedua tema karena kontrasnya sudah aman. Default tetap gelap: pengguna lama
+ * tidak berubah kecuali memilih terang.
+ */
+html[data-theme="light"] {
+  --ink-950: 241 245 249; /* slate-100 — latar halaman */
+  --ink-900: 255 255 255; /* putih — input & permukaan dalam */
+  --ink-850: 255 255 255; /* putih — kartu */
+  --ink-800: 226 232 240; /* slate-200 */
+  --ink-700: 203 213 225; /* slate-300 */
+  --ink-600: 148 163 184; /* slate-400 */
+}
+
+/* Balik warna teks/tepi terang→gelap pada tema terang. Kelas .text-white
+   sengaja TIDAK dibalik: tombol & badge berlatar warna tetap butuh teks putih
+   (warnanya di-compile ke kelas komponen .btn-*, bukan utilitas .text-white). */
+html[data-theme="light"] .text-slate-100 { color: #0f172a; }
+html[data-theme="light"] .text-slate-200 { color: #1e293b; }
+html[data-theme="light"] .text-slate-300 { color: #334155; }
+html[data-theme="light"] .text-slate-400 { color: #475569; }
+html[data-theme="light"] .text-slate-500 { color: #64748b; }
+html[data-theme="light"] .border-white\/5 { border-color: rgba(15, 23, 42, 0.08); }
+html[data-theme="light"] .border-white\/10 { border-color: rgba(15, 23, 42, 0.12); }
+html[data-theme="light"] .border-white\/15 { border-color: rgba(15, 23, 42, 0.15); }
+html[data-theme="light"] .border-white\/20 { border-color: rgba(15, 23, 42, 0.2); }
+html[data-theme="light"] .bg-white\/5 { background-color: rgba(15, 23, 42, 0.04); }
+html[data-theme="light"] .bg-white\/10 { background-color: rgba(15, 23, 42, 0.07); }
+html[data-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Kelas komponen (@apply meng-compile warna gelap ke aturannya sendiri, jadi
+   utilitas di atas tak menjangkaunya) — sesuaikan untuk tema terang. */
+html[data-theme="light"] .card { border-color: rgba(15, 23, 42, 0.1); }
+html[data-theme="light"] .input {
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #0f172a;
+}
+html[data-theme="light"] .btn-ghost {
+  border-color: rgba(15, 23, 42, 0.15);
+  background-color: rgba(15, 23, 42, 0.04);
+  color: #0f172a;
 }
 
 html {
@@ -59,6 +114,17 @@ body::before {
     radial-gradient(1200px 600px at 85% -10%, rgba(52, 100, 230, 0.18), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(56, 189, 248, 0.10), transparent 55%),
     linear-gradient(180deg, #0a1740 0%, #070f29 100%);
+}
+
+/* Tema terang: teks tubuh gelap + latar dekoratif lembut (bukan navy). */
+html[data-theme="light"] body {
+  color: #0f172a;
+}
+html[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(52, 100, 230, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(56, 189, 248, 0.06), transparent 55%),
+    linear-gradient(180deg, #eef2fb 0%, #f1f5f9 100%);
 }
 
 @layer components {
