@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import type { MenuGrup } from "@/lib/distribusi-types";
 
@@ -131,6 +131,7 @@ function Inner() {
   const sp = useSearchParams();
   const tanggal = /^\d{4}-\d{2}-\d{2}$/.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : jakartaToday();
   const dok = sp.get("dok") || "semua";
+  const urut = sp.get("urut") === "lembaga" ? "lembaga" : "dokumen";
   const [data, setData] = useState<DistData | null>(null);
   const [err, setErr] = useState(false);
   const [paper, setPaper] = useState("A4");
@@ -359,6 +360,94 @@ function Inner() {
     );
   };
 
+  // Dokumen BAST untuk satu penerima (sekolah atau posyandu/B3).
+  const bastDoc = (s: Baris) => {
+    const isB3 = s.jenis === "b3";
+    const jml = kelasRows(s).reduce((a, r) => a + r.porsi, 0);
+    const pic = isB3 ? "(Nama PIC Penerima)" : "(Nama PIC Sekolah Penerima)";
+    const L = "______________________";
+    const Box = () => (
+      <div className="w-64 shrink-0 self-start border border-black p-3 text-sm">
+        <p>Mengetahui:</p>
+        <div className="h-12" />
+        <p>{sppg.kepala_sppg || "____________"}</p>
+        <p>Kepala SPPG,&nbsp; {namaSppg}</p>
+      </div>
+    );
+    return (
+      <div key={"bast-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
+        {/* --- Berita Acara Penerimaan --- */}
+        <KopBerita judul="BERITA ACARA PENERIMAAN PAKET MAKANAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
+        <p className="mt-6 text-justify text-sm leading-relaxed">
+          Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam__________telah diterima paket makanan
+          sejumlah : <u>{jml}</u> Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg},
+          yang melayani {isB3 ? "" : "sekolah "}<u>{s.nama}</u> Baik dimakan sebelum jam _______________
+        </p>
+        <div className="mt-4 text-sm">
+          <p>Yang menyerahkan &nbsp;: {L}</p>
+          <p>Nomor Telepon &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {L}</p>
+        </div>
+        <p className="mt-8 text-sm">({L})</p>
+        <div className="mt-1 flex justify-between gap-4">
+          <div className="text-sm">
+            <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
+            <p className="pl-[6.5rem]">{pic}</p>
+            <p className="mt-3">Nomor Telepon : {L}</p>
+          </div>
+          <Box />
+        </div>
+        <p className="mt-6 text-sm">({L})</p>
+
+        {/* --- Berita Acara Pengembalian --- */}
+        <div className="mt-12">
+          <KopBerita judul="BERITA ACARA  PENGEMBALIAN ALAT MAKAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
+          <p className="mt-6 text-justify text-sm leading-relaxed">
+            Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam __________telah diserahkan kembali ompreng
+            sejumlah : {jml} Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg}.
+          </p>
+          <div className="mt-4 text-sm">
+            <p>Yang menyerahkan : {L}</p>
+            <p className="pl-[7.5rem]">{pic}</p>
+            <p className="mt-2">Nomor Telepon : {L}</p>
+          </div>
+          <p className="mt-8 text-sm">( {L})</p>
+          <div className="mt-1 flex justify-between gap-4">
+            <div className="text-sm">
+              <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
+              <p className="mt-1">Nomor Telepon : {L}</p>
+            </div>
+            <Box />
+          </div>
+          <p className="mt-6 text-sm">({L})</p>
+        </div>
+      </div>
+    );
+  };
+
+  // Opsi 2: urut per LEMBAGA — tiap lembaga tampil BAST → Surat Jalan → Organoleptik.
+  const sjByDesa = new Map(sjPosyandu.map((d) => [d.desa, d]));
+  const units: { nama: string; docs: ReactNode[] }[] = [];
+  for (const s of serdik) {
+    const docs: ReactNode[] = [];
+    if (showBast) docs.push(bastDoc(s));
+    if (showSJ) docs.push(suratJalanDoc("sj-" + s.penerima_id, s.nama, s.jam_kirim || "", kelasRows(s), "Sekolah"));
+    if (showOrg) docs.push(orgDoc("org-" + s.penerima_id, s.nama, data.distribusi.menu_sekolah || [], false, "Sampel"));
+    units.push({ nama: s.nama, docs });
+  }
+  for (const [desa, rows] of desaTerurut) {
+    const docs: ReactNode[] = [];
+    if (showBast) for (const r of rows) docs.push(bastDoc(r));
+    if (showSJ) {
+      const d = sjByDesa.get(desa);
+      if (d) docs.push(suratJalanDoc(d.key, `Posyandu Desa ${d.desa}`, d.jam, d.kelas, "Posyandu"));
+    }
+    if (showOrg)
+      for (const o of orgPosyandu.filter((x) => x.key.startsWith(`org-${desa}-`)))
+        docs.push(orgDoc(o.key, o.nama, o.grup, true, o.label));
+    units.push({ nama: `Desa ${desa}`, docs });
+  }
+  units.sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+
   return (
     <div className="min-h-screen bg-white py-6 text-black">
       <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
@@ -378,81 +467,23 @@ function Inner() {
         </div>
       </div>
 
-      {/* ===== BAST per penerima (sekolah & posyandu) ===== */}
-      {showBast && [...serdik, ...b3].map((s) => {
-        const isB3 = s.jenis === "b3";
-        const jml = kelasRows(s).reduce((a, r) => a + r.porsi, 0);
-        const pic = isB3 ? "(Nama PIC Penerima)" : "(Nama PIC Sekolah Penerima)";
-        const L = "______________________";
-        const Box = () => (
-          <div className="w-64 shrink-0 self-start border border-black p-3 text-sm">
-            <p>Mengetahui:</p>
-            <div className="h-12" />
-            <p>{sppg.kepala_sppg || "____________"}</p>
-            <p>Kepala SPPG,&nbsp; {namaSppg}</p>
-          </div>
-        );
-        return (
-          <div key={"bast-" + s.penerima_id} className="doc mx-auto mb-6 max-w-[720px] bg-white p-10 font-serif text-black">
-            {/* --- Berita Acara Penerimaan --- */}
-            <KopBerita judul="BERITA ACARA PENERIMAAN PAKET MAKANAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
-            <p className="mt-6 text-justify text-sm leading-relaxed">
-              Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam__________telah diterima paket makanan
-              sejumlah : <u>{jml}</u> Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg},
-              yang melayani {isB3 ? "" : "sekolah "}<u>{s.nama}</u> Baik dimakan sebelum jam _______________
-            </p>
-            <div className="mt-4 text-sm">
-              <p>Yang menyerahkan &nbsp;: {L}</p>
-              <p>Nomor Telepon &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {L}</p>
-            </div>
-            <p className="mt-8 text-sm">({L})</p>
-            <div className="mt-1 flex justify-between gap-4">
-              <div className="text-sm">
-                <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
-                <p className="pl-[6.5rem]">{pic}</p>
-                <p className="mt-3">Nomor Telepon : {L}</p>
-              </div>
-              <Box />
-            </div>
-            <p className="mt-6 text-sm">({L})</p>
-
-            {/* --- Berita Acara Pengembalian --- */}
-            <div className="mt-12">
-              <KopBerita judul="BERITA ACARA  PENGEMBALIAN ALAT MAKAN PROGRAM MAKAN BERGIZI GRATIS" sppgNama={namaSppg} />
-              <p className="mt-6 text-justify text-sm leading-relaxed">
-                Pada Hari {hari(tanggal)} Tanggal {tglSlash(tanggal)} jam __________telah diserahkan kembali ompreng
-                sejumlah : {jml} Paket Makanan Bergizi dari Satuan Pelayanan Pemenuhan Gizi (SPPG) {namaSppg}.
-              </p>
-              <div className="mt-4 text-sm">
-                <p>Yang menyerahkan : {L}</p>
-                <p className="pl-[7.5rem]">{pic}</p>
-                <p className="mt-2">Nomor Telepon : {L}</p>
-              </div>
-              <p className="mt-8 text-sm">( {L})</p>
-              <div className="mt-1 flex justify-between gap-4">
-                <div className="text-sm">
-                  <p>Diterima oleh &nbsp;&nbsp;&nbsp;: {L}</p>
-                  <p className="mt-1">Nomor Telepon : {L}</p>
-                </div>
-                <Box />
-              </div>
-              <p className="mt-6 text-sm">({L})</p>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* ===== Surat Jalan: per sekolah (serdik) + per DESA untuk Posyandu ===== */}
-      {showSJ && serdik.map((s) =>
-        suratJalanDoc("sj-" + s.penerima_id, s.nama, s.jam_kirim || "", kelasRows(s), "Sekolah"),
+      {urut === "lembaga" ? (
+        /* ===== Opsi 2: urut per LEMBAGA (BAST → SJ → Organoleptik per lembaga) ===== */
+        units.map((u) => <Fragment key={"unit-" + u.nama}>{u.docs}</Fragment>)
+      ) : (
+        <>
+          {/* ===== Opsi 1: urut per JENIS DOKUMEN ===== */}
+          {showBast && [...serdik, ...b3].map((s) => bastDoc(s))}
+          {showSJ && serdik.map((s) =>
+            suratJalanDoc("sj-" + s.penerima_id, s.nama, s.jam_kirim || "", kelasRows(s), "Sekolah"),
+          )}
+          {showSJ && sjPosyandu.map((d) =>
+            suratJalanDoc(d.key, `Posyandu Desa ${d.desa}`, d.jam, d.kelas, "Posyandu"),
+          )}
+          {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, data.distribusi.menu_sekolah || [], false, "Sampel"))}
+          {showOrg && orgPosyandu.map((o) => orgDoc(o.key, o.nama, o.grup, true, o.label))}
+        </>
       )}
-      {showSJ && sjPosyandu.map((d) =>
-        suratJalanDoc(d.key, `Posyandu Desa ${d.desa}`, d.jam, d.kelas, "Posyandu"),
-      )}
-
-      {/* ===== Uji Organoleptik: per sekolah (serdik) + per DESA untuk Posyandu ===== */}
-      {showOrg && serdik.map((s) => orgDoc("org-" + s.penerima_id, s.nama, data.distribusi.menu_sekolah || [], false, "Sampel"))}
-      {showOrg && orgPosyandu.map((o) => orgDoc(o.key, o.nama, o.grup, true, o.label))}
 
       {serdik.length === 0 && b3.length === 0 && (
         <p className="p-8 text-center text-gray-600">

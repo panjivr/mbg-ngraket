@@ -213,8 +213,11 @@ export default function DistribusiPage() {
     return [...m.entries()];
   }, [baris]);
 
-  const cetak = (dok: string) =>
-    window.open(`/cetak/distribusi?tanggal=${tanggal}&dok=${dok}`, "_blank");
+  const cetak = (dok: string, urut: "dokumen" | "lembaga" = "dokumen") =>
+    window.open(
+      `/cetak/distribusi?tanggal=${tanggal}&dok=${dok}&urut=${urut}`,
+      "_blank",
+    );
 
   return (
     <div className="space-y-5">
@@ -374,7 +377,8 @@ export default function DistribusiPage() {
         <button onClick={() => cetak("bast")} className="btn-ghost text-sm">🧾 BAST</button>
         <button onClick={() => cetak("surat-jalan")} className="btn-ghost text-sm">🚚 Surat Jalan</button>
         <button onClick={() => cetak("organoleptik")} className="btn-ghost text-sm">🔬 Organoleptik</button>
-        <button onClick={() => cetak("semua")} className="btn-ghost text-sm">📚 Semua</button>
+        <button onClick={() => cetak("semua", "dokumen")} className="btn-ghost text-sm" title="Semua dokumen dikelompokkan per jenis: semua BAST, lalu semua Surat Jalan, lalu semua Organoleptik">📚 Semua (per dokumen)</button>
+        <button onClick={() => cetak("semua", "lembaga")} className="btn-ghost text-sm" title="Per lembaga berurutan: BAST → Surat Jalan → Organoleptik untuk tiap lembaga, urut nama">📑 Semua (per lembaga)</button>
         {!data?.tersimpan && (
           <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar angka terbaru ikut.</span>
         )}
