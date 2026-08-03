@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import ChatAspirasi from "@/components/ChatAspirasi";
 
 interface Pengaduan {
   id: number;
@@ -34,7 +35,6 @@ export default function AdminPengaduanPage() {
   const [list, setList] = useState<Pengaduan[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"semua" | "baru" | "selesai">("semua");
-  const [balasDraft, setBalasDraft] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -135,56 +135,38 @@ export default function AdminPengaduanPage() {
                 {p.isi}
               </p>
 
-              {p.balasan && (
-                <div className="rounded-lg border border-gold-400/20 bg-gold-400/5 p-2 text-sm">
-                  <p className="text-xs font-semibold text-gold-300">
-                    Balasan terkirim:
+              {p.anonim ? (
+                <div className="space-y-2 border-t border-white/5 pt-2">
+                  <p className="text-xs italic text-slate-500">
+                    Laporan anonim — tidak bisa dibalas via chat (identitas
+                    pelapor disembunyikan).
                   </p>
-                  <p className="mt-0.5 whitespace-pre-wrap text-slate-200">
-                    {p.balasan}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2 border-t border-white/5 pt-2">
-                <textarea
-                  className="input min-h-[60px] text-sm"
-                  placeholder="Tulis balasan (opsional)…"
-                  value={balasDraft[p.id] ?? p.balasan ?? ""}
-                  onChange={(e) =>
-                    setBalasDraft((d) => ({ ...d, [p.id]: e.target.value }))
-                  }
-                />
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <button
-                    onClick={() =>
-                      patch(p.id, {
-                        balasan: balasDraft[p.id] ?? p.balasan ?? "",
-                        status: "selesai",
-                      })
-                    }
-                    className="btn-primary px-3 py-1.5"
-                  >
-                    Balas & Selesaikan
-                  </button>
-                  {p.status === "baru" && (
-                    <button
-                      onClick={() => patch(p.id, { status: "dibaca" })}
-                      className="btn-ghost px-3 py-1.5"
-                    >
-                      Tandai dibaca
-                    </button>
-                  )}
                   {p.status !== "selesai" && (
                     <button
                       onClick={() => patch(p.id, { status: "selesai" })}
-                      className="btn-ghost px-3 py-1.5 text-emerald-300"
+                      className="btn-ghost px-3 py-1.5 text-xs text-emerald-300"
                     >
                       Tandai selesai
                     </button>
                   )}
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-2 border-t border-white/5 pt-2">
+                  <ChatAspirasi
+                    base="/api/admin/pengaduan"
+                    id={p.id}
+                    viewerIsAdmin={true}
+                  />
+                  {p.status !== "selesai" && (
+                    <button
+                      onClick={() => patch(p.id, { status: "selesai" })}
+                      className="btn-ghost px-3 py-1.5 text-xs text-emerald-300"
+                    >
+                      Tandai selesai
+                    </button>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

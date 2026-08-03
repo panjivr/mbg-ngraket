@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import ChatAspirasi from "@/components/ChatAspirasi";
 
 interface Pengaduan {
   id: number;
@@ -43,6 +44,7 @@ export default function PengaduanPage() {
   const [anonim, setAnonim] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pesan, setPesan] = useState("");
+  const [openId, setOpenId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -182,17 +184,27 @@ export default function PengaduanPage() {
                 <p className="mt-1 whitespace-pre-wrap text-sm text-slate-300">
                   {p.isi}
                 </p>
-                {p.balasan && (
-                  <div className="mt-2 rounded-lg border border-gold-400/20 bg-gold-400/5 p-2 text-sm">
-                    <p className="text-xs font-semibold text-gold-300">
-                      Balasan manajemen:
-                    </p>
-                    <p className="mt-0.5 whitespace-pre-wrap text-slate-200">
-                      {p.balasan}
-                    </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <p className="text-xs text-slate-500">{fmt(p.created_at)}</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenId((cur) => (cur === p.id ? null : p.id))
+                    }
+                    className="text-xs font-medium text-gold-300 hover:text-gold-200"
+                  >
+                    {openId === p.id ? "Tutup chat ▲" : "💬 Buka chat ▼"}
+                  </button>
+                </div>
+                {openId === p.id && (
+                  <div className="mt-2">
+                    <ChatAspirasi
+                      base="/api/me/pengaduan"
+                      id={p.id}
+                      viewerIsAdmin={false}
+                    />
                   </div>
                 )}
-                <p className="mt-1 text-xs text-slate-500">{fmt(p.created_at)}</p>
               </li>
             ))}
           </ul>
