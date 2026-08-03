@@ -9,8 +9,11 @@ interface Resp {
   from: string | null;
   to: string | null;
   me: number;
+  myDapur?: string | null;
   board: BoardRow[];
 }
+
+type Scope = "lokal" | "global";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -40,10 +43,14 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [scope, setScope] = useState<Scope>("lokal");
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/leaderboard", { cache: "no-store" })
+    setLoading(true);
+    const url =
+      scope === "global" ? "/api/leaderboard/global" : "/api/leaderboard";
+    fetch(url, { cache: "no-store" })
       .then((r) => r.json())
       .then((d: Resp) => {
         if (alive) setData(d);
@@ -55,7 +62,7 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
     return () => {
       alive = false;
     };
-  }, []);
+  }, [scope]);
 
   const toggleOpen = (id: number) =>
     setOpen((prev) => {
@@ -65,38 +72,78 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
       return next;
     });
 
+  const isGlobal = scope === "global";
+
+  // Toggle Lokal/Global — hanya di papan lengkap (bukan ringkasan layar absen).
+  const tabs = !compact && (
+    <div className="flex gap-2">
+      {(["lokal", "global"] as const).map((s) => (
+        <button
+          key={s}
+          onClick={() => setScope(s)}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+            scope === s
+              ? "border-gold-400/60 bg-gold-400/10 text-gold-300"
+              : "border-white/10 text-slate-300"
+          }`}
+        >
+          {s === "lokal" ? "🏠 Dapur ini" : "🌐 Global"}
+        </button>
+      ))}
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="card p-4">
-        <div className="h-5 w-40 animate-pulse rounded bg-white/10" />
+      <div className="space-y-3">
+        {tabs}
+        <div className="card p-4">
+          <div className="h-5 w-40 animate-pulse rounded bg-white/10" />
+        </div>
       </div>
     );
   }
 
-  // Belum ada periode yang dipublikasikan admin.
-  if (!data || !data.from || !data.to || data.board.length === 0) {
+  // Papan kosong: lokal butuh periode terpublikasi; global butuh minimal 1 baris.
+  const noData = isGlobal
+    ? !data || data.board.length === 0
+    : !data || !data.from || !data.to || data.board.length === 0;
+  if (noData) {
     if (compact) return null; // jangan tampilkan kartu kosong di layar absen
     return (
-      <div className="card p-6 text-center text-sm text-slate-400">
-        Papan peringkat belum tersedia. Admin belum menetapkan periode.
+      <div className="space-y-3">
+        {tabs}
+        <div className="card p-6 text-center text-sm text-slate-400">
+          {isGlobal
+            ? "Papan global belum tersedia. Belum ada dapur yang menetapkan periode."
+            : "Papan peringkat belum tersedia. Admin belum menetapkan periode."}
+        </div>
       </div>
     );
   }
 
-  const me = data.me;
-  const full = data.board;
+  const me = data!.me;
+  const myDapur = data!.myDapur ?? null;
+  const isMeRow = (r: BoardRow): boolean =>
+    r.user_id === me && (!isGlobal || r.dapur === myDapur);
+  const full = data!.board;
   const rows = compact ? full.slice(0, 5) : full;
-  const myIndex = full.findIndex((r) => r.user_id === me);
-  const meInList = rows.some((r) => r.user_id === me);
-  const colSpan = compact ? 3 : 6;
+  const myIndex = full.findIndex(isMeRow);
+  const meInList = rows.some(isMeRow);
+  const colSpan = compact ? 3 : isGlobal ? 7 : 6;
+  const rowKey = (r: BoardRow): string => `${r.dapur ?? ""}#${r.user_id}`;
 
-  return (
+  const board = (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 px-4 py-3">
         <div>
-          <p className="text-sm font-bold">🏆 Peringkat Kinerja</p>
+          <p className="text-sm font-bold">
+            {isGlobal ? "🌐 Peringkat Global" : "🏆 Peringkat Kinerja"}
+          </p>
           <p className="text-xs text-slate-400">
-            Periode {fmtTanggal(data.from)} – {fmtTanggal(data.to)}
+            {isGlobal
+              ? "Gabungan semua dapur yang telah menetapkan periode"
+              : `Periode ${fmtTanggal(data!.from!)} – ${fmtTanggal(data!.to!)}`}
           </p>
         </div>
         {myIndex >= 0 && (
@@ -112,6 +159,7 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
             <tr className="border-b border-white/5">
               <th className="px-3 py-2 text-center">#</th>
               <th className="px-3 py-2">Nama</th>
+              {!compact && isGlobal && <th className="px-3 py-2">Dapur</th>}
               {!compact && <th className="px-3 py-2 text-right">Hadir</th>}
               {!compact && <th className="px-3 py-2 text-right">Ketepatan</th>}
               {!compact && <th className="px-3 py-2 text-right">Jam/Hari</th>}
@@ -121,11 +169,12 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
           <tbody className="divide-y divide-white/5">
             {rows.map((r, i) => (
               <BoardTr
-                key={r.user_id}
+                key={rowKey(r)}
                 r={r}
                 i={i}
-                me={me}
+                isMe={isMeRow(r)}
                 compact={compact}
+                showDapur={isGlobal}
                 colSpan={colSpan}
                 isOpen={open.has(r.user_id)}
                 onToggle={() => toggleOpen(r.user_id)}
@@ -136,8 +185,9 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
               <BoardTr
                 r={full[myIndex]}
                 i={myIndex}
-                me={me}
+                isMe
                 compact={compact}
+                showDapur={isGlobal}
                 colSpan={colSpan}
                 isOpen={open.has(full[myIndex].user_id)}
                 onToggle={() => toggleOpen(full[myIndex].user_id)}
@@ -158,13 +208,22 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
       )}
     </div>
   );
+
+  if (compact) return board;
+  return (
+    <div className="space-y-3">
+      {tabs}
+      {board}
+    </div>
+  );
 }
 
 function BoardTr({
   r,
   i,
-  me,
+  isMe,
   compact,
+  showDapur,
   colSpan,
   isOpen,
   onToggle,
@@ -172,14 +231,14 @@ function BoardTr({
 }: {
   r: BoardRow;
   i: number;
-  me: number;
+  isMe: boolean;
   compact: boolean;
+  showDapur: boolean;
   colSpan: number;
   isOpen: boolean;
   onToggle: () => void;
   divider?: boolean;
 }) {
-  const isMe = r.user_id === me;
   const top3 = i < 3;
   return (
     <Fragment>
@@ -202,6 +261,9 @@ function BoardTr({
           </div>
           <div className="pl-3.5 text-xs text-slate-400">{r.divisi_nama || "Tanpa divisi"}</div>
         </td>
+        {!compact && showDapur && (
+          <td className="px-3 py-2.5 text-xs text-slate-300">{r.dapur || "—"}</td>
+        )}
         {!compact && <td className="px-3 py-2.5 text-right">{r.hadir}</td>}
         {!compact && <td className="px-3 py-2.5 text-right text-slate-300">{r.ketepatan.pct}%</td>}
         {!compact && (

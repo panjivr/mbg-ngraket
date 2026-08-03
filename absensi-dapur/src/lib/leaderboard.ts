@@ -25,6 +25,7 @@ export interface BoardRow {
   user_id: number;
   nama: string;
   divisi_nama: string | null;
+  dapur?: string; // hanya diisi pada papan global (nama dapur/SPPG asal)
   hidden: boolean;
   hadir: number;
   tepat: number;
@@ -181,4 +182,66 @@ export async function computeBoard(
   const val = { board, op_days: rows[0]?.op_days || 0 };
   boardCache.set(key, { at: Date.now(), val });
   return val;
+}
+
+// Cache papan global (gabungan semua dapur). Lebih mahal (banyak query), jadi
+// hasilnya di-cache 60 detik terpisah dari cache per-dapur.
+const GLOBAL_TTL_MS = 60_000;
+let globalCache: { at: number; val: BoardRow[] } | null = null;
+
+/** Hapus cache papan global (panggil bersama invalidateBoard bila perlu). */
+export function invalidateGlobalBoard(): void {
+  globalCache = null;
+}
+
+interface SppgPeriode {
+  id: number;
+  nama: string;
+  leaderboard_from: string;
+  leaderboard_to: string;
+}
+
+/**
+ * Papan peringkat GLOBAL: gabungan seluruh dapur yang sudah mempublikasikan
+ * periode papannya. Tiap dapur dihitung pada periodenya sendiri (reuse
+ * computeBoard yang ter-cache), lalu baris non-hidden digabung, diberi label
+ * dapur asal, dan diurut ulang lintas dapur. Ini pengecualian sengaja terhadap
+ * pembatasan sppg_id (satu-satunya papan lintas-tenant).
+ */
+export async function computeGlobalBoard(): Promise<BoardRow[]> {
+  if (globalCache && Date.now() - globalCache.at < GLOBAL_TTL_MS) {
+    return globalCache.val;
+  }
+
+  const dapurs = await query<SppgPeriode>(
+    `SELECT id, nama, leaderboard_from, leaderboard_to
+       FROM sppg
+      WHERE aktif = TRUE
+        AND leaderboard_from IS NOT NULL
+        AND leaderboard_to IS NOT NULL`,
+  );
+
+  const merged: BoardRow[] = [];
+  for (const d of dapurs) {
+    const { board } = await computeBoard(
+      d.id,
+      d.leaderboard_from,
+      d.leaderboard_to,
+    );
+    for (const r of board) {
+      if (r.hidden || r.hadir <= 0) continue;
+      merged.push({ ...r, dapur: d.nama });
+    }
+  }
+
+  merged.sort(
+    (a, b) =>
+      b.skor - a.skor ||
+      b.ketepatan.pct - a.ketepatan.pct ||
+      b.hadir - a.hadir ||
+      a.nama.localeCompare(b.nama, "id"),
+  );
+
+  globalCache = { at: Date.now(), val: merged };
+  return merged;
 }
