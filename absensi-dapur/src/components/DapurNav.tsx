@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Navigasi staf dapur yang dikelompokkan agar ringkas (tidak lagi ~11 tautan sejajar).
- * "Absen" tetap tampil langsung; sisanya dirapikan ke menu dropdown per kategori.
+ * Navigasi staf dapur yang dikelompokkan agar ringkas & responsif.
+ * "Absen" tetap tombol langsung; sisanya dirapikan ke dropdown per kategori.
+ * Memakai `display:contents` (root tanpa kotak) supaya tombol ikut wrap di
+ * container <nav> induk — tidak ada scroll horizontal, semua terlihat di HP.
  */
 type Item = { href: string; label: string };
 type Group = { key: string; label: string; items: Item[] };
@@ -76,16 +78,17 @@ export default function DapurNav({
     ...(isDriver ? [{ href: "/dapur/kilometer", label: "🚗 Kilometer" }] : []),
     ...(gudangKeluar ? [{ href: "/dapur/gudang", label: "🗄️ Gudang" }] : []),
   ];
-  if (operasional.length) groups.push({ key: "operasional", label: "🛠️ Operasional", items: operasional });
+  if (operasional.length)
+    groups.push({ key: "operasional", label: "🛠️ Operasional", items: operasional });
 
-  const linkCls = (active: boolean) =>
+  const itemCls = (active: boolean) =>
     "block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
     (active ? "bg-gold-500/15 text-gold-400" : "text-slate-300 hover:bg-white/5 hover:text-slate-100");
 
   const absenActive = pathname === "/dapur";
 
   return (
-    <div ref={ref} className="scroll-x flex items-center gap-1 overflow-x-auto">
+    <div ref={ref} className="contents">
       <Link
         href="/dapur"
         className={
@@ -93,7 +96,7 @@ export default function DapurNav({
           (absenActive ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:bg-white/5 hover:text-slate-100")
         }
       >
-        Absen
+        📍 Absen
       </Link>
 
       {groups.map((g) => {
@@ -105,6 +108,7 @@ export default function DapurNav({
               type="button"
               onClick={() => setOpen(isOpen ? null : g.key)}
               aria-expanded={isOpen}
+              aria-label={g.label}
               className={
                 "flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
                 (groupActive || isOpen
@@ -116,9 +120,9 @@ export default function DapurNav({
               <span className={"text-[10px] transition-transform " + (isOpen ? "rotate-180" : "")}>▾</span>
             </button>
             {isOpen && (
-              <div className="absolute left-0 top-full z-20 mt-1 min-w-[11rem] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl shadow-black/40">
+              <div className="absolute left-0 top-full z-30 mt-1 max-w-[calc(100vw-2rem)] min-w-[11rem] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl shadow-black/40">
                 {g.items.map((it) => (
-                  <Link key={it.href} href={it.href} className={linkCls(pathname.startsWith(it.href))}>
+                  <Link key={it.href} href={it.href} className={itemCls(pathname.startsWith(it.href))}>
                     {it.label}
                   </Link>
                 ))}

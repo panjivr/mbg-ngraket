@@ -213,7 +213,99 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
   return (
     <div className="space-y-3">
       {tabs}
+      {myIndex >= 0 && (
+        <MyScoreCard r={full[myIndex]} rank={myIndex + 1} total={full.length} />
+      )}
+      <StatStrip board={full} />
       {board}
+    </div>
+  );
+}
+
+/** Ringkasan statistik papan: jumlah peserta, rata-rata & skor tertinggi. */
+function StatStrip({ board }: { board: BoardRow[] }) {
+  const aktif = board.filter((r) => r.hadir > 0);
+  const n = aktif.length;
+  const avg = n > 0 ? aktif.reduce((s, r) => s + r.skor, 0) / n : 0;
+  const top = board[0]?.skor ?? 0;
+  const avgHadir =
+    n > 0
+      ? aktif.reduce((s, r) => s + (r.op_days > 0 ? r.hadir / r.op_days : 0), 0) /
+        n
+      : 0;
+  const Cell = ({ label, value, tone }: { label: string; value: string; tone: string }) => (
+    <div className="rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2.5 text-center">
+      <p className={`text-lg font-bold ${tone}`}>{value}</p>
+      <p className="text-[11px] text-slate-400">{label}</p>
+    </div>
+  );
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <Cell label="Peserta" value={String(board.length)} tone="text-slate-100" />
+      <Cell label="Rata-rata skor" value={avg.toFixed(1)} tone={skorColor(avg)} />
+      <Cell label="Skor tertinggi" value={top.toFixed(1)} tone={skorColor(top)} />
+      <Cell label="Rata kehadiran" value={`${Math.round(avgHadir * 100)}%`} tone="text-slate-100" />
+    </div>
+  );
+}
+
+/** Kartu skor pribadi: posisi, skor, rincian 3 komponen, & saran perbaikan. */
+function MyScoreCard({ r, rank, total }: { r: BoardRow; rank: number; total: number }) {
+  const komp = [
+    { label: "Ketepatan waktu", bobot: 55, k: r.ketepatan, tip: "datang lebih tepat waktu" },
+    { label: "Keaktifan hadir", bobot: 25, k: r.keaktifan, tip: "kurangi bolos di hari kerja" },
+    { label: "Kelengkapan presensi", bobot: 20, k: r.kelengkapan, tip: "jangan lupa clock-out" },
+  ];
+  // Saran: komponen dengan capaian persen terendah (yang paling menahan skor).
+  const weakest = [...komp].sort((a, b) => a.k.pct - b.k.pct)[0];
+  const belumSempurna = weakest.k.pct < 100;
+  return (
+    <div className="card space-y-3 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-slate-400">Kinerja kamu periode ini</p>
+          <p className="text-sm font-semibold text-slate-100">
+            Peringkat <span className={skorColor(r.skor)}>#{rank}</span>
+            <span className="text-slate-500"> dari {total}</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className={`text-3xl font-extrabold leading-none ${skorColor(r.skor)}`}>
+            {r.skor.toFixed(1)}
+          </p>
+          <p className="text-[11px] text-slate-400">dari 100</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {komp.map((c) => (
+          <div key={c.label}>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-300">
+                {c.label} <span className="text-slate-500">(maks {c.bobot})</span>
+              </span>
+              <span className="text-slate-400">
+                <b className="text-slate-200">{c.k.pct}%</b> ·{" "}
+                <b className="text-gold-400">{c.k.poin} poin</b>
+              </span>
+            </div>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
+              <div className={`h-full rounded-full ${barColor(c.k.pct)}`} style={{ width: `${c.k.pct}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {belumSempurna ? (
+        <p className="rounded-lg bg-gold-500/10 px-3 py-2 text-xs text-gold-200">
+          💡 Ingin naik peringkat? Fokus <b>{weakest.tip}</b> — komponen{" "}
+          <b>{weakest.label.toLowerCase()}</b> masih {weakest.k.pct}%.
+        </p>
+      ) : (
+        <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+          🎉 Semua komponen sempurna. Pertahankan kedisiplinanmu!
+        </p>
+      )}
     </div>
   );
 }

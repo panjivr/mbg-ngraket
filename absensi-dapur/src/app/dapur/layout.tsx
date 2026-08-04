@@ -45,7 +45,7 @@ export default async function DapurLayout({
             <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
           </div>
         </div>
-        <nav className="mt-3 flex items-center gap-1">
+        <nav className="mt-3 flex flex-wrap items-center gap-1">
           <DapurNav isDriver={isDriver} gudangKeluar={gudangKeluar} />
           {session.role === "admin" ? (
             <Link href="/admin" className="ml-auto shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">

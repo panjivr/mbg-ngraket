@@ -541,9 +541,19 @@ function LaporanPribadi() {
   return (
     <div className="space-y-4">
       {/* Privasi */}
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-        🔒 <b>Privat.</b> Semua angka di halaman ini <b>hanya tersimpan di HP-mu</b> — tidak dikirim ke
-        server dan <b>tidak bisa dilihat admin/manajemen</b>. Isi jujur, ini untukmu sendiri.
+      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
+        <p className="flex items-center gap-1.5 text-sm font-bold text-emerald-200">
+          🔒 100% Rahasia — hanya untukmu sendiri
+        </p>
+        <ul className="mt-1.5 space-y-1 text-xs text-emerald-100/90">
+          <li>✅ Angka tersimpan <b>hanya di HP ini</b> (di aplikasi, bukan di internet).</li>
+          <li>✅ <b>Tidak dikirim ke server</b> mana pun — tidak ada penyimpanan data di database.</li>
+          <li>✅ <b>Admin & manajemen TIDAK BISA melihat</b> isi laporan ini.</li>
+          <li>✅ Kalau ganti HP atau hapus aplikasi, data ini ikut hilang (memang privat).</li>
+        </ul>
+        <p className="mt-1.5 text-xs text-emerald-200">
+          Jadi <b>isi sejujurnya</b> — ini catatan pribadi untuk membantu dirimu sendiri.
+        </p>
       </div>
 
       {/* Ringkasan utama */}
