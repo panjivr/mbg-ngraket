@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
-import NavLink from "@/components/NavLink";
+import DapurNav from "@/components/DapurNav";
 import LogoutButton from "@/components/LogoutButton";
 import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
@@ -45,19 +45,8 @@ export default async function DapurLayout({
             <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
           </div>
         </div>
-        <nav className="scroll-x mt-3 flex items-center gap-1 overflow-x-auto">
-          <NavLink href="/dapur" label="Absen" exact />
-          <NavLink href="/dapur/peringkat" label="🏆 Peringkat" />
-          <NavLink href="/dapur/jadwal" label="🗓️ Jadwal" />
-          <NavLink href="/dapur/izin" label="📝 Izin" />
-          <NavLink href="/dapur/pengaduan" label="📮 Aspirasi" />
-          <NavLink href="/dapur/slip" label="🧾 Slip Gaji" />
-          <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
-          <NavLink href="/dapur/sop" label="📋 SOP" />
-          <NavLink href="/dapur/profil" label="Kartu Saya" />
-          <NavLink href="/dapur/finansial" label="💰 Finansial" />
-          {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
-          {gudangKeluar && <NavLink href="/dapur/gudang" label="🗄️ Gudang" />}
+        <nav className="mt-3 flex items-center gap-1">
+          <DapurNav isDriver={isDriver} gudangKeluar={gudangKeluar} />
           {session.role === "admin" ? (
             <Link href="/admin" className="ml-auto shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
               Panel Admin →
