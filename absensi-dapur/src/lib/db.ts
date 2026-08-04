@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-03a.chat-aspirasi";
+const SCHEMA_VERSION = "2026-08-04a.finansial-pribadi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -132,6 +132,17 @@ async function doEnsureSchema(): Promise<void> {
         nip           TEXT,
         aktif         BOOLEAN NOT NULL DEFAULT TRUE,
         created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+
+    // --- Laporan keuangan pribadi karyawan (privat per akun) ---
+    // Disimpan sebagai satu baris per user; angka disimpan di kolom JSONB `data`.
+    // Sinkron lintas perangkat saat login. Tidak ditampilkan di panel admin.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS finansial_pribadi (
+        user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        data        JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `);
 
