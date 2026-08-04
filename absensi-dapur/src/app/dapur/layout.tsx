@@ -55,6 +55,7 @@ export default async function DapurLayout({
           <NavLink href="/dapur/riwayat" label="Riwayat Saya" />
           <NavLink href="/dapur/sop" label="📋 SOP" />
           <NavLink href="/dapur/profil" label="Kartu Saya" />
+          <NavLink href="/dapur/finansial" label="💰 Finansial" />
           {isDriver && <NavLink href="/dapur/kilometer" label="🚗 Kilometer" />}
           {gudangKeluar && <NavLink href="/dapur/gudang" label="🗄️ Gudang" />}
           {session.role === "admin" ? (
