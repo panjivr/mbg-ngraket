@@ -54,6 +54,7 @@ function buildGroups(f: Flags): Group[] {
       label: "Kepegawaian",
       items: [
         { label: "👥 Pegawai", href: "/admin/pegawai", also: ["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"], show: f.fullAdmin && has("pegawai") },
+        { label: "📊 Statistik", href: "/admin/statistik", show: f.fullAdmin && has("pegawai") },
         { label: "🧾 HR / Gaji", href: "/admin/hr", show: f.isHr && has("hr") },
       ],
     },
