@@ -3,12 +3,14 @@ import StaffLeaderboard from "@/components/StaffLeaderboard";
 import PengumumanCard from "@/components/PengumumanCard";
 import BebanHariIni from "@/components/BebanHariIni";
 import PengingatAbsen from "@/components/PengingatAbsen";
+import HariIstimewa from "@/components/HariIstimewa";
 
 export const dynamic = "force-dynamic";
 
 export default function DapurPage() {
   return (
     <div className="space-y-4">
+      <HariIstimewa />
       <PengumumanCard />
       <PengingatAbsen />
       <BebanHariIni />
