@@ -129,6 +129,7 @@ export interface Attendance {
   selfie_out: string | null;
   catatan: string | null;
   lokasi: string | null;
+  mood: string | null;
 }
 
 export interface AttendanceWithUser extends Attendance {

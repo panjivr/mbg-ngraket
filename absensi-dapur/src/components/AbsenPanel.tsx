@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
 import MoodAI from "@/components/MoodAI";
+import { MOODS } from "@/lib/mood";
 import { getFaceApiLite, detectLandmarks, type FaceApi, type Pt } from "@/lib/faceapiLite";
 import { STICKERS, computeRefs } from "@/lib/faceStickers";
 
@@ -99,6 +100,7 @@ export default function AbsenPanel() {
   const [filterIdx, setFilterIdx] = useState(0);
   const [stikerIdx, setStikerIdx] = useState(-1); // -1 = tanpa filter wajah
   const [moodOpen, setMoodOpen] = useState(false);
+  const [mood, setMood] = useState<string | null>(null); // suasana hati saat masuk
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
@@ -335,6 +337,8 @@ export default function AbsenPanel() {
           // shift dipilih hanya saat check-in & tidak ada event yang menimpa.
           shift_id: eventInfo ? null : selectedShiftId,
           titik: pakaiEvent ? "event" : "dapur",
+          // suasana hati hanya relevan saat absen masuk.
+          mood: phase === "masuk" ? mood : null,
         }),
       });
       const data = await res.json();
@@ -346,6 +350,7 @@ export default function AbsenPanel() {
       setMessage({ kind: "ok", text: `${label} berhasil dicatat. Terima kasih!` });
       setQuote(quoteAcak());
       setSelfie(null);
+      setMood(null);
       await loadToday();
     } catch {
       setMessage({ kind: "err", text: "Tidak dapat terhubung ke server." });
@@ -768,6 +773,45 @@ export default function AbsenPanel() {
           <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">✨ Kutipan Hari Ini</p>
           <p className="mt-2 text-sm italic leading-relaxed text-slate-100">“{quote.teks}”</p>
           <p className="mt-1 text-xs text-slate-400">— {quote.sumber}</p>
+        </div>
+      )}
+
+      {/* Suasana hati hari ini (opsional) — hanya saat absen masuk */}
+      {phase === "masuk" && (
+        <div className="card p-4">
+          <p className="text-sm font-semibold">Bagaimana perasaanmu hari ini?</p>
+          <p className="mb-3 text-xs text-slate-400">
+            Opsional — bantu dapur memahami suasana tim (jadi grafik emosi).
+          </p>
+          <div className="grid grid-cols-5 gap-2">
+            {MOODS.map((m) => {
+              const aktif = mood === m.key;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setMood(aktif ? null : m.key)}
+                  aria-pressed={aktif}
+                  className={
+                    "flex flex-col items-center gap-1 rounded-xl border px-1 py-2 transition active:scale-95 " +
+                    (aktif
+                      ? "border-gold-400/60 bg-gold-400/10"
+                      : "border-white/10 hover:bg-white/5")
+                  }
+                >
+                  <span className="text-2xl leading-none">{m.emoji}</span>
+                  <span
+                    className={
+                      "text-[11px] font-medium " +
+                      (aktif ? "text-gold-300" : "text-slate-400")
+                    }
+                  >
+                    {m.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

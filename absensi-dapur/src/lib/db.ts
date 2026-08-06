@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-04a.finansial-pribadi";
+const SCHEMA_VERSION = "2026-08-06a.mood-absensi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -235,6 +235,10 @@ async function doEnsureSchema(): Promise<void> {
     );
     await client.query(
       `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS shift_pulang TEXT`,
+    );
+    // Suasana hati (mood) yang dilaporkan pegawai saat absen masuk (opsional).
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS mood TEXT`,
     );
     // Backfill tanggal kerja shift untuk baris lama.
     await client.query(

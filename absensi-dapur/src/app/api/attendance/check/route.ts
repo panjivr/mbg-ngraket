@@ -5,6 +5,7 @@ import { getSppg } from "@/lib/sppg";
 import { ok, fail, route } from "@/lib/api";
 import { haversineMeters } from "@/lib/geo";
 import { localDate, shiftDate, statusMasukShift } from "@/lib/time";
+import { MOOD_KEYS } from "@/lib/mood";
 import type { Attendance } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -26,6 +27,11 @@ export const POST = route(async (req: NextRequest) => {
   const lat = toNum(body.lat);
   const lng = toNum(body.lng);
   const selfie = typeof body.selfie === "string" ? body.selfie : null;
+  // Suasana hati (opsional) — hanya dicatat saat check-in & harus dari daftar.
+  const mood =
+    typeof body.mood === "string" && MOOD_KEYS.includes(body.mood)
+      ? body.mood
+      : null;
 
   const settings = await getSppg(session.sppg_id as number);
   if (!settings) return fail(500, "Pengaturan dapur belum tersedia.");
@@ -198,8 +204,8 @@ export const POST = route(async (req: NextRequest) => {
           `INSERT INTO attendance
              (user_id, tanggal, shift_tanggal, divisi_id, shift_masuk, shift_pulang,
               check_in, status_masuk, check_in_lat, check_in_lng, check_in_jarak, selfie_in,
-              divisi_shift_id, event_id, lokasi)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+              divisi_shift_id, event_id, lokasi, mood)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
            RETURNING *`,
           [
             session.uid,
@@ -217,6 +223,7 @@ export const POST = route(async (req: NextRequest) => {
             divisiShiftId,
             eventId,
             target.nama,
+            mood,
           ],
         )
       ).rows[0];
