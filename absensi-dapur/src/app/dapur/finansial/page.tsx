@@ -234,10 +234,41 @@ interface FinStore {
   reset: () => void;
   loaded: boolean;
   saving: boolean;
+  /** Bulan laporan aktif "YYYY-MM". */
+  bulan: string;
+  setBulan: (b: string) => void;
+  /** Salin isi bulan sebelumnya (yang ada datanya) ke bulan aktif. */
+  salinBulanLalu: () => void;
+}
+
+/** Bulan sekarang "YYYY-MM" (zona Asia/Jakarta). */
+function bulanIni(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit" }).format(new Date());
+}
+
+interface StoreShape { bulan: string; months: Record<string, FinData> }
+
+/** Migrasi data tersimpan → model per-bulan. Data lama (satu profil) → bulan berjalan. */
+function normalizeStore(raw: unknown): StoreShape {
+  const cur = bulanIni();
+  const r = raw as Record<string, unknown> | null;
+  if (r && typeof r === "object" && r.months && typeof r.months === "object") {
+    const months: Record<string, FinData> = {};
+    for (const [k, v] of Object.entries(r.months as Record<string, unknown>)) {
+      if (/^\d{4}-\d{2}$/.test(k)) months[k] = normalize(v);
+    }
+    if (Object.keys(months).length === 0) months[cur] = { ...FIN_AWAL };
+    let bulan = typeof r.bulan === "string" && /^\d{4}-\d{2}$/.test(r.bulan) ? r.bulan : cur;
+    if (!months[bulan]) bulan = Object.keys(months).sort().reverse()[0] || cur;
+    if (!months[bulan]) months[bulan] = { ...FIN_AWAL };
+    return { bulan, months };
+  }
+  // Format lama (satu FinData datar) → taruh di bulan berjalan.
+  return { bulan: cur, months: { [cur]: normalize(r) } };
 }
 
 function useFinStore(): FinStore {
-  const [data, setData] = useState<FinData>(FIN_AWAL);
+  const [store, setStore] = useState<StoreShape>(() => ({ bulan: bulanIni(), months: { [bulanIni()]: { ...FIN_AWAL } } }));
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -245,7 +276,7 @@ function useFinStore(): FinStore {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(FIN_KEY);
-      if (raw) setData(normalize(JSON.parse(raw)));
+      if (raw) setStore(normalizeStore(JSON.parse(raw)));
     } catch {
       /* localStorage tak tersedia — abaikan */
     }
@@ -255,7 +286,7 @@ function useFinStore(): FinStore {
         const res = await fetch("/api/finansial", { cache: "no-store" });
         if (res.ok) {
           const j = (await res.json()) as { data?: unknown };
-          if (alive && j?.data && typeof j.data === "object") setData(normalize(j.data));
+          if (alive && j?.data && typeof j.data === "object") setStore(normalizeStore(j.data));
         }
       } catch {
         /* offline — pakai cache lokal */
@@ -271,7 +302,7 @@ function useFinStore(): FinStore {
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem(FIN_KEY, JSON.stringify(data));
+      localStorage.setItem(FIN_KEY, JSON.stringify(store));
     } catch {
       /* kuota penuh / mode privat — abaikan */
     }
@@ -281,7 +312,7 @@ function useFinStore(): FinStore {
       fetch("/api/finansial", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify({ data: store }),
       })
         .catch(() => {
           /* gagal simpan ke server — data tetap aman di cache lokal */
@@ -291,12 +322,22 @@ function useFinStore(): FinStore {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [data, loaded]);
+  }, [store, loaded]);
 
-  const patch = (p: Partial<FinData>) => setData((s) => ({ ...s, ...p }));
-  const reset = () => setData(FIN_AWAL);
+  const bulan = store.bulan;
+  const data = store.months[bulan] ?? FIN_AWAL;
+  const patch = (p: Partial<FinData>) =>
+    setStore((s) => ({ ...s, months: { ...s.months, [s.bulan]: { ...(s.months[s.bulan] ?? FIN_AWAL), ...p } } }));
+  const reset = () => setStore((s) => ({ ...s, months: { ...s.months, [s.bulan]: { ...FIN_AWAL } } }));
+  const setBulan = (b: string) =>
+    setStore((s) => (/^\d{4}-\d{2}$/.test(b) ? { bulan: b, months: s.months[b] ? s.months : { ...s.months, [b]: { ...FIN_AWAL } } } : s));
+  const salinBulanLalu = () =>
+    setStore((s) => {
+      const prev = Object.keys(s.months).filter((b) => b < s.bulan).sort().reverse()[0];
+      return prev ? { ...s, months: { ...s.months, [s.bulan]: { ...s.months[prev] } } } : s;
+    });
   const d = useMemo(() => hitung(data), [data]);
-  return { data, d, patch, reset, loaded, saving };
+  return { data, d, patch, reset, loaded, saving, bulan, setBulan, salinBulanLalu };
 }
 
 /* ---------------- Quote keuangan (melek finansial untuk semua) ---------------- */
@@ -390,6 +431,22 @@ export default function FinansialPage() {
           apakah kamu sudah bisa <b>keluar dari rat race</b>, lalu unduh jadi PDF. Semua tab memakai
           angka yang sama & tersimpan di akunmu.
         </p>
+      </div>
+
+      <div className="card flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
+        <label className="text-sm font-medium text-slate-300">🗓️ Bulan laporan</label>
+        <input
+          type="month"
+          value={store.bulan}
+          onChange={(e) => store.setBulan(e.target.value)}
+          className="input w-auto"
+        />
+        <button onClick={store.salinBulanLalu} className="btn-ghost px-3 py-1.5 text-xs">
+          Salin dari bulan lalu
+        </button>
+        <span className="text-xs text-slate-500">
+          Tiap bulan disimpan &amp; dihitung terpisah.{store.saving ? " Menyimpan…" : ""}
+        </span>
       </div>
 
       <QuoteBanner />
