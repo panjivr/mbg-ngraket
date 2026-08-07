@@ -106,6 +106,23 @@ export function ensureSchema(): Promise<void> {
 }
 
 async function doEnsureSchema(): Promise<void> {
+  // Fast-path lock-free: cukup 1 SELECT tanpa transaksi/advisory lock. Pada
+  // kondisi normal (skema sudah versi terkini) inilah satu-satunya round-trip
+  // sebelum query pertama, sehingga cold start serverless jauh lebih cepat —
+  // tak perlu BEGIN + pg_advisory_xact_lock + CREATE TABLE + COMMIT (±5 round-
+  // trip ke Postgres). Jika app_meta belum ada (deploy pertama), SELECT gagal
+  // dan kita lanjut ke migrasi penuh berkunci di bawah.
+  try {
+    const verFast = (
+      await getPool().query<{ v: string }>(
+        `SELECT v FROM app_meta WHERE k = 'schema_version'`,
+      )
+    ).rows[0]?.v;
+    if (verFast === SCHEMA_VERSION) return;
+  } catch {
+    // app_meta belum ada — jalankan migrasi penuh (berkunci) di bawah.
+  }
+
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
