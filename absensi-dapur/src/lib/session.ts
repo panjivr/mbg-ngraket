@@ -75,17 +75,17 @@ export async function requireAkses(area: "distribusi" | "laporan"): Promise<Sess
 
 /**
  * Peran HR — satu-satunya yang boleh mengelola data gaji & pengaturan slip.
- * Admin biasa TIDAK cukup; wajib flag is_hr. Backfill dari DB bila perlu.
+ * Admin biasa TIDAK cukup; wajib flag is_hr. Selalu diverifikasi dari DB (bukan
+ * token) agar pemberian/pencabutan peran HR langsung berlaku tanpa login ulang —
+ * token berumur 7 hari, jadi flag di token bisa basi.
  */
 export async function requireHr(): Promise<SessionData> {
   const s = await requireSession();
-  if (s.is_hr === undefined) {
-    const r = await query<{ is_hr: boolean }>(
-      `SELECT is_hr FROM users WHERE id = $1`,
-      [s.uid],
-    );
-    s.is_hr = !!r[0]?.is_hr;
-  }
+  const r = await query<{ is_hr: boolean }>(
+    `SELECT is_hr FROM users WHERE id = $1`,
+    [s.uid],
+  );
+  s.is_hr = !!r[0]?.is_hr;
   if (!s.is_hr) throw new HttpError(403, "Khusus HR.");
   return s;
 }
