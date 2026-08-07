@@ -101,12 +101,12 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     body.akses_laporan !== undefined ? Boolean(body.akses_laporan) : (existing.akses_laporan ?? false);
   const akses_gudang_keluar =
     body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
-  // Peran HR hanya boleh diberikan/dicabut oleh super admin (pemilik), bukan
-  // admin biasa — menegakkan batas "admin biasa pun tidak cukup".
+  // Peran HR dapat diberikan/dicabut oleh admin penuh dapur ini (route sudah
+  // requireAdmin + dibatasi sppg_id). Batas "admin biasa pun tidak cukup" tetap
+  // ditegakkan saat AKSES (halaman & API HR mengecek is_hr terbaru), bukan saat
+  // penetapan — jadi admin dapur bisa menunjuk siapa yang memegang data gaji.
   const is_hr =
-    admin.is_super && body.is_hr !== undefined
-      ? Boolean(body.is_hr)
-      : (existing.is_hr ?? false);
+    body.is_hr !== undefined ? Boolean(body.is_hr) : (existing.is_hr ?? false);
 
   let passwordClause = "";
   const paramsArr: unknown[] = [
@@ -147,6 +147,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   if (existing.nama !== nama) ubah.push("nama");
   if (existing.role !== role) ubah.push(`role→${role}`);
   if (existing.aktif !== aktif) ubah.push(aktif ? "diaktifkan" : "dinonaktifkan");
+  if ((existing.is_hr ?? false) !== is_hr) ubah.push(is_hr ? "HR aktif" : "HR nonaktif");
   if (passwordClause) ubah.push("password");
   await catatAudit(admin, "ubah", "Pegawai", `${nama}${ubah.length ? " · " + ubah.join(", ") : ""}`);
   return ok({ employee: rows[0] });
