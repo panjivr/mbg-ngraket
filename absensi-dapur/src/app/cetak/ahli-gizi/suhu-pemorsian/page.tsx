@@ -8,6 +8,7 @@ const t = getTemplateGizi("suhu-pemorsian")!;
 export default function Page() {
   return (
     <PrintFrame
+      saveUrl="/api/admin/ahli-gizi/dok"
       heading={t.heading}
       slug={t.slug}
       judul={t.judul}
