@@ -99,8 +99,26 @@ function isActive(pathname: string, it: Item): boolean {
 const clean = (s: string) => s.replace(/^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}️‍]+\s*)/u, "");
 
 const linkCls = (active: boolean) =>
-  "shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
+  "shrink-0 cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
+  "focus-visible:outline-none " +
   (active ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:bg-white/5 hover:text-slate-100");
+
+// Ikon chevron SVG (bukan glyph teks) agar konsisten dengan set ikon lain &
+// tajam di semua platform. Berputar 180° saat dropdown terbuka.
+const ChevronIcon = ({ open }: { open: boolean }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={"h-3.5 w-3.5 transition-transform duration-200 " + (open ? "rotate-180" : "")}
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
 
 export default function AdminNav(flags: Flags) {
   const pathname = usePathname();
@@ -149,12 +167,14 @@ export default function AdminNav(flags: Flags) {
               type="button"
               onClick={() => setOpen(isOpen ? null : g.key)}
               className={linkCls(groupActive) + " inline-flex items-center gap-1"}
+              aria-expanded={isOpen}
+              aria-haspopup="menu"
             >
               {g.label}
-              <span className={"text-[10px] transition-transform " + (isOpen ? "rotate-180" : "")}>▾</span>
+              <ChevronIcon open={isOpen} />
             </button>
             {isOpen && (
-              <div className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
+              <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
                 {vis.map((it) => (
                   <Link
                     key={it.href}
