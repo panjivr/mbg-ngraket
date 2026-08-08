@@ -41,6 +41,7 @@ export default function GudangPage() {
   const [belanja, setBelanja] = useState(false);
   const [copied, setCopied] = useState(false);
   const [q, setQ] = useState("");
+  const [hanyaKad, setHanyaKad] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,14 +53,16 @@ export default function GudangPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const today = jakartaToday();
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return list.filter(
       (b) =>
         (filter === "all" || b.kategori === filter) &&
-        (needle === "" || b.nama.toLowerCase().includes(needle) || b.catatan.toLowerCase().includes(needle)),
+        (needle === "" || b.nama.toLowerCase().includes(needle) || b.catatan.toLowerCase().includes(needle)) &&
+        (!hanyaKad || (() => { const k = statusKadaluarsa(b.tanggal_kadaluarsa, today); return k === "kadaluarsa" || k === "segera"; })()),
     );
-  }, [list, filter, q]);
+  }, [list, filter, q, hanyaKad, today]);
   const grup = useMemo(() => {
     const m = new Map<Kategori, Barang[]>();
     for (const b of shown) { if (!m.has(b.kategori)) m.set(b.kategori, []); m.get(b.kategori)!.push(b); }
@@ -76,7 +79,6 @@ export default function GudangPage() {
   }, [list]);
 
   // Peringatan kadaluarsa (FEFO): barang kadaluarsa / akan kadaluarsa ≤ 7 hari.
-  const today = jakartaToday();
   const kadaluarsa = useMemo(
     () =>
       list
@@ -233,6 +235,13 @@ export default function GudangPage() {
             {k === "all" ? "Semua" : KATEGORI_LABEL[k]}
           </button>
         ))}
+        <button
+          onClick={() => setHanyaKad((v) => !v)}
+          title="Tampilkan hanya barang kadaluarsa / akan kadaluarsa"
+          className={"rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " + (hanyaKad ? "border-red-500/40 bg-red-500/15 text-red-300" : "border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5")}
+        >
+          ⚠ Kadaluarsa{kadaluarsa.length > 0 ? ` (${kadaluarsa.length})` : ""}
+        </button>
       </div>
 
       {kadaluarsa.length > 0 && (

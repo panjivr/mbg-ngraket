@@ -92,6 +92,10 @@ function isActive(pathname: string, it: Item): boolean {
   return it.also?.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p)) ?? false;
 }
 
+// Navigasi profesional tanpa emoji: buang emoji di awal label (ikon struktural
+// sebaiknya bukan emoji). Label sumber tetap beremoji agar dipakai tempat lain.
+const clean = (s: string) => s.replace(/^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}️‍]+\s*)/u, "");
+
 const linkCls = (active: boolean) =>
   "shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
   (active ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:bg-white/5 hover:text-slate-100");
@@ -120,7 +124,7 @@ export default function AdminNav(flags: Flags) {
           if (!g.solo.show) return null;
           return (
             <Link key={g.key} href={g.solo.href} className={linkCls(isActive(pathname, g.solo))}>
-              {g.solo.label}
+              {clean(g.solo.label)}
             </Link>
           );
         }
@@ -131,7 +135,7 @@ export default function AdminNav(flags: Flags) {
           const it = vis[0];
           return (
             <Link key={g.key} href={it.href} className={linkCls(isActive(pathname, it))}>
-              {it.label}
+              {clean(it.label)}
             </Link>
           );
         }
@@ -159,7 +163,7 @@ export default function AdminNav(flags: Flags) {
                       (isActive(pathname, it) ? "bg-gold-500/15 text-gold-400" : "text-slate-300 hover:bg-white/5 hover:text-slate-100")
                     }
                   >
-                    {it.label}
+                    {clean(it.label)}
                   </Link>
                 ))}
               </div>
