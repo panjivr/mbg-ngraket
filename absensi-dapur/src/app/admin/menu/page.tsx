@@ -506,6 +506,15 @@ function MenuEditor({
               >
                 🎯 Cocokkan otomatis
               </button>
+              <a
+                href={`https://siskaperbapo.jatimprov.go.id/harga/tabel/?kabkota=${encodeURIComponent(pasar?.kabkota ?? "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost px-2.5 py-1 text-xs"
+                title="Buka situs resmi SISKAPERBAPO (harga selalu bisa dilihat manual)"
+              >
+                Buka SISKAPERBAPO ↗
+              </a>
             </div>
           </div>
           <p className="mt-2 text-[11px] text-slate-400">

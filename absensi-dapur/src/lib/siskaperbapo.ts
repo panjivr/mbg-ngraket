@@ -3,7 +3,14 @@
 // `/harga/tabel.nodesign/` (HTML). Kita ambil & parse di server (tanpa CORS),
 // dengan cache pendek + degradasi anggun bila situs tak bisa diakses.
 
-const BASE = "https://siskaperbapo.jatimprov.go.id/harga/tabel.nodesign/";
+// Situs bisa mengubah markup/endpoint sewaktu-waktu. Coba beberapa varian
+// endpoint berurutan agar integrasi tetap hidup "apapun caranya".
+const BASES = [
+  "https://siskaperbapo.jatimprov.go.id/harga/tabel.nodesign/",
+  "https://siskaperbapo.jatimprov.go.id/harga/tabel/",
+  "https://siskaperbapo.jatimprov.go.id/harga/tabel",
+  "https://siskaperbapo.jatimprov.go.id/harga/",
+];
 
 /** 38 kabupaten/kota Jawa Timur (value = parameter `kabkota`). "" = rata-rata provinsi. */
 export const KABKOTA_JATIM: { value: string; label: string }[] = [
@@ -77,10 +84,49 @@ function parseRupiah(s: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** Ambil baris komoditas (nama, satuan, harga sekarang) dari HTML tabel.nodesign. */
+function stripTags(s: string): string {
+  return s
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+const SATUAN_RE = /\b(kg|gram|ons|liter|ltr|butir|ikat|buah|ekor|bungkus|sisir|papan|pack|sachet|botol|bh|100\s?gram)\b/i;
+
+/** Fallback generik: baca baris <tr> tabel apa pun (tahan perubahan markup). */
+function parseGenerik(html: string): KomoditasPasar[] {
+  const out: KomoditasPasar[] = [];
+  const seen = new Set<string>();
+  const rows = html.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+  for (const row of rows) {
+    const cells = (row.match(/<t[dh][\s\S]*?<\/t[dh]>/gi) || []).map(stripTags);
+    if (cells.length < 2) continue;
+    const nama = cells.find(
+      (c) => c.length > 2 && c.length < 60 && /[a-zA-Z]/.test(c) && parseRupiah(c) === 0 && !SATUAN_RE.test(c),
+    );
+    if (!nama || /komoditas|nama|satuan|harga|no\.?$|perubahan/i.test(nama)) continue;
+    let harga = 0;
+    for (const c of cells) {
+      const v = parseRupiah(c);
+      if (v >= 100 && v > harga) harga = v;
+    }
+    if (harga === 0) continue;
+    const key = nama.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const satuan = (cells.find((c) => SATUAN_RE.test(c))?.match(SATUAN_RE)?.[0] ?? "").toLowerCase();
+    out.push({ id: String(out.length + 1), nama, satuan, harga });
+    if (out.length >= 200) break;
+  }
+  return out;
+}
+
+/** Ambil baris komoditas (nama, satuan, harga sekarang) dari HTML SISKAPERBAPO. */
 export function parseTabel(html: string): KomoditasPasar[] {
+  // 1) Pola spesifik SISKAPERBAPO — atribut bisa pakai kutip ' maupun ".
   const re =
-    /data-commodity-id='(\d+)'>([^<]+)<\/span>\s*<\/td>\s*<td>([^<]*)<\/td>[\s\S]*?sekarang">([\d.]+)</g;
+    /data-commodity-id=['"](\d+)['"][^>]*>([^<]+)<\/span>\s*<\/td>\s*<td>([^<]*)<\/td>[\s\S]*?sekarang["']?\s*>?\s*([\d.]+)/g;
   const out: KomoditasPasar[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
@@ -89,7 +135,9 @@ export function parseTabel(html: string): KomoditasPasar[] {
     const harga = parseRupiah(m[4]);
     if (nama && harga > 0) out.push({ id: m[1], nama, satuan, harga });
   }
-  return out;
+  if (out.length > 0) return out;
+  // 2) Fallback generik bila pola spesifik gagal (markup berubah).
+  return parseGenerik(html);
 }
 
 const cache = new Map<string, { at: number; val: KomoditasPasar[] }>();
@@ -110,29 +158,32 @@ export async function ambilHargaPasar(
     return { tanggal, kabkota: kab, label: labelKabkota(kab), komoditas: hit.val, sumber: "cache" };
   }
 
-  const url = `${BASE}?tanggal=${encodeURIComponent(tanggal)}&kabkota=${encodeURIComponent(kab)}&pasar=`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 9000);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const komoditas = parseTabel(html);
-    if (komoditas.length === 0) return null;
-    cache.set(key, { at: Date.now(), val: komoditas });
-    return { tanggal, kabkota: kab, label: labelKabkota(kab), komoditas, sumber: "live" };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
+  const params = `?tanggal=${encodeURIComponent(tanggal)}&kabkota=${encodeURIComponent(kab)}&pasar=`;
+  for (const base of BASES) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 9000);
+    try {
+      const res = await fetch(base + params, {
+        signal: ctrl.signal,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+        },
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const komoditas = parseTabel(html);
+      if (komoditas.length === 0) continue;
+      cache.set(key, { at: Date.now(), val: komoditas });
+      return { tanggal, kabkota: kab, label: labelKabkota(kab), komoditas, sumber: "live" };
+    } catch {
+      // coba endpoint berikutnya
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  return null;
 }
