@@ -120,7 +120,7 @@ export default function KartuStokPage() {
             <p className="mt-1 text-sm text-slate-400">{form.barang.nama} · stok <b>{fmtNum(form.barang.stok)} {form.barang.satuan}</b></p>
             <div className="mt-4 space-y-3">
               <div><label className="label">Tanggal</label><input type="date" className="input" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></div>
-              <div><label className="label">Jumlah keluar ({form.barang.satuan})</label><input type="number" min={0} step="0.01" className="input" value={form.jumlah} onChange={(e) => setForm({ ...form, jumlah: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+              <div><label className="label">Jumlah keluar ({form.barang.satuan})</label><input type="number" min={0} step="0.01" inputMode="decimal" autoFocus className="input" value={form.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setForm({ ...form, jumlah: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               <div><label className="label">Keperluan (opsional)</label><input className="input" value={form.keterangan} onChange={(e) => setForm({ ...form, keterangan: e.target.value })} placeholder="mis. persiapan / pengolahan / pemorsian" /></div>
               {msg && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{msg}</p>}
               <div className="flex gap-2 pt-2">
