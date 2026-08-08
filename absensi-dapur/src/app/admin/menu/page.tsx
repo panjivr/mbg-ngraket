@@ -66,6 +66,35 @@ function cariKomoditas(namaBahan: string, list: KomoditasPasar[]): KomoditasPasa
   return bestScore >= 3 ? best : null;
 }
 
+/**
+ * Parser "tempel manual": ubah teks yang disalin dari tabel SISKAPERBAPO
+ * (atau daftar harga apa pun) menjadi daftar komoditas. Jaminan agar fitur
+ * tetap bisa dipakai walau pengambilan otomatis gagal — tinggal salin-tempel.
+ */
+const SATUAN_TEMPEL = /\b(kg|gram|ons|liter|ltr|butir|ikat|buah|ekor|bungkus|sisir|papan|pack|sachet|botol|bh)\b/i;
+function parseTempelKomoditas(text: string): KomoditasPasar[] {
+  const out: KomoditasPasar[] = [];
+  const seen = new Set<string>();
+  for (const raw of text.split(/\n+/)) {
+    const line = raw.replace(/\s+/g, " ").trim();
+    if (!line) continue;
+    const nums = [...line.matchAll(/\d[\d.,]*/g)]
+      .map((m) => ({ v: parseInt(m[0].replace(/[^\d]/g, ""), 10), i: m.index ?? 0 }))
+      .filter((x) => x.v >= 100);
+    if (nums.length === 0) continue;
+    const harga = nums.reduce((a, b) => (b.v > a.v ? b : a));
+    let nama = line.slice(0, harga.i).replace(/^\d+[.)]\s*/, "").replace(/[|:–-]+\s*$/, "").trim();
+    const satuan = (nama.match(SATUAN_TEMPEL)?.[0] || line.match(SATUAN_TEMPEL)?.[0] || "").toLowerCase();
+    nama = nama.replace(SATUAN_TEMPEL, "").replace(/\s+/g, " ").trim();
+    if (nama.length < 2 || /komoditas|harga|satuan|no\.?$/i.test(nama)) continue;
+    const key = nama.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id: String(out.length + 1), nama, satuan, harga: harga.v });
+  }
+  return out;
+}
+
 interface BarangPilih {
   id: number;
   nama: string;
@@ -309,6 +338,18 @@ function MenuEditor({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [porsiTarget, setPorsiTarget] = useState<number>(menu.porsi_dasar);
+  // Tempel manual harga pasar (fallback bila auto-fetch SISKAPERBAPO gagal).
+  const [manualKom, setManualKom] = useState<KomoditasPasar[]>([]);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteVal, setPasteVal] = useState("");
+  const komList = manualKom.length > 0 ? manualKom : pasar?.komoditas || [];
+  const adaHarga = komList.length > 0;
+  const prosesTempel = () => {
+    const parsed = parseTempelKomoditas(pasteVal);
+    setManualKom(parsed);
+    setMsg(parsed.length > 0 ? `${parsed.length} komoditas dibaca dari tempelan.` : "Tidak ada baris harga terbaca. Pastikan menyalin kolom nama & harga.");
+    if (parsed.length > 0) setPasteOpen(false);
+  };
 
   const updBahan = (i: number, patch: Partial<BahanDraft>) =>
     setBahan((prev) => prev.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
@@ -331,7 +372,7 @@ function MenuEditor({
 
   // Isi harga satu bahan dari komoditas pasar terpilih.
   const pakaiKomoditas = (i: number, namaKomoditas: string) => {
-    const k = pasar?.komoditas.find((x) => x.nama === namaKomoditas);
+    const k = komList.find((x) => x.nama === namaKomoditas);
     if (!k) {
       updBahan(i, { pasar_ref: "" });
       return;
@@ -341,7 +382,7 @@ function MenuEditor({
 
   // Cocokkan otomatis semua bahan ke komoditas pasar & isi harganya.
   const cocokkanOtomatis = () => {
-    const list = pasar?.komoditas || [];
+    const list = komList;
     if (list.length === 0) return;
     let terisi = 0;
     setBahan((prev) =>
@@ -500,11 +541,18 @@ function MenuEditor({
               </select>
               <button
                 onClick={cocokkanOtomatis}
-                disabled={!pasar?.tersedia || pasarBusy}
+                disabled={!adaHarga || pasarBusy}
                 className="btn-ghost px-2.5 py-1 text-xs"
                 title="Cocokkan nama bahan ke komoditas pasar & isi harganya otomatis"
               >
                 🎯 Cocokkan otomatis
+              </button>
+              <button
+                onClick={() => setPasteOpen((v) => !v)}
+                className="btn-ghost px-2.5 py-1 text-xs"
+                title="Tempel harga hasil salin dari situs SISKAPERBAPO"
+              >
+                Tempel manual
               </button>
               <a
                 href={`https://siskaperbapo.jatimprov.go.id/harga/tabel/?kabkota=${encodeURIComponent(pasar?.kabkota ?? "")}`}
@@ -517,12 +565,31 @@ function MenuEditor({
               </a>
             </div>
           </div>
+          {pasteOpen && (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={pasteVal}
+                onChange={(e) => setPasteVal(e.target.value)}
+                rows={5}
+                className="input text-xs"
+                placeholder={"Salin baris komoditas dari situs SISKAPERBAPO lalu tempel di sini.\nContoh:\nBeras Premium   kg   13.500\nTelur Ayam Ras   kg   27.000\nMinyak Goreng Curah   liter   15.700"}
+              />
+              <div className="flex gap-2">
+                <button onClick={prosesTempel} className="btn-gold px-3 py-1 text-xs">Proses tempelan</button>
+                {manualKom.length > 0 && (
+                  <button onClick={() => { setManualKom([]); setPasteVal(""); }} className="btn-ghost px-3 py-1 text-xs">Hapus data tempel</button>
+                )}
+              </div>
+            </div>
+          )}
           <p className="mt-2 text-[11px] text-slate-400">
             {pasarBusy
               ? "Memuat harga pasar…"
-              : pasar?.tersedia
-                ? `Harga per ${pasar.tanggal} · ${pasar.label} · ${pasar.komoditas.length} komoditas${pasar.sumber === "cache" ? " (cache)" : ""}. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
-                : pasar?.catatan || "Harga pasar tidak tersedia saat ini — isi harga bahan manual."}
+              : manualKom.length > 0
+                ? `${manualKom.length} komoditas dari tempelan manual. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
+                : pasar?.tersedia
+                  ? `Harga per ${pasar.tanggal} · ${pasar.label} · ${pasar.komoditas.length} komoditas${pasar.sumber === "cache" ? " (cache)" : ""}. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
+                  : (pasar?.catatan || "Harga pasar otomatis tak tersedia.") + " Gunakan tombol Buka SISKAPERBAPO lalu Tempel manual, atau isi harga manual."}
           </p>
         </div>
         {bahan.length === 0 ? (
@@ -623,11 +690,11 @@ function MenuEditor({
                         className="input w-40 py-1"
                         value={b.pasar_ref}
                         onChange={(e) => pakaiKomoditas(i, e.target.value)}
-                        disabled={!pasar?.tersedia}
+                        disabled={!adaHarga}
                         title="Ambil harga dari komoditas pasar SISKAPERBAPO"
                       >
                         <option value="">— manual —</option>
-                        {pasar?.komoditas.map((k) => (
+                        {komList.map((k) => (
                           <option key={k.id} value={k.nama}>
                             {k.nama} ({rupiah(k.harga)}/{k.satuan})
                           </option>
