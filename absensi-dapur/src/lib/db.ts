@@ -630,6 +630,8 @@ async function doEnsureSchema(): Promise<void> {
     // Harga satuan & kode akun untuk Kartu Stok (nilai persediaan).
     await client.query(`ALTER TABLE barang ADD COLUMN IF NOT EXISTS harga NUMERIC NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE barang ADD COLUMN IF NOT EXISTS kode_akun TEXT NOT NULL DEFAULT ''`);
+    // Tanggal kadaluarsa terdekat (opsional) untuk peringatan keamanan pangan (FEFO).
+    await client.query(`ALTER TABLE barang ADD COLUMN IF NOT EXISTS tanggal_kadaluarsa DATE`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS stok_mutasi (
         id           SERIAL PRIMARY KEY,

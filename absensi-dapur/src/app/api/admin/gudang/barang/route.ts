@@ -2,14 +2,14 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import { normalizeKategori, type Barang } from "@/lib/gudang";
+import { normalizeKategori, normalizeTanggal, type Barang } from "@/lib/gudang";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SELECT = `SELECT id, sppg_id, nama, kategori, satuan,
   stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun,
-  catatan, aktif, urutan FROM barang`;
+  catatan, aktif, urutan, tanggal_kadaluarsa::text AS tanggal_kadaluarsa FROM barang`;
 
 export const GET = route(async () => {
   const admin = await requireGudang("read");
@@ -32,12 +32,13 @@ export const POST = route(async (req: NextRequest) => {
   const harga = Math.max(0, Number(b.harga) || 0);
   const kode_akun = String(b.kode_akun ?? "").trim().slice(0, 30);
   const catatan = String(b.catatan ?? "").trim().slice(0, 300);
+  const tanggal_kadaluarsa = normalizeTanggal(b.tanggal_kadaluarsa);
   const maxUrut = (await query<{ m: number }>(`SELECT COALESCE(MAX(urutan),0) AS m FROM barang WHERE sppg_id = $1`, [admin.sppg_id]))[0]?.m ?? 0;
   const rows = await query<Barang>(
-    `INSERT INTO barang (sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, aktif, urutan)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,TRUE,$10)
-     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan`,
-    [admin.sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, maxUrut + 1],
+    `INSERT INTO barang (sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, aktif, urutan, tanggal_kadaluarsa)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,TRUE,$10,$11)
+     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan, tanggal_kadaluarsa::text AS tanggal_kadaluarsa`,
+    [admin.sppg_id, nama, kategori, satuan, stok, stok_min, harga, kode_akun, catatan, maxUrut + 1, tanggal_kadaluarsa],
   );
   return ok({ barang: rows[0] });
 });
