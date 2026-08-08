@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import BgnLogo from "@/components/BgnLogo";
+import { DecorBlobs, DotGrid, PanciMasak } from "@/components/Illustrations";
 
 function LoginForm() {
   const router = useRouter();
@@ -45,8 +46,12 @@ function LoginForm() {
   return (
     <div className="card grid w-full max-w-3xl overflow-hidden md:grid-cols-2">
       {/* Panel branding (kiri) ala portal resmi BGN */}
-      <div className="relative hidden flex-col justify-between bg-gradient-to-br from-ink-800 to-ink-950 p-8 md:flex">
-        <div className="flex items-center gap-3">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-ink-800 to-ink-950 p-8 md:flex">
+        {/* Dekorasi vektor bertema — pola titik + blob berpendar + panci mengepul */}
+        <DotGrid className="pointer-events-none absolute inset-0 -z-10 text-slate-100/[0.05]" />
+        <DecorBlobs className="pointer-events-none absolute -right-24 -top-24 -z-10 h-80 w-80" />
+        <PanciMasak className="pointer-events-none absolute -bottom-6 -right-4 -z-10 h-40 w-40 text-gold-400/20" />
+        <div className="relative flex items-center gap-3">
           <BgnLogo size={52} />
           <div className="leading-tight">
             <p className="text-sm font-bold tracking-wide">BADAN GIZI NASIONAL</p>
