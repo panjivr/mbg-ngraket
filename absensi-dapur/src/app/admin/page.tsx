@@ -440,11 +440,11 @@ export default function AdminDashboard() {
             <p className="text-sm text-slate-400">🍽️ Menu hari ini: <span className="text-slate-200">{ring.menu}</span></p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Besar (+PJ)</p><p className="mt-0.5 text-2xl font-bold text-emerald-300">{ring.distribusi.besar}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Kecil</p><p className="mt-0.5 text-2xl font-bold text-sky-300">{ring.distribusi.kecil}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi B3</p><p className="mt-0.5 text-2xl font-bold text-amber-300">{ring.distribusi.b3}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Total Porsi</p><p className="mt-0.5 text-2xl font-bold">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
-            <div className="card p-4 sm:col-span-1"><p className="text-xs text-slate-400">Pagu Hari Ini</p><p className="mt-0.5 text-lg font-bold text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Besar (+PJ)</p><p className="mt-0.5 text-2xl font-bold tabular-nums text-emerald-300">{ring.distribusi.besar}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Kecil</p><p className="mt-0.5 text-2xl font-bold tabular-nums text-sky-300">{ring.distribusi.kecil}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Porsi B3</p><p className="mt-0.5 text-2xl font-bold tabular-nums text-amber-300">{ring.distribusi.b3}</p></div>
+            <div className="card p-4"><p className="text-xs text-slate-400">Total Porsi</p><p className="mt-0.5 text-2xl font-bold tabular-nums">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
+            <div className="card p-4 sm:col-span-1"><p className="text-xs text-slate-400">Pagu Hari Ini</p><p className="mt-0.5 text-lg font-bold tabular-nums text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
             <div className="card p-4">
               <p className="text-xs text-slate-400">Stok Gudang</p>
               <p className="mt-0.5 text-sm"><b className="text-emerald-300">{ring.gudang.aman}</b> aman · <b className="text-amber-300">{ring.gudang.menipis}</b> menipis · <b className="text-red-300">{ring.gudang.habis}</b> habis</p>
@@ -477,7 +477,7 @@ export default function AdminDashboard() {
                   <Icon name={c.icon} />
                 </span>
               </div>
-              <p className={"mt-2 text-3xl font-bold " + c.text}>
+              <p className={"mt-2 text-3xl font-bold tabular-nums " + c.text}>
                 {val ?? "–"}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p>

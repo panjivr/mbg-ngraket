@@ -7,9 +7,9 @@ import type { ReactNode } from "react";
  * Server component murni — tanpa state, tanpa query DB (item operasional
  * bersyarat tetap tersedia lewat sheet "Menu" di bilah bawah).
  *
- * Warna mengikuti palet resmi BGN: navy #071e49, biru pastel #b5e0ea,
- * emas #d1b06c — dipakai sebagai gradasi lembut pada tiap chip ikon agar
- * tampil bermartabat & konsisten dengan lambang Badan Gizi Nasional.
+ * Gaya: satu sistem chip seragam (permukaan lembut + tepi tipis), warna hanya
+ * pada ikon sebagai kode kategori — tenang, bermartabat, dan konsisten dengan
+ * palet BGN di tema gelap maupun terang.
  */
 
 type SvgProps = { className?: string };
@@ -110,36 +110,39 @@ const SERVICES: Service[] = [
   { href: "/dapur/profil", label: "Kartu Saya", Icon: IdCardIcon, tone: "gold" },
 ];
 
-// Gradasi chip mengacu palet resmi BGN (bgn.go.id/logo-meaning).
+// Sistem chip tunggal (nirmana: kesatuan) — satu permukaan lembut yang seragam,
+// warna hanya pada ikon sebagai kode kategori halus. Jauh lebih tenang &
+// profesional daripada tiga gradasi penuh, dan otomatis kontras di tema terang
+// (kelas bg-white/5 & text-*-400 sudah ditimpa untuk mode terang di globals).
 const TONE: Record<Service["tone"], string> = {
-  navy: "from-[#0e1f55] to-[#071e49] text-[#b5e0ea] ring-1 ring-inset ring-white/10",
-  sky: "from-[#5b8bff] to-[#3464e6] text-white ring-1 ring-inset ring-white/15",
-  gold: "from-[#e0a92e] to-[#c08e1e] text-[#fff7e6] ring-1 ring-inset ring-white/15",
+  navy: "text-gold-400",
+  sky: "text-ember-400",
+  gold: "text-emas-500",
 };
 
 export default function DapurQuickMenu() {
   return (
-    <section className="card p-4" aria-labelledby="layanan-pegawai">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="card p-5" aria-labelledby="layanan-pegawai">
+      <div className="mb-4 flex items-center justify-between">
         <h2 id="layanan-pegawai" className="text-sm font-bold text-slate-100">
           Layanan Pegawai
         </h2>
         <span className="text-[11px] font-medium text-slate-400">Akses cepat</span>
       </div>
-      <div className="grid grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-4">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-5 sm:grid-cols-4">
         {SERVICES.map((s) => (
           <Link
             key={s.href}
             href={s.href}
-            className="group flex flex-col items-center gap-2 rounded-2xl px-1 py-1.5 text-center transition-colors hover:bg-white/5"
+            className="group flex flex-col items-center gap-2.5 rounded-2xl px-1 py-1.5 text-center transition-colors"
           >
             <span
               className={
-                "grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br shadow-[0_8px_20px_-10px_rgba(2,8,40,0.7)] transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-95 " +
+                "grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-white/5 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-gold-500/40 group-hover:bg-white/10 group-active:scale-95 " +
                 TONE[s.tone]
               }
             >
-              <s.Icon className="h-7 w-7" />
+              <s.Icon className="h-6 w-6" />
             </span>
             <span className="text-[11px] font-medium leading-tight text-slate-300">
               {s.label}

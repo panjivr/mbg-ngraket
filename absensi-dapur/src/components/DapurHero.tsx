@@ -51,9 +51,9 @@ export default async function DapurHero() {
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-[#b5e0ea]">{sapa},</p>
-          <h1 className="truncate text-xl font-extrabold tracking-tight text-white">{nama}</h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <p className="text-xs font-medium tracking-wide text-[#b5e0ea]">{sapa},</p>
+          <h1 className="mt-0.5 truncate text-2xl font-extrabold leading-tight tracking-tight text-white">{nama}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
               className="badge text-[#071e49]"
               style={{ backgroundColor: "#d1b06c" }}
@@ -67,7 +67,7 @@ export default async function DapurHero() {
       </div>
 
       {/* Chip status — hijau BGN menandai sesi aktif */}
-      <div className="relative mt-4 flex flex-wrap gap-2">
+      <div className="relative mt-5 flex flex-wrap gap-2">
         <span
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-[#071e49]"
           style={{ backgroundColor: "#92d05d" }}

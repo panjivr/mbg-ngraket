@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default function DapurPage() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <DapurHero />
       <HariIstimewa />
       <PengumumanCard />
