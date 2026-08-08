@@ -228,7 +228,9 @@ html[data-theme="light"] body::before {
   .input {
     @apply w-full rounded-xl border border-white/10 bg-ink-900/80 px-3.5 py-2.5 text-sm text-slate-100
            placeholder:text-slate-500 outline-none transition-colors duration-200
-           focus:border-gold-500/70 focus:ring-2 focus:ring-gold-500/25 hover:border-white/20;
+           focus:border-gold-500/70 focus:ring-2 focus:ring-gold-500/25 hover:border-white/20
+           disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-white/10
+           read-only:cursor-default read-only:bg-white/[0.03] read-only:text-slate-300;
   }
   .label {
     @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
