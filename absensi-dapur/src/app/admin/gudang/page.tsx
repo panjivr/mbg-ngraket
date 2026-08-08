@@ -35,6 +35,8 @@ export default function GudangPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [infoKat, setInfoKat] = useState<Kategori | null>(null);
   const [tab, setTab] = useState<"dashboard" | "kelola" | "kartu">("dashboard");
+  const [belanja, setBelanja] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +59,29 @@ export default function GudangPage() {
     for (const b of list) { const s = statusStok(b); if (s === "habis") habis++; else if (s === "menipis") menipis++; }
     return { total: list.length, habis, menipis };
   }, [list]);
+
+  // Daftar belanja: barang habis/menipis + saran jumlah beli (stok_min − stok).
+  const perluBeli = useMemo(
+    () =>
+      list
+        .map((b) => ({ b, s: statusStok(b), saran: Math.max(0, b.stok_min - b.stok) }))
+        .filter((x) => x.s !== "aman")
+        .sort((a, b) => (a.s === b.s ? 0 : a.s === "habis" ? -1 : 1)),
+    [list],
+  );
+  const belanjaTeks = useMemo(() => {
+    if (perluBeli.length === 0) return "";
+    const tgl = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+    const baris = perluBeli.map(({ b, s, saran }) => {
+      const beli = saran > 0 ? `beli ±${fmtNum(saran)} ${b.satuan}` : `stok habis`;
+      return `• ${b.nama} — ${beli} (sisa ${fmtNum(b.stok)} ${b.satuan}${s === "habis" ? ", HABIS" : ""})`;
+    });
+    return `🛒 Daftar Belanja Gudang · ${tgl}\n\n${baris.join("\n")}\n\nTotal ${perluBeli.length} barang perlu dibeli.`;
+  }, [perluBeli]);
+
+  async function salinBelanja() {
+    try { await navigator.clipboard.writeText(belanjaTeks); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+  }
 
   async function simpanBarang() {
     if (!bForm) return;
@@ -105,7 +130,15 @@ export default function GudangPage() {
           <p className="text-sm text-slate-400">Dashboard nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
         </div>
         {tab === "kelola" && (
-          <button onClick={() => { setMsg(null); setBForm({ ...emptyB }); }} className="btn-gold">+ Tambah Barang</button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setBelanja(true)} className="btn-ghost">
+              Daftar Belanja
+              {perluBeli.length > 0 && (
+                <span className="ml-0.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-amber-300">{perluBeli.length}</span>
+              )}
+            </button>
+            <button onClick={() => { setMsg(null); setBForm({ ...emptyB }); }} className="btn-gold">+ Tambah Barang</button>
+          </div>
         )}
       </div>
 
@@ -288,6 +321,41 @@ export default function GudangPage() {
               </table>
             )}
             <div className="mt-4"><button onClick={() => setRiwayat(null)} className="btn-ghost w-full">Tutup</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal daftar belanja (barang habis/menipis) */}
+      {belanja && (
+        <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4" onClick={() => setBelanja(false)}>
+          <div className="card flex max-h-[85dvh] w-full max-w-md flex-col p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold">Daftar Belanja</h2>
+            <p className="mt-1 text-sm text-slate-400">Barang habis &amp; menipis beserta saran jumlah beli (dari stok minimum).</p>
+            {perluBeli.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">Semua stok aman — tidak ada yang perlu dibeli. 👍</p>
+            ) : (
+              <>
+                <div className="scroll-x mt-4 flex-1 space-y-1.5 overflow-y-auto pr-1">
+                  {perluBeli.map(({ b, s, saran }) => (
+                    <div key={b.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{b.nama}</p>
+                        <p className="text-[11px] text-slate-400">sisa {fmtNum(b.stok)} {b.satuan} · min {fmtNum(b.stok_min)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className={"badge " + STATUS_BADGE[s]}>{STATUS_LABEL[s]}</span>
+                        {saran > 0 && <p className="mt-0.5 text-[11px] font-semibold text-amber-300">beli ±{fmtNum(saran)} {b.satuan}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button onClick={salinBelanja} className="btn-ghost flex-1">{copied ? "Tersalin ✓" : "Salin teks"}</button>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(belanjaTeks)}`} target="_blank" rel="noopener noreferrer" className="btn-gold flex-1">Bagikan ke WhatsApp</a>
+                </div>
+              </>
+            )}
+            <button onClick={() => setBelanja(false)} className="mt-2 text-xs text-slate-400 hover:text-slate-200">Tutup</button>
           </div>
         </div>
       )}
