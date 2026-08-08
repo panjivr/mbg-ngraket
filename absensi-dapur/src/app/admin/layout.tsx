@@ -45,8 +45,8 @@ export default async function AdminLayout({
   const fitur: string[] = isSuper ? SEMUA_FITUR : fiturAktif(paket);
 
   return (
-    <div className="mx-auto min-h-dvh max-w-6xl px-4 pb-12">
-      <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
+    <div className="mx-auto min-h-dvh w-full max-w-[1720px] px-4 pb-12 sm:px-6 lg:px-8 xl:px-10">
+      <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <BgnLogo size={38} />
