@@ -26,6 +26,11 @@ interface DivisiRow {
   tepat: number;
   terlambat: number;
 }
+interface DistRow {
+  d: string;
+  porsi: number;
+  pagu: number;
+}
 
 /**
  * Data agregat untuk halaman Statistik / Grafik absensi (per dapur).
@@ -43,7 +48,7 @@ export const GET = route(async (req: NextRequest) => {
   const from = DATE_RE.test(sp.get("from") || "") ? sp.get("from")! : today;
   const to = DATE_RE.test(sp.get("to") || "") ? sp.get("to")! : today;
 
-  const [daily, mood, divisi, board] = await Promise.all([
+  const [daily, mood, divisi, board, distribusi] = await Promise.all([
     query<DailyRow>(
       `SELECT COALESCE(a.shift_tanggal, a.tanggal)::text AS d,
               COUNT(*) FILTER (WHERE a.status_masuk = 'Tepat Waktu')::int AS tepat,
@@ -81,6 +86,18 @@ export const GET = route(async (req: NextRequest) => {
       [from, to, sppgId],
     ),
     computeBoard(sppgId, from, to).then((r) => r.board),
+    query<DistRow>(
+      `SELECT dd.tanggal::text AS d,
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.besar + di.kecil + di.b3 ELSE 0 END), 0)::int AS porsi,
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.besar * s.harga_besar + di.kecil * s.harga_kecil + di.b3 * s.harga_b3 ELSE 0 END), 0)::float8 AS pagu
+         FROM distribusi dd
+         JOIN sppg s ON s.id = dd.sppg_id
+         LEFT JOIN distribusi_item di ON di.distribusi_id = dd.id
+        WHERE dd.sppg_id = $3 AND dd.tanggal BETWEEN $1 AND $2
+        GROUP BY dd.tanggal
+        ORDER BY dd.tanggal`,
+      [from, to, sppgId],
+    ),
   ]);
 
   const ranking = board
@@ -96,5 +113,5 @@ export const GET = route(async (req: NextRequest) => {
       ketepatan: r.ketepatan.pct,
     }));
 
-  return ok({ from, to, daily, mood, divisi, ranking });
+  return ok({ from, to, daily, mood, divisi, ranking, distribusi });
 });
