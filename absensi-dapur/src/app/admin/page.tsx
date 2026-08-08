@@ -437,16 +437,16 @@ export default function AdminDashboard() {
       {ring && (
         <div className="space-y-3">
           {ring.menu && (
-            <p className="text-sm text-slate-400">🍽️ Menu hari ini: <span className="text-slate-200">{ring.menu}</span></p>
+            <p className="text-sm text-slate-400">Menu hari ini: <span className="font-medium text-slate-200">{ring.menu}</span></p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Besar (+PJ)</p><p className="mt-0.5 text-2xl font-bold text-emerald-300">{ring.distribusi.besar}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi Kecil</p><p className="mt-0.5 text-2xl font-bold text-sky-300">{ring.distribusi.kecil}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Porsi B3</p><p className="mt-0.5 text-2xl font-bold text-amber-300">{ring.distribusi.b3}</p></div>
-            <div className="card p-4"><p className="text-xs text-slate-400">Total Porsi</p><p className="mt-0.5 text-2xl font-bold">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
-            <div className="card p-4 sm:col-span-1"><p className="text-xs text-slate-400">Pagu Hari Ini</p><p className="mt-0.5 text-lg font-bold text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
-            <div className="card p-4">
-              <p className="text-xs text-slate-400">Stok Gudang</p>
+            <div className="stat-card"><p className="stat-label">Porsi Besar (+PJ)</p><p className="stat-value text-emerald-300">{ring.distribusi.besar}</p></div>
+            <div className="stat-card"><p className="stat-label">Porsi Kecil</p><p className="stat-value text-sky-300">{ring.distribusi.kecil}</p></div>
+            <div className="stat-card"><p className="stat-label">Porsi B3</p><p className="stat-value text-amber-300">{ring.distribusi.b3}</p></div>
+            <div className="stat-card"><p className="stat-label">Total Porsi</p><p className="stat-value">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
+            <div className="stat-card sm:col-span-1"><p className="stat-label">Pagu Hari Ini</p><p className="stat-value !text-lg text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
+            <div className="stat-card">
+              <p className="stat-label">Stok Gudang</p>
               <p className="mt-0.5 text-sm"><b className="text-emerald-300">{ring.gudang.aman}</b> aman · <b className="text-amber-300">{ring.gudang.menipis}</b> menipis · <b className="text-red-300">{ring.gudang.habis}</b> habis</p>
               <p className="text-[11px] text-slate-500">{ring.gudang.total} jenis barang</p>
             </div>
@@ -469,15 +469,15 @@ export default function AdminDashboard() {
               ? "pegawai aktif"
               : `${pct(val ?? 0, derived.total)}% dari total`;
           return (
-            <div key={c.key} className="card relative overflow-hidden p-4">
-              <span className={"absolute inset-x-0 top-0 h-0.5 " + c.bar} />
+            <div key={c.key} className="stat-card">
+              <span className={"absolute inset-y-0 left-0 w-0.5 " + c.bar} />
               <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-400">{c.label}</p>
+                <p className="stat-label">{c.label}</p>
                 <span className={"grid h-8 w-8 place-items-center rounded-lg " + c.chip}>
                   <Icon name={c.icon} />
                 </span>
               </div>
-              <p className={"mt-2 text-3xl font-bold " + c.text}>
+              <p className={"stat-value !text-3xl " + c.text}>
                 {val ?? "–"}
               </p>
               <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import DapurIcon, { type IconName } from "@/components/DapurIcons";
 
 /**
  * Floating bottom navigation untuk staf dapur — hanya mobile (md:hidden).
@@ -98,7 +99,7 @@ const RIGHT: Tab[] = [
   { href: "/dapur/riwayat", label: "Riwayat", Icon: HistoryIcon },
 ];
 
-type SheetLink = { href: string; label: string };
+type SheetLink = { href: string; label: string; icon: IconName };
 type SheetGroup = { title: string; links: SheetLink[] };
 
 export default function DapurBottomNav({
@@ -133,37 +134,37 @@ export default function DapurBottomNav({
   const absenActive = pathname === "/dapur";
 
   const groups: SheetGroup[] = [
-    { title: "🏆 Kinerja", links: [
-      { href: "/dapur/peringkat", label: "🏆 Peringkat" },
-      { href: "/dapur/jadwal", label: "🗓️ Jadwal" },
-      { href: "/dapur/sop", label: "📋 SOP" },
+    { title: "Kinerja", links: [
+      { href: "/dapur/peringkat", label: "Peringkat", icon: "trophy" },
+      { href: "/dapur/jadwal", label: "Jadwal", icon: "calendar" },
+      { href: "/dapur/sop", label: "SOP", icon: "book" },
     ] },
-    { title: "💰 Keuangan", links: [
-      { href: "/dapur/slip", label: "🧾 Slip Gaji" },
-      { href: "/dapur/finansial", label: "💰 Finansial" },
+    { title: "Keuangan", links: [
+      { href: "/dapur/slip", label: "Slip Gaji", icon: "receipt" },
+      { href: "/dapur/finansial", label: "Finansial", icon: "wallet" },
     ] },
-    { title: "📝 Pengajuan", links: [
-      { href: "/dapur/izin", label: "📝 Izin" },
-      { href: "/dapur/pengaduan", label: "📮 Aspirasi" },
+    { title: "Pengajuan", links: [
+      { href: "/dapur/izin", label: "Izin", icon: "docPen" },
+      { href: "/dapur/pengaduan", label: "Aspirasi", icon: "megaphone" },
     ] },
-    { title: "👤 Saya", links: [
-      { href: "/dapur/riwayat", label: "🕘 Riwayat Saya" },
-      { href: "/dapur/profil", label: "🪪 Kartu Saya" },
+    { title: "Saya", links: [
+      { href: "/dapur/riwayat", label: "Riwayat Saya", icon: "history" },
+      { href: "/dapur/profil", label: "Kartu Saya", icon: "idCard" },
     ] },
   ];
   const operasional: SheetLink[] = [
-    ...(isDriver ? [{ href: "/dapur/kilometer", label: "🚗 Kilometer" }] : []),
-    ...(gudangKeluar ? [{ href: "/dapur/gudang", label: "🗄️ Gudang" }] : []),
+    ...(isDriver ? [{ href: "/dapur/kilometer", label: "Kilometer", icon: "car" as const }] : []),
+    ...(gudangKeluar ? [{ href: "/dapur/gudang", label: "Gudang", icon: "box" as const }] : []),
   ];
-  if (operasional.length) groups.push({ title: "🛠️ Operasional", links: operasional });
+  if (operasional.length) groups.push({ title: "Operasional", links: operasional });
   const pintasan: SheetLink[] =
     role === "admin"
-      ? [{ href: "/admin", label: "🛡️ Panel Admin" }]
+      ? [{ href: "/admin", label: "Panel Admin", icon: "shield" }]
       : [
-          ...(aksesDistribusi ? [{ href: "/admin/distribusi", label: "🚚 Distribusi" }] : []),
-          ...(aksesLaporan ? [{ href: "/admin/laporan", label: "📋 Laporan" }] : []),
+          ...(aksesDistribusi ? [{ href: "/admin/distribusi", label: "Distribusi", icon: "truck" as const }] : []),
+          ...(aksesLaporan ? [{ href: "/admin/laporan", label: "Laporan", icon: "clipboard" as const }] : []),
         ];
-  if (pintasan.length) groups.push({ title: "🔗 Pintasan", links: pintasan });
+  if (pintasan.length) groups.push({ title: "Pintasan", links: pintasan });
 
   const tabCls = (active: boolean) =>
     "flex min-w-[3.25rem] flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-medium transition-colors " +
@@ -253,12 +254,16 @@ export default function DapurBottomNav({
                           key={l.href}
                           href={l.href}
                           className={
-                            "rounded-xl border px-3 py-3 text-sm font-medium transition-colors " +
+                            "flex items-center gap-2.5 rounded-xl border px-3 py-3 text-sm font-medium transition-colors " +
                             (active
                               ? "border-gold-500/40 bg-gold-500/15 text-gold-400"
                               : "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10")
                           }
                         >
+                          <DapurIcon
+                            name={l.icon}
+                            className={"h-5 w-5 shrink-0 " + (active ? "text-gold-400" : "text-slate-400")}
+                          />
                           {l.label}
                         </Link>
                       );

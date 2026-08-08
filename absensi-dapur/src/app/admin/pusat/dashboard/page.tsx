@@ -73,7 +73,7 @@ export default function DashboardPusatPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📊 Dashboard Semua Dapur</h1>
+          <h1 className="text-xl font-bold">Dashboard Semua Dapur</h1>
           <p className="text-sm text-slate-400">Ringkasan pagu, kehadiran, karyawan, porsi &amp; menu — pilih tanggal &amp; dapur.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -110,9 +110,9 @@ export default function DashboardPusatPage() {
       {cards.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           {cards.map((c) => (
-            <div key={c.label} className="card p-4">
-              <p className="text-xs text-slate-400">{c.label}</p>
-              <p className={"mt-1 text-xl font-bold tabular-nums " + c.cls}>{c.value}</p>
+            <div key={c.label} className="stat-card">
+              <p className="stat-label">{c.label}</p>
+              <p className={"stat-value !text-xl " + c.cls}>{c.value}</p>
             </div>
           ))}
         </div>
