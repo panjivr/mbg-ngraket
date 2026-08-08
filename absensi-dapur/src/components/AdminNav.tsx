@@ -91,7 +91,7 @@ function buildGroups(f: Flags): Group[] {
 function isActive(pathname: string, it: Item): boolean {
   if (it.exact) return pathname === it.href;
   if (pathname === it.href || pathname.startsWith(it.href + "/")) return true;
-  return it.also?.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p)) ?? false;
+  return it.also?.some((p) => pathname === p || pathname.startsWith(p + "/")) ?? false;
 }
 
 // Navigasi profesional tanpa emoji: buang emoji di awal label (ikon struktural
