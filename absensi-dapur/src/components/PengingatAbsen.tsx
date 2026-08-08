@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 interface Data {
   belumMasuk: boolean;
@@ -43,11 +43,16 @@ export default function PengingatAbsen() {
   return (
     <div className="space-y-2">
       {data.belumMasuk && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3">
-          <span className="text-lg">⏰</span>
+        <div className="card flex items-start gap-3 border-l-4 border-l-amber-500 p-4">
+          <span className="mt-0.5 shrink-0 text-amber-500">
+            <ReminderIcon>
+              <circle cx="12" cy="13" r="8" />
+              <path d="M12 9v4l2.5 1.5M5 3 2.5 5.5M19 3l2.5 2.5" />
+            </ReminderIcon>
+          </span>
           <div className="text-sm">
-            <p className="font-semibold text-amber-200">Kamu belum absen masuk</p>
-            <p className="text-amber-100/80">
+            <p className="font-semibold text-slate-100">Kamu belum absen masuk</p>
+            <p className="mt-0.5 leading-relaxed text-slate-400">
               Rekan kerjamu sudah absen masuk
               {data.jamTemanMasuk ? ` sejak jam ${jam(data.jamTemanMasuk)}` : ""}.
               Jangan lupa absen ya!
@@ -56,11 +61,15 @@ export default function PengingatAbsen() {
         </div>
       )}
       {data.belumPulang && (
-        <div className="flex items-start gap-3 rounded-xl border border-sky-400/40 bg-sky-400/10 p-3">
-          <span className="text-lg">🌙</span>
+        <div className="card flex items-start gap-3 border-l-4 border-l-sky-500 p-4">
+          <span className="mt-0.5 shrink-0 text-sky-500">
+            <ReminderIcon>
+              <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+            </ReminderIcon>
+          </span>
           <div className="text-sm">
-            <p className="font-semibold text-sky-200">Kamu belum absen pulang</p>
-            <p className="text-sky-100/80">
+            <p className="font-semibold text-slate-100">Kamu belum absen pulang</p>
+            <p className="mt-0.5 leading-relaxed text-slate-400">
               Rekan kerjamu sudah absen pulang
               {data.jamTemanPulang ? ` sejak jam ${jam(data.jamTemanPulang)}` : ""}.
               Ingat absen pulang sebelum pergi.
@@ -69,5 +78,22 @@ export default function PengingatAbsen() {
         </div>
       )}
     </div>
+  );
+}
+
+function ReminderIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
   );
 }
