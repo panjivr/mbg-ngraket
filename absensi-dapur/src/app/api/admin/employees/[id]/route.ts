@@ -99,6 +99,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     body.akses_distribusi !== undefined ? Boolean(body.akses_distribusi) : (existing.akses_distribusi ?? false);
   const akses_laporan =
     body.akses_laporan !== undefined ? Boolean(body.akses_laporan) : (existing.akses_laporan ?? false);
+  const akses_keuangan =
+    body.akses_keuangan !== undefined ? Boolean(body.akses_keuangan) : (existing.akses_keuangan ?? false);
+  const akses_gizi =
+    body.akses_gizi !== undefined ? Boolean(body.akses_gizi) : (existing.akses_gizi ?? false);
   const akses_gudang_keluar =
     body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
   // Peran HR dapat diberikan/dicabut oleh admin penuh dapur ini (route sudah
@@ -111,7 +115,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
-    jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr,
+    jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_gudang_keluar, is_hr,
   ];
   // Ganti password HANYA bila diminta eksplisit (change_password) — mencegah
   // autofill browser diam-diam menimpa password saat mengedit data lain.
@@ -130,10 +134,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     rows = await query<User>(
       `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
               divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
-              akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14, is_hr=$15${passwordClause}
+              akses_distribusi=$12, akses_laporan=$13, akses_keuangan=$14, akses_gizi=$15, akses_gudang_keluar=$16, is_hr=$17${passwordClause}
          WHERE id = $${paramsArr.length}
        RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-                 tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr`,
+                 tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_gudang_keluar, is_hr`,
       paramsArr,
     );
   } catch (e) {
@@ -148,6 +152,8 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   if (existing.role !== role) ubah.push(`role→${role}`);
   if (existing.aktif !== aktif) ubah.push(aktif ? "diaktifkan" : "dinonaktifkan");
   if ((existing.is_hr ?? false) !== is_hr) ubah.push(is_hr ? "HR aktif" : "HR nonaktif");
+  if ((existing.akses_keuangan ?? false) !== akses_keuangan) ubah.push(akses_keuangan ? "Akuntan aktif" : "Akuntan nonaktif");
+  if ((existing.akses_gizi ?? false) !== akses_gizi) ubah.push(akses_gizi ? "Ahli Gizi aktif" : "Ahli Gizi nonaktif");
   if (passwordClause) ubah.push("password");
   await catatAudit(admin, "ubah", "Pegawai", `${nama}${ubah.length ? " · " + ubah.join(", ") : ""}`);
   return ok({ employee: rows[0] });

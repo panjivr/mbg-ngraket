@@ -20,7 +20,7 @@ interface BahanIn {
 
 // Update data menu + ganti seluruh daftar bahan dalam satu transaksi.
 export const PUT = route(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID menu tidak valid.");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -72,7 +72,7 @@ export const PUT = route(async (req: NextRequest, ctx: { params: Promise<{ id: s
 });
 
 export const DELETE = route(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID menu tidak valid.");
   const done = await withClient(async (client) => {

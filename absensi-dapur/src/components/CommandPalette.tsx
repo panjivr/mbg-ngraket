@@ -13,6 +13,8 @@ interface Flags {
   fullAdmin: boolean;
   aksesDistribusi: boolean;
   aksesLaporan: boolean;
+  aksesKeuangan: boolean;
+  aksesGizi: boolean;
   isHr: boolean;
   isSuper: boolean;
   fitur: string[];
@@ -30,10 +32,10 @@ function buildDests(f: Flags): Dest[] {
   const raw: Dest[] = [
     { label: "Dashboard", href: "/admin", group: "Utama", keywords: "beranda home ringkasan", show: f.fullAdmin },
     { label: "Distribusi", href: "/admin/distribusi", group: "Operasional", keywords: "kirim antar sekolah porsi", show: f.aksesDistribusi && has("distribusi") },
-    { label: "Menu", href: "/admin/menu", group: "Operasional", keywords: "makanan resep hidangan", show: f.aksesDistribusi && has("distribusi") },
-    { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", group: "Operasional", keywords: "belanja bahan periode rencana", show: f.aksesDistribusi && has("distribusi") },
+    { label: "Menu", href: "/admin/menu", group: "Operasional", keywords: "makanan resep hidangan", show: (f.aksesDistribusi || f.aksesGizi) && has("distribusi") },
+    { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", group: "Operasional", keywords: "belanja bahan periode rencana", show: (f.aksesDistribusi || f.aksesGizi) && has("distribusi") },
     { label: "Laporan Harian", href: "/admin/laporan", group: "Operasional", keywords: "penerimaan harian catatan", show: f.aksesLaporan && has("distribusi") },
-    { label: "Ahli Gizi", href: "/admin/ahli-gizi", group: "Operasional", keywords: "nutrisi kalori gizi", show: f.fullAdmin && has("ahli_gizi") },
+    { label: "Ahli Gizi", href: "/admin/ahli-gizi", group: "Operasional", keywords: "nutrisi kalori gizi", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
     { label: "Gudang", href: "/admin/gudang", group: "Operasional", keywords: "stok inventaris bahan", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
     { label: "Pegawai", href: "/admin/pegawai", group: "Kepegawaian", keywords: "staf karyawan tim absen", show: f.fullAdmin && has("pegawai") },
     { label: "Divisi", href: "/admin/divisi", group: "Kepegawaian", keywords: "bagian departemen grup", show: f.fullAdmin && has("pegawai") },
@@ -47,7 +49,7 @@ function buildDests(f: Flags): Dest[] {
     { label: "Rekap", href: "/admin/rekap", group: "Keuangan", keywords: "laporan absensi ekspor", show: f.fullAdmin },
     { label: "Gaji", href: "/admin/gaji", group: "Keuangan", keywords: "payroll upah bayar", show: f.fullAdmin },
     { label: "Slip", href: "/admin/slip", group: "Keuangan", keywords: "slip gaji cetak", show: f.fullAdmin },
-    { label: "Akuntan", href: "/admin/akuntan", group: "Keuangan", keywords: "pembukuan kas jurnal", show: f.fullAdmin && has("akuntan") },
+    { label: "Akuntan", href: "/admin/akuntan", group: "Keuangan", keywords: "pembukuan kas jurnal", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
     { label: "Aktivitas", href: "/admin/audit", group: "Sistem", keywords: "log audit riwayat", show: f.fullAdmin },
     { label: "Pengaturan", href: "/admin/pengaturan", group: "Sistem", keywords: "setting konfigurasi profil dapur", show: f.fullAdmin },
     { label: "Dashboard Dapur", href: "/admin/pusat/dashboard", group: "Semua Dapur", keywords: "pusat monitoring semua", show: f.isSuper },

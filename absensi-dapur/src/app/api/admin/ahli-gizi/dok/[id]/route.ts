@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireAkses } from "@/lib/session";
 import { catatAudit } from "@/lib/audit";
 import { ok, fail, route } from "@/lib/api";
 
@@ -28,7 +28,7 @@ const parseId = (raw: string): number | null => {
 
 // GET: ambil satu dokumen gizi lengkap (termasuk konten_html) untuk dibuka/cetak ulang.
 export const GET = route(async (_req: NextRequest, ctx: Ctx) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("gizi");
   const id = parseId((await ctx.params).id);
   if (id === null) return fail(400, "ID tidak valid.");
 
@@ -44,7 +44,7 @@ export const GET = route(async (_req: NextRequest, ctx: Ctx) => {
 
 // DELETE: hapus satu dokumen gizi tersimpan.
 export const DELETE = route(async (_req: NextRequest, ctx: Ctx) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("gizi");
   const id = parseId((await ctx.params).id);
   if (id === null) return fail(400, "ID tidak valid.");
 

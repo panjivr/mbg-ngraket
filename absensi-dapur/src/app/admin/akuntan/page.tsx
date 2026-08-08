@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { query } from "@/lib/db";
 import { TEMPLATE_AKUNTAN } from "@/lib/akuntan";
 
 export const dynamic = "force-dynamic";
@@ -112,8 +113,17 @@ const KELOMPOK: { label: string; ket: string; slugs: string[] }[] = [
 export default async function AkuntanHubPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  // Hanya admin penuh yang boleh mengakses template akuntan.
-  if (session.role !== "admin") redirect("/dapur");
+  // Admin penuh ATAU sub-admin Akuntan (akses_keuangan). Flag dibaca dari DB
+  // (bukan token) agar pemberian/pencabutan akses langsung berlaku.
+  if (session.role !== "admin") {
+    const me = (
+      await query<{ akses_keuangan: boolean }>(
+        `SELECT akses_keuangan FROM users WHERE id = $1`,
+        [session.uid],
+      )
+    )[0];
+    if (!me?.akses_keuangan) redirect("/dapur");
+  }
 
   const byslug = new Map(TEMPLATE_AKUNTAN.map((t) => [t.slug, t]));
   // Jumlah otomatis nominal acuan dari BA yang memiliki nominal.

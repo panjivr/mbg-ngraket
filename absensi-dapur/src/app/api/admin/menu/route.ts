@@ -22,7 +22,7 @@ interface BarangPilih {
 
 // Daftar semua menu (beserta bahannya) + daftar barang gudang untuk pemilih bahan.
 export const GET = route(async () => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const menus = await query<Menu>(
     `SELECT id, sppg_id, nama, kategori, porsi_dasar, keterangan, aktif, urutan
        FROM menu WHERE sppg_id = $1 ORDER BY urutan ASC, id ASC`,
@@ -64,7 +64,7 @@ export const GET = route(async () => {
 // Buat menu baru. Jika `duplikat_dari` diisi, salin menu + seluruh bahannya
 // (untuk membuat variasi menu dengan cepat). Selain itu buat menu kosong.
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const nama = String(b.nama ?? "").trim().slice(0, 120);
   if (!nama) return fail(400, "Nama menu wajib diisi.");

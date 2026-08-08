@@ -65,6 +65,8 @@ export interface User {
   is_driver?: boolean;
   akses_distribusi?: boolean;
   akses_laporan?: boolean;
+  akses_keuangan?: boolean;
+  akses_gizi?: boolean;
   akses_gudang_keluar?: boolean;
   is_hr?: boolean;
 }

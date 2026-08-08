@@ -21,6 +21,8 @@ interface Employee {
   is_driver: boolean;
   akses_distribusi: boolean;
   akses_laporan: boolean;
+  akses_keuangan: boolean;
+  akses_gizi: boolean;
   akses_gudang_keluar: boolean;
   is_hr: boolean;
 }
@@ -48,6 +50,8 @@ interface FormState {
   is_driver: boolean;
   akses_distribusi: boolean;
   akses_laporan: boolean;
+  akses_keuangan: boolean;
+  akses_gizi: boolean;
   akses_gudang_keluar: boolean;
   is_hr: boolean;
 }
@@ -68,9 +72,60 @@ const emptyForm: FormState = {
   is_driver: false,
   akses_distribusi: false,
   akses_laporan: false,
+  akses_keuangan: false,
+  akses_gizi: false,
   akses_gudang_keluar: false,
   is_hr: false,
 };
+
+/** Kunci boolean pada FormState yang mewakili peran/akses khusus. */
+type AksesKey =
+  | "is_driver"
+  | "akses_distribusi"
+  | "akses_laporan"
+  | "akses_gizi"
+  | "akses_keuangan"
+  | "akses_gudang_keluar"
+  | "is_hr";
+
+interface AksesOpsi {
+  key: AksesKey;
+  icon: string;
+  title: string;
+  desc: string;
+  /** Kelas Tailwind LENGKAP & statis (tak boleh di-concat dinamis → aman purge). */
+  chip: string;
+}
+
+/**
+ * Peran & akses khusus dikelompokkan agar mudah dipindai admin. Kartu toggle
+ * (switch) menggantikan daftar checkbox polos supaya terbaca profesional dan
+ * seirama dengan panel lain. Palet mengikuti aksen BGN.
+ */
+const AKSES_GRUP: { judul: string; opsi: AksesOpsi[] }[] = [
+  {
+    judul: "Operasional",
+    opsi: [
+      { key: "akses_distribusi", icon: "🚚", title: "Admin Distribusi", desc: "Akses seluruh fitur Distribusi.", chip: "bg-gold-500/15 text-gold-400 ring-1 ring-inset ring-gold-500/30" },
+      { key: "akses_laporan", icon: "📋", title: "Admin Penerimaan", desc: "Laporan Harian & kelola Gudang.", chip: "bg-amber-500/15 text-amber-200 ring-1 ring-inset ring-amber-500/30" },
+      { key: "akses_gudang_keluar", icon: "🗄️", title: "Gudang Keluar", desc: "Persiapan/pengolahan/pemorsian — hanya catat barang keluar.", chip: "bg-slate-500/20 text-slate-200 ring-1 ring-inset ring-slate-400/30" },
+      { key: "is_driver", icon: "🚗", title: "Driver", desc: "Mengisi Data Kilometer di menu staf.", chip: "bg-sky-500/15 text-sky-200 ring-1 ring-inset ring-sky-500/30" },
+    ],
+  },
+  {
+    judul: "Menu & Gizi",
+    opsi: [
+      { key: "akses_gizi", icon: "🥗", title: "Admin Ahli Gizi", desc: "Dokumentasi gizi + kelola Menu & Jadwal.", chip: "bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-500/30" },
+    ],
+  },
+  {
+    judul: "Keuangan & SDM",
+    opsi: [
+      { key: "akses_keuangan", icon: "🧮", title: "Admin Akuntan", desc: "Berita acara & template Finansial.", chip: "bg-emas-500/15 text-emas-400 ring-1 ring-inset ring-emas-500/30" },
+      { key: "is_hr", icon: "🧾", title: "HR / Gaji", desc: "Kelola data gaji & slip (admin lain tidak bisa).", chip: "bg-violet-500/15 text-violet-200 ring-1 ring-inset ring-violet-500/30" },
+    ],
+  },
+];
 
 export default function PegawaiPage() {
   const [list, setList] = useState<Employee[]>([]);
@@ -135,7 +190,7 @@ export default function PegawaiPage() {
     const head = [
       "Nama", "Username", "Peran", "Jabatan", "NIP", "Divisi",
       "Jenis Kelamin", "Tempat Lahir", "Tanggal Lahir", "Status",
-      "Sopir", "HR", "Akses Distribusi", "Akses Laporan", "Akses Gudang Keluar",
+      "Sopir", "HR", "Akses Distribusi", "Akses Laporan", "Akses Akuntan", "Akses Ahli Gizi", "Akses Gudang Keluar",
     ];
     const body = list.map((e) =>
       [
@@ -145,6 +200,7 @@ export default function PegawaiPage() {
         e.aktif ? "Aktif" : "Nonaktif",
         e.is_driver ? "Ya" : "", e.is_hr ? "Ya" : "",
         e.akses_distribusi ? "Ya" : "", e.akses_laporan ? "Ya" : "",
+        e.akses_keuangan ? "Ya" : "", e.akses_gizi ? "Ya" : "",
         e.akses_gudang_keluar ? "Ya" : "",
       ].map(esc).join(","),
     );
@@ -264,6 +320,8 @@ export default function PegawaiPage() {
       is_driver: !!e.is_driver,
       akses_distribusi: !!e.akses_distribusi,
       akses_laporan: !!e.akses_laporan,
+      akses_keuangan: !!e.akses_keuangan,
+      akses_gizi: !!e.akses_gizi,
       akses_gudang_keluar: !!e.akses_gudang_keluar,
       is_hr: !!e.is_hr,
     });
@@ -292,6 +350,8 @@ export default function PegawaiPage() {
         is_driver: form.is_driver,
         akses_distribusi: form.akses_distribusi,
         akses_laporan: form.akses_laporan,
+        akses_keuangan: form.akses_keuangan,
+        akses_gizi: form.akses_gizi,
         akses_gudang_keluar: form.akses_gudang_keluar,
         is_hr: form.is_hr,
       };
@@ -662,34 +722,56 @@ export default function PegawaiPage() {
                   </select>
                 </div>
               </div>
-              <div className="space-y-1.5 rounded-lg border border-white/10 p-3">
-                <p className="text-xs font-semibold text-slate-400">Akses Khusus (opsional)</p>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_driver}
-                    onChange={(e) => setForm({ ...form, is_driver: e.target.checked })} />
-                  🚗 Driver — mengisi Data Kilometer di menu staf
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_distribusi}
-                    onChange={(e) => setForm({ ...form, akses_distribusi: e.target.checked })} />
-                  🚚 Admin Distribusi — akses semua fitur Distribusi
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_laporan}
-                    onChange={(e) => setForm({ ...form, akses_laporan: e.target.checked })} />
-                  📋 Admin Penerimaan — akses Laporan Harian &amp; kelola Gudang
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_gudang_keluar}
-                    onChange={(e) => setForm({ ...form, akses_gudang_keluar: e.target.checked })} />
-                  🗄️ Petugas Gudang Keluar (persiapan/pengolahan/pemorsian) — hanya catat barang keluar
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_hr}
-                    onChange={(e) => setForm({ ...form, is_hr: e.target.checked })} />
-                  🧾 HR — kelola data gaji &amp; slip (admin lain tidak bisa)
-                </label>
-                <p className="text-[11px] text-slate-500">Setelah diubah, pegawai perlu logout &amp; login ulang agar akses aktif.</p>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">Akses Khusus</span>
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-500">opsional</span>
+                </div>
+                <div className="space-y-4">
+                  {AKSES_GRUP.map((g) => (
+                    <div key={g.judul}>
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{g.judul}</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {g.opsi.map((o) => {
+                          const on = form[o.key];
+                          return (
+                            <label
+                              key={o.key}
+                              className={
+                                "group flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors " +
+                                (on
+                                  ? "border-gold-500/40 bg-gold-500/[0.07]"
+                                  : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]")
+                              }
+                            >
+                              <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base " + o.chip}>
+                                {o.icon}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-semibold text-slate-100">{o.title}</span>
+                                <span className="mt-0.5 block text-[11px] leading-snug text-slate-400">{o.desc}</span>
+                              </span>
+                              <span className="relative mt-0.5 h-5 w-9 shrink-0">
+                                <input
+                                  type="checkbox"
+                                  className="peer sr-only"
+                                  checked={on}
+                                  onChange={(e) => setForm({ ...form, [o.key]: e.target.checked })}
+                                />
+                                <span className="block h-5 w-9 rounded-full bg-white/15 transition-colors peer-checked:bg-gold-500" />
+                                <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4" />
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 flex items-start gap-1.5 text-[11px] text-slate-500">
+                  <span aria-hidden="true">ℹ️</span>
+                  <span>Setelah diubah, pegawai perlu logout &amp; login ulang agar sebagian akses aktif.</span>
+                </p>
               </div>
 
               <div>

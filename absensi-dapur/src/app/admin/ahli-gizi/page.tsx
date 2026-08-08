@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { query } from "@/lib/db";
 import { TEMPLATE_GIZI, KELOMPOK_GIZI } from "@/lib/ahli-gizi";
 
 export const dynamic = "force-dynamic";
@@ -79,8 +80,17 @@ const AKSEN_DEFAULT = {
 export default async function AhliGiziHubPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  // Hanya admin penuh yang boleh mengakses template ahli gizi.
-  if (session.role !== "admin") redirect("/dapur");
+  // Admin penuh ATAU sub-admin Ahli Gizi (akses_gizi). Flag dibaca dari DB
+  // (bukan token) agar pemberian/pencabutan akses langsung berlaku.
+  if (session.role !== "admin") {
+    const me = (
+      await query<{ akses_gizi: boolean }>(
+        `SELECT akses_gizi FROM users WHERE id = $1`,
+        [session.uid],
+      )
+    )[0];
+    if (!me?.akses_gizi) redirect("/dapur");
+  }
 
   const byslug = new Map(TEMPLATE_GIZI.map((t) => [t.slug, t]));
 

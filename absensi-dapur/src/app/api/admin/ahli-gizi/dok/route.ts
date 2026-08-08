@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireAkses } from "@/lib/session";
 import { catatAudit } from "@/lib/audit";
 import { ok, fail, route } from "@/lib/api";
 import { sanitizeBaHtml } from "@/lib/berita-acara";
@@ -26,7 +26,7 @@ interface GiziRow {
 // GET: daftar dokumen gizi tersimpan. ?tanggal=YYYY-MM-DD (satu hari) atau
 // ?bulan=YYYY-MM (satu bulan). Tanpa parameter -> semua di dapur ini (terbaru).
 export const GET = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("gizi");
   const sp = req.nextUrl.searchParams;
   const tanggal = sp.get("tanggal") || "";
   const bulan = sp.get("bulan") || "";
@@ -54,7 +54,7 @@ export const GET = route(async (req: NextRequest) => {
 
 // POST: simpan (buat baru) atau perbarui (bila id dikirim) satu dokumen gizi.
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAdmin();
+  const admin = await requireAkses("gizi");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
   const tanggal = str(b.tanggal, 10);

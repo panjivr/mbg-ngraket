@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-06a.mood-absensi";
+const SCHEMA_VERSION = "2026-08-08a.akses-keuangan-gizi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -578,6 +578,9 @@ async function doEnsureSchema(): Promise<void> {
     // Sub-admin scoped: akses khusus Distribusi / Laporan Harian (mirip driver).
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_distribusi BOOLEAN NOT NULL DEFAULT FALSE`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_laporan BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Sub-admin scoped: Akuntan (Finansial/Berita Acara) & Ahli Gizi (dok gizi + Menu/Jadwal).
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_keuangan BOOLEAN NOT NULL DEFAULT FALSE`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_gizi BOOLEAN NOT NULL DEFAULT FALSE`);
     // Petugas gudang keluar (persiapan/pengolahan/pemorsian): hanya boleh barang keluar.
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_gudang_keluar BOOLEAN NOT NULL DEFAULT FALSE`);
     // Peringkat: sembunyikan pegawai berjadwal khusus (keamanan/admin) dari papan.
