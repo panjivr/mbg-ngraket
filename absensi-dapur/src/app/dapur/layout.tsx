@@ -35,11 +35,8 @@ export default async function DapurLayout({
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <BgnLogo size={38} />
-            <div className="leading-tight">
-              <p className="text-sm font-bold">Absensi Dapur</p>
-              <p className="text-xs text-slate-400">Halo, {session.nama}</p>
-            </div>
+            <BgnLogo size={34} />
+            <p className="text-sm font-bold tracking-tight">Absensi Dapur</p>
           </div>
           <div className="flex items-center gap-2">
             <SettingsMenu />
