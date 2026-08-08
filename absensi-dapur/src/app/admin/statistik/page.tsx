@@ -28,6 +28,11 @@ interface DivisiItem {
   tepat: number;
   terlambat: number;
 }
+interface DistPoint {
+  d: string;
+  porsi: number;
+  pagu: number;
+}
 interface Resp {
   from: string;
   to: string;
@@ -35,7 +40,10 @@ interface Resp {
   mood: { mood: string; n: number }[];
   divisi: DivisiItem[];
   ranking: RankItem[];
+  distribusi: DistPoint[];
 }
+const rupiah = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
+const fmtN = (n: number) => (n || 0).toLocaleString("id-ID");
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -96,6 +104,14 @@ export default function StatistikPage() {
     const dinilai = tepat + telat;
     const ketepatan = dinilai > 0 ? Math.round((tepat / dinilai) * 100) : 0;
     return { hadir, tepat, telat, ketepatan, hariOp: d.length };
+  }, [data]);
+
+  const distTrend = useMemo(() => {
+    const d = data?.distribusi ?? [];
+    const totalPorsi = d.reduce((s, x) => s + x.porsi, 0);
+    const totalPagu = d.reduce((s, x) => s + x.pagu, 0);
+    const maxPorsi = Math.max(1, ...d.map((x) => x.porsi));
+    return { hari: d.length, totalPorsi, totalPagu, maxPorsi };
   }, [data]);
 
   const moodData = useMemo(() => {
@@ -199,6 +215,38 @@ export default function StatistikPage() {
                 <Kosong />
               ) : (
                 <DayTrend data={data!.daily} />
+              )}
+            </div>
+
+            <div className="card p-4 lg:col-span-2">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold">🍽️ Tren Porsi &amp; Pagu Distribusi</p>
+                {distTrend.hari > 0 && (
+                  <span className="text-xs text-slate-400">
+                    Σ {fmtN(distTrend.totalPorsi)} porsi · {rupiah(distTrend.totalPagu)} · rata-rata {fmtN(Math.round(distTrend.totalPorsi / distTrend.hari))}/hari
+                  </span>
+                )}
+              </div>
+              {distTrend.hari === 0 ? (
+                <Kosong />
+              ) : (
+                <div className="scroll-x flex items-end gap-1.5 overflow-x-auto pb-1" style={{ height: 160 }}>
+                  {data!.distribusi.map((p) => (
+                    <div
+                      key={p.d}
+                      className="flex min-w-[20px] flex-1 flex-col items-center gap-1"
+                      title={`${p.d}: ${fmtN(p.porsi)} porsi · ${rupiah(p.pagu)}`}
+                    >
+                      <div className="flex w-full items-end justify-center" style={{ height: 128 }}>
+                        <div
+                          className="w-full max-w-[26px] rounded-t bg-gradient-to-t from-emerald-500 to-emerald-400"
+                          style={{ height: `${Math.max(4, (p.porsi / distTrend.maxPorsi) * 128)}px` }}
+                        />
+                      </div>
+                      <span className="text-[9px] tabular-nums text-slate-500">{p.d.slice(8)}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
