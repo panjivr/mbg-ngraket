@@ -33,7 +33,7 @@ interface PorsiRow {
 
 // GET: satu periode jadwal (mulai + jumlah hari) beserta porsi & daftar menu.
 export const GET = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const url = new URL(req.url);
   const mulai = url.searchParams.get("mulai") || localDate("Asia/Jakarta");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(mulai)) return fail(400, "Tanggal mulai tidak valid.");
@@ -88,7 +88,7 @@ export const GET = route(async (req: NextRequest) => {
 
 // POST: tempel satu menu ke tanggal (sasaran reguler/b3).
 export const POST = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const tanggal = String(b.tanggal ?? "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return fail(400, "Tanggal tidak valid.");
@@ -124,7 +124,7 @@ export const POST = route(async (req: NextRequest) => {
 
 // DELETE: lepas satu menu dari jadwal (?id=).
 export const DELETE = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const id = parseInt(new URL(req.url).searchParams.get("id") || "", 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   const done = await withClient(async (client) => {
@@ -140,7 +140,7 @@ export const DELETE = route(async (req: NextRequest) => {
 
 // PUT: set/override jumlah porsi untuk satu tanggal.
 export const PUT = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  const admin = await requireAkses(["distribusi", "gizi"]);
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const tanggal = String(b.tanggal ?? "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return fail(400, "Tanggal tidak valid.");

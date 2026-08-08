@@ -184,8 +184,8 @@ html[data-theme="light"] body::before {
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-white/10 bg-ink-850/70 shadow-soft backdrop-blur
-           transition-colors duration-300;
+    @apply rounded-2xl border border-white/[0.08] bg-gradient-to-b from-ink-850/80 to-ink-850/55
+           shadow-soft backdrop-blur transition-colors duration-300;
   }
   /* Kartu yang bisa diklik/hover — angkat halus & pertegas tepi */
   .card-interactive {
@@ -233,7 +233,8 @@ html[data-theme="light"] body::before {
     @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
   }
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold
+           ring-1 ring-inset ring-white/10;
   }
 }
 

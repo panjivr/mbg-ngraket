@@ -53,8 +53,11 @@ const config: Config = {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 10px 40px -12px rgba(2,8,40,0.55)",
+        // Bayangan berlapis ala produk enterprise: hairline tipis + drop lembut.
+        soft: "0 1px 2px rgba(2,8,40,0.28), 0 10px 40px -12px rgba(2,8,40,0.55)",
         glow: "0 0 0 1px rgba(52,100,230,0.30), 0 12px 30px -10px rgba(52,100,230,0.35)",
+        // Elevasi app-bar/header sticky agar terpisah rapi dari konten saat scroll.
+        appbar: "0 1px 0 rgba(255,255,255,0.04), 0 10px 30px -18px rgba(2,8,40,0.85)",
       },
     },
   },

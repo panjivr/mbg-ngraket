@@ -108,12 +108,16 @@ export default function DapurBottomNav({
   role,
   aksesDistribusi,
   aksesLaporan,
+  aksesKeuangan,
+  aksesGizi,
 }: {
   isDriver: boolean;
   gudangKeluar: boolean;
   role: string;
   aksesDistribusi: boolean;
   aksesLaporan: boolean;
+  aksesKeuangan: boolean;
+  aksesGizi: boolean;
 }) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -163,6 +167,8 @@ export default function DapurBottomNav({
       : [
           ...(aksesDistribusi ? [{ href: "/admin/distribusi", label: "Distribusi", icon: "truck" as const }] : []),
           ...(aksesLaporan ? [{ href: "/admin/laporan", label: "Laporan", icon: "clipboard" as const }] : []),
+          ...(aksesKeuangan ? [{ href: "/admin/akuntan", label: "Keuangan", icon: "wallet" as const }] : []),
+          ...(aksesGizi ? [{ href: "/admin/ahli-gizi", label: "Gizi", icon: "book" as const }] : []),
         ];
   if (pintasan.length) groups.push({ title: "Pintasan", links: pintasan });
 

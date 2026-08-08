@@ -13,6 +13,8 @@ interface Flags {
   fullAdmin: boolean;
   aksesDistribusi: boolean;
   aksesLaporan: boolean;
+  aksesKeuangan: boolean;
+  aksesGizi: boolean;
   isHr: boolean;
   isSuper: boolean;
   /** Fitur yang dibuka paket langganan dapur ini. */
@@ -42,10 +44,10 @@ function buildGroups(f: Flags): Group[] {
       label: "Operasional",
       items: [
         { label: "🚚 Distribusi", href: "/admin/distribusi", show: f.aksesDistribusi && has("distribusi") },
-        { label: "🍱 Menu", href: "/admin/menu", show: f.aksesDistribusi && has("distribusi") },
-        { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: f.aksesDistribusi && has("distribusi") },
+        { label: "🍱 Menu", href: "/admin/menu", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
+        { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "📋 Laporan Harian", href: "/admin/laporan", show: f.aksesLaporan && has("distribusi") },
-        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: f.fullAdmin && has("ahli_gizi") },
+        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
         { label: "📦 Gudang", href: "/admin/gudang", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
       ],
     },
@@ -63,7 +65,7 @@ function buildGroups(f: Flags): Group[] {
       label: "Keuangan",
       items: [
         { label: "📊 Rekap", href: "/admin/rekap", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
-        { label: "🧮 Akuntan", href: "/admin/akuntan", show: f.fullAdmin && has("akuntan") },
+        { label: "🧮 Akuntan", href: "/admin/akuntan", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
       ],
     },
     {

@@ -19,6 +19,8 @@ interface UserRow {
   is_super: boolean;
   akses_distribusi: boolean;
   akses_laporan: boolean;
+  akses_keuangan: boolean;
+  akses_gizi: boolean;
   is_hr: boolean;
 }
 
@@ -32,7 +34,7 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const rows = await query<UserRow>(
-    `SELECT id, nama, username, password_hash, role, aktif, sppg_id, is_super, akses_distribusi, akses_laporan, is_hr
+    `SELECT id, nama, username, password_hash, role, aktif, sppg_id, is_super, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, is_hr
        FROM users WHERE lower(username) = $1 LIMIT 1`,
     [username],
   );
@@ -54,6 +56,8 @@ export const POST = route(async (req: NextRequest) => {
     is_super: !!user.is_super,
     akses_distribusi: !!user.akses_distribusi,
     akses_laporan: !!user.akses_laporan,
+    akses_keuangan: !!user.akses_keuangan,
+    akses_gizi: !!user.akses_gizi,
     is_hr: !!user.is_hr,
   };
   await setSessionCookie(session);

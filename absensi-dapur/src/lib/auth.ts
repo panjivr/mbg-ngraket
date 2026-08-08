@@ -18,6 +18,10 @@ export interface SessionData {
   akses_distribusi?: boolean;
   /** Sub-admin scoped: akses ke fitur Laporan Harian. */
   akses_laporan?: boolean;
+  /** Sub-admin scoped: akses Keuangan (Akuntan/Berita Acara). */
+  akses_keuangan?: boolean;
+  /** Sub-admin scoped: akses Gizi (Ahli Gizi + Menu/Jadwal Menu). */
+  akses_gizi?: boolean;
   /** Petugas gudang keluar (hanya boleh barang keluar). */
   akses_gudang_keluar?: boolean;
   /** Peran HR: satu-satunya yang boleh kelola data gaji & slip. */
@@ -77,6 +81,8 @@ export async function verifySession(
         is_super: payload.is_super === true,
         akses_distribusi: payload.akses_distribusi === true,
         akses_laporan: payload.akses_laporan === true,
+        akses_keuangan: payload.akses_keuangan === true,
+        akses_gizi: payload.akses_gizi === true,
         is_hr: payload.is_hr === true,
       };
     }

@@ -36,9 +36,20 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/cetak/dokumentasi") ||
       pathname.startsWith("/cetak/kilometer");
     const isHrArea = pathname.startsWith("/admin/hr");
+    // Sub-admin Keuangan (Akuntan) & Gizi (Ahli Gizi + Menu/Jadwal Menu).
+    const isKeuangan =
+      pathname.startsWith("/admin/akuntan") ||
+      pathname.startsWith("/cetak/akuntan");
+    const isGizi =
+      pathname.startsWith("/admin/ahli-gizi") ||
+      pathname.startsWith("/admin/menu") ||
+      pathname.startsWith("/admin/jadwal-menu") ||
+      pathname.startsWith("/cetak/ahli-gizi");
     const allowed =
       (session.akses_distribusi === true && isDistribusi) ||
       (session.akses_laporan === true && isLaporan) ||
+      (session.akses_keuangan === true && isKeuangan) ||
+      (session.akses_gizi === true && isGizi) ||
       isHrArea;
     if (!allowed) {
       const url = req.nextUrl.clone();

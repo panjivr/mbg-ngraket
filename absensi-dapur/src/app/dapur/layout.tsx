@@ -20,14 +20,16 @@ export default async function DapurLayout({
   if (!session) redirect("/login");
 
   const me = (
-    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean; akses_gudang_keluar: boolean }>(
-      `SELECT is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar FROM users WHERE id = $1`,
+    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean; akses_keuangan: boolean; akses_gizi: boolean; akses_gudang_keluar: boolean }>(
+      `SELECT is_driver, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_gudang_keluar FROM users WHERE id = $1`,
       [session.uid],
     )
   )[0];
   const isDriver = !!me?.is_driver;
   const aksesDistribusi = !!me?.akses_distribusi;
   const aksesLaporan = !!me?.akses_laporan;
+  const aksesKeuangan = !!me?.akses_keuangan;
+  const aksesGizi = !!me?.akses_gizi;
   const gudangKeluar = !!me?.akses_gudang_keluar;
 
   return (
@@ -61,6 +63,16 @@ export default async function DapurLayout({
                   📋 Laporan →
                 </Link>
               )}
+              {aksesKeuangan && (
+                <Link href="/admin/akuntan" className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                  💰 Keuangan →
+                </Link>
+              )}
+              {aksesGizi && (
+                <Link href="/admin/ahli-gizi" className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-sky-300 hover:bg-white/5">
+                  🥗 Gizi →
+                </Link>
+              )}
             </span>
           )}
         </nav>
@@ -73,6 +85,8 @@ export default async function DapurLayout({
         role={session.role}
         aksesDistribusi={aksesDistribusi}
         aksesLaporan={aksesLaporan}
+        aksesKeuangan={aksesKeuangan}
+        aksesGizi={aksesGizi}
       />
     </div>
   );

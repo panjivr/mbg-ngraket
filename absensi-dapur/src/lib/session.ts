@@ -53,22 +53,38 @@ export async function requireAdmin(): Promise<SessionData> {
   return s;
 }
 
+export type AksesArea = "distribusi" | "laporan" | "keuangan" | "gizi";
+
 /**
- * Izinkan admin penuh ATAU sub-admin dengan akses area tertentu
- * ("distribusi" | "laporan"). Backfill flag dari DB bila token lama.
+ * Izinkan admin penuh ATAU sub-admin dengan akses area tertentu. Menerima satu
+ * area atau daftar area (any-of: cukup punya salah satu). Flag SELALU dibaca
+ * ulang dari DB agar pemberian/pencabutan akses langsung berlaku tanpa login
+ * ulang (token berumur 7 hari bisa basi — sama alasannya dengan requireHr).
  */
-export async function requireAkses(area: "distribusi" | "laporan"): Promise<SessionData> {
+export async function requireAkses(area: AksesArea | AksesArea[]): Promise<SessionData> {
   const s = await requireSession();
   if (s.role === "admin") return s;
-  if (s.akses_distribusi === undefined || s.akses_laporan === undefined) {
-    const r = await query<{ akses_distribusi: boolean; akses_laporan: boolean }>(
-      `SELECT akses_distribusi, akses_laporan FROM users WHERE id = $1`,
-      [s.uid],
-    );
-    s.akses_distribusi = !!r[0]?.akses_distribusi;
-    s.akses_laporan = !!r[0]?.akses_laporan;
-  }
-  const ok = area === "distribusi" ? s.akses_distribusi : s.akses_laporan;
+  const areas = Array.isArray(area) ? area : [area];
+  const r = await query<{
+    akses_distribusi: boolean;
+    akses_laporan: boolean;
+    akses_keuangan: boolean;
+    akses_gizi: boolean;
+  }>(
+    `SELECT akses_distribusi, akses_laporan, akses_keuangan, akses_gizi FROM users WHERE id = $1`,
+    [s.uid],
+  );
+  s.akses_distribusi = !!r[0]?.akses_distribusi;
+  s.akses_laporan = !!r[0]?.akses_laporan;
+  s.akses_keuangan = !!r[0]?.akses_keuangan;
+  s.akses_gizi = !!r[0]?.akses_gizi;
+  const flags: Record<AksesArea, boolean> = {
+    distribusi: s.akses_distribusi,
+    laporan: s.akses_laporan,
+    keuangan: s.akses_keuangan,
+    gizi: s.akses_gizi,
+  };
+  const ok = areas.some((a) => flags[a]);
   if (!ok) throw new HttpError(403, "Tidak punya akses ke fitur ini.");
   return s;
 }

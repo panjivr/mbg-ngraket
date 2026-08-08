@@ -403,9 +403,10 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold sm:text-2xl">Dashboard Operasional</h1>
-          <p className="text-sm text-slate-400">
+        <div className="border-l-2 border-gold-500/70 pl-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-400">Panel Operasional</p>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Dashboard Operasional</h1>
+          <p className="mt-0.5 text-sm text-slate-400">
             {tanggalTampil || "Memuat tanggal…"} ·{" "}
             <span className="font-mono tabular-nums text-slate-300">{jam} WIB</span>
           </p>
@@ -437,7 +438,12 @@ export default function AdminDashboard() {
       {ring && (
         <div className="space-y-3">
           {ring.menu && (
-            <p className="text-sm text-slate-400">Menu hari ini: <span className="font-medium text-slate-200">{ring.menu}</span></p>
+            <p className="flex items-center gap-2 text-sm text-slate-400">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-gold-400">
+                <path d="M4 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3M6 3v18M18 3c-1.5 0-3 1.5-3 5s1.5 4 3 4v9" />
+              </svg>
+              Menu hari ini: <span className="text-slate-200">{ring.menu}</span>
+            </p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="stat-card"><p className="stat-label">Porsi Besar (+PJ)</p><p className="stat-value text-emerald-300">{ring.distribusi.besar}</p></div>
@@ -768,9 +774,12 @@ export default function AdminDashboard() {
             <button
               onClick={exportCsv}
               disabled={rowsTampil.length === 0}
-              className="btn-ghost px-2.5 py-1 text-xs text-gold-400 disabled:opacity-40"
+              className="btn-ghost gap-1.5 px-2.5 py-1 text-xs text-gold-400 disabled:opacity-40"
               title="Unduh tabel ini sebagai CSV (buka di Excel)"
             >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                <path d="M12 3v12M7 12l5 5 5-5M5 21h14" />
+              </svg>
               CSV
             </button>
             <span className="text-xs text-slate-400">{rowsTampil.length} entri</span>
@@ -852,9 +861,12 @@ export default function AdminDashboard() {
                             </span>
                             <button
                               onClick={() => tutupAbsen(r.id, r.nama)}
-                              className="btn-ghost px-2 py-0.5 text-[11px]"
+                              className="btn-ghost gap-1 px-2 py-0.5 text-[11px]"
                               title="Tutup absen pulang (untuk yang lupa menekan pulang)"
                             >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                <rect x="5" y="5" width="14" height="14" rx="2" />
+                              </svg>
                               Tutup
                             </button>
                           </span>
