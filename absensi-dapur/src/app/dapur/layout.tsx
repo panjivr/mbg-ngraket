@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import DapurNav from "@/components/DapurNav";
+import DapurBottomNav from "@/components/DapurBottomNav";
 import LogoutButton from "@/components/LogoutButton";
 import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
@@ -30,7 +31,7 @@ export default async function DapurLayout({
   const gudangKeluar = !!me?.akses_gudang_keluar;
 
   return (
-    <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-12">
+    <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-28 md:pb-12">
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -45,7 +46,7 @@ export default async function DapurLayout({
             <LogoutButton className="btn-ghost px-3 py-1.5 text-xs" />
           </div>
         </div>
-        <nav className="mt-3 flex flex-wrap items-center gap-1">
+        <nav className="mt-3 hidden flex-wrap items-center gap-1 md:flex">
           <DapurNav isDriver={isDriver} gudangKeluar={gudangKeluar} />
           {session.role === "admin" ? (
             <Link href="/admin" className="ml-auto shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gold-400 hover:bg-white/5">
@@ -69,6 +70,13 @@ export default async function DapurLayout({
       </header>
       <BirthdayGreeting />
       {children}
+      <DapurBottomNav
+        isDriver={isDriver}
+        gudangKeluar={gudangKeluar}
+        role={session.role}
+        aksesDistribusi={aksesDistribusi}
+        aksesLaporan={aksesLaporan}
+      />
     </div>
   );
 }
