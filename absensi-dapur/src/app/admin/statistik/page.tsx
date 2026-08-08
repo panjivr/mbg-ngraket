@@ -32,6 +32,9 @@ interface DistPoint {
   d: string;
   porsi: number;
   pagu: number;
+  besar: number;
+  kecil: number;
+  b3: number;
 }
 interface Resp {
   from: string;
@@ -111,7 +114,10 @@ export default function StatistikPage() {
     const totalPorsi = d.reduce((s, x) => s + x.porsi, 0);
     const totalPagu = d.reduce((s, x) => s + x.pagu, 0);
     const maxPorsi = Math.max(1, ...d.map((x) => x.porsi));
-    return { hari: d.length, totalPorsi, totalPagu, maxPorsi };
+    const besar = d.reduce((s, x) => s + x.besar, 0);
+    const kecil = d.reduce((s, x) => s + x.kecil, 0);
+    const b3 = d.reduce((s, x) => s + x.b3, 0);
+    return { hari: d.length, totalPorsi, totalPagu, maxPorsi, besar, kecil, b3 };
   }, [data]);
 
   const moodData = useMemo(() => {
@@ -230,22 +236,41 @@ export default function StatistikPage() {
               {distTrend.hari === 0 ? (
                 <Kosong />
               ) : (
-                <div className="scroll-x flex items-end gap-1.5 overflow-x-auto pb-1" style={{ height: 160 }}>
-                  {data!.distribusi.map((p) => (
-                    <div
-                      key={p.d}
-                      className="flex min-w-[20px] flex-1 flex-col items-center gap-1"
-                      title={`${p.d}: ${fmtN(p.porsi)} porsi · ${rupiah(p.pagu)}`}
-                    >
-                      <div className="flex w-full items-end justify-center" style={{ height: 128 }}>
-                        <div
-                          className="w-full max-w-[26px] rounded-t bg-gradient-to-t from-emerald-500 to-emerald-400"
-                          style={{ height: `${Math.max(4, (p.porsi / distTrend.maxPorsi) * 128)}px` }}
-                        />
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                  <div className="scroll-x flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto pb-1" style={{ height: 160 }}>
+                    {data!.distribusi.map((p) => (
+                      <div
+                        key={p.d}
+                        className="flex min-w-[20px] flex-1 flex-col items-center gap-1"
+                        title={`${p.d}: ${fmtN(p.porsi)} porsi (B ${fmtN(p.besar)} · K ${fmtN(p.kecil)} · B3 ${fmtN(p.b3)}) · ${rupiah(p.pagu)}`}
+                      >
+                        <div className="flex w-full flex-col-reverse items-center" style={{ height: 128 }}>
+                          <div className="w-full max-w-[26px] bg-emerald-400" style={{ height: `${(p.besar / distTrend.maxPorsi) * 128}px` }} />
+                          <div className="w-full max-w-[26px] bg-sky-400" style={{ height: `${(p.kecil / distTrend.maxPorsi) * 128}px` }} />
+                          <div className="w-full max-w-[26px] rounded-t bg-amber-400" style={{ height: `${(p.b3 / distTrend.maxPorsi) * 128}px` }} />
+                        </div>
+                        <span className="text-[9px] tabular-nums text-slate-500">{p.d.slice(8)}</span>
                       </div>
-                      <span className="text-[9px] tabular-nums text-slate-500">{p.d.slice(8)}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4 lg:w-60 lg:flex-col lg:items-stretch">
+                    <Donut
+                      segments={[
+                        { label: "Besar", value: distTrend.besar, color: "#34d399" },
+                        { label: "Kecil", value: distTrend.kecil, color: "#38bdf8" },
+                        { label: "B3", value: distTrend.b3, color: "#fbbf24" },
+                      ]}
+                      centerValue={fmtN(distTrend.totalPorsi)}
+                      centerLabel="porsi"
+                    />
+                    <Legend
+                      items={[
+                        { label: "Besar (+PJ)", color: "#34d399", value: fmtN(distTrend.besar) },
+                        { label: "Kecil", color: "#38bdf8", value: fmtN(distTrend.kecil) },
+                        { label: "B3", color: "#fbbf24", value: fmtN(distTrend.b3) },
+                      ]}
+                    />
+                  </div>
                 </div>
               )}
             </div>

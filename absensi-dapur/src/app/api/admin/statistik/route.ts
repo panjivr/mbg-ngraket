@@ -30,6 +30,9 @@ interface DistRow {
   d: string;
   porsi: number;
   pagu: number;
+  besar: number;
+  kecil: number;
+  b3: number;
 }
 
 /**
@@ -89,7 +92,10 @@ export const GET = route(async (req: NextRequest) => {
     query<DistRow>(
       `SELECT dd.tanggal::text AS d,
               COALESCE(SUM(CASE WHEN di.ikut THEN di.besar + di.kecil + di.b3 ELSE 0 END), 0)::int AS porsi,
-              COALESCE(SUM(CASE WHEN di.ikut THEN di.besar * s.harga_besar + di.kecil * s.harga_kecil + di.b3 * s.harga_b3 ELSE 0 END), 0)::float8 AS pagu
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.besar * s.harga_besar + di.kecil * s.harga_kecil + di.b3 * s.harga_b3 ELSE 0 END), 0)::float8 AS pagu,
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.besar ELSE 0 END), 0)::int AS besar,
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.kecil ELSE 0 END), 0)::int AS kecil,
+              COALESCE(SUM(CASE WHEN di.ikut THEN di.b3 ELSE 0 END), 0)::int AS b3
          FROM distribusi dd
          JOIN sppg s ON s.id = dd.sppg_id
          LEFT JOIN distribusi_item di ON di.distribusi_id = dd.id
