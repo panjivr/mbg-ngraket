@@ -63,7 +63,16 @@ html[data-theme="light"] .text-emas-500 { color: #a1740b; }
 
 /* Kelas komponen (@apply meng-compile warna gelap ke aturannya sendiri, jadi
    utilitas di atas tak menjangkaunya) — sesuaikan untuk tema terang. */
-html[data-theme="light"] .card { border-color: rgba(15, 23, 42, 0.1); }
+/* Kartu di tema terang: garis tepi tipis + bayangan netral berlapis (bukan
+   navy) supaya kedalaman terasa di atas latar terang — depth via cahaya,
+   bukan warna. */
+html[data-theme="light"] .card {
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 30px -18px rgba(15, 23, 42, 0.22);
+}
+html[data-theme="light"] .shadow-soft {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 32px -18px rgba(15, 23, 42, 0.24);
+}
 html[data-theme="light"] .input {
   border-color: rgba(15, 23, 42, 0.14);
   color: #0f172a;
@@ -83,6 +92,23 @@ body {
   @apply bg-ink-950 text-slate-100 antialiased;
   min-height: 100dvh;
   text-rendering: optimizeLegibility;
+}
+
+/*
+ * Ritme tipografi — hierarki tenang & profesional. Judul dirapatkan sedikit
+ * (optical tracking) dan diberi tinggi baris menurut proporsi rasio emas
+ * (≈1.2) agar padat namun terbaca; teks tubuh 1.6 (mendekati 1.618) untuk
+ * kenyamanan baca. Nirmana: kesatuan & keseimbangan lewat skala konsisten.
+ */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.014em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
 }
 
 /* Seleksi teks selaras tema biru BGN */
@@ -148,6 +174,17 @@ html[data-theme="light"] body::before {
   .card-interactive {
     @apply card transition duration-300 hover:-translate-y-0.5 hover:border-gold-500/40
            hover:shadow-glow;
+  }
+  /* Kartu statistik seragam (dasbor) — label kecil di atas, angka besar
+     tabular. Garis aksen tipis di sisi kiri memberi emphasis tanpa berisik. */
+  .stat-card {
+    @apply card relative overflow-hidden p-4;
+  }
+  .stat-label {
+    @apply text-xs font-medium text-slate-400;
+  }
+  .stat-value {
+    @apply mt-1 text-2xl font-bold tabular-nums tracking-tight;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold

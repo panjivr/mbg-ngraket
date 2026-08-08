@@ -110,9 +110,9 @@ export default function DashboardPusatPage() {
       {cards.length > 0 && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
           {cards.map((c) => (
-            <div key={c.label} className="card p-4">
-              <p className="text-xs text-slate-400">{c.label}</p>
-              <p className={"mt-1 text-xl font-bold tabular-nums " + c.cls}>{c.value}</p>
+            <div key={c.label} className="stat-card">
+              <p className="stat-label">{c.label}</p>
+              <p className={"stat-value !text-xl " + c.cls}>{c.value}</p>
             </div>
           ))}
         </div>

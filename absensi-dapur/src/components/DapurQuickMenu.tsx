@@ -110,11 +110,13 @@ const SERVICES: Service[] = [
   { href: "/dapur/profil", label: "Kartu Saya", Icon: IdCardIcon, tone: "gold" },
 ];
 
-// Gradasi chip mengacu palet resmi BGN (bgn.go.id/logo-meaning).
+// Nirmana — kesatuan: satu permukaan tenang untuk semua petak, aksen hanya
+// pada warna ikon. Menghindari mozaik gradasi yang ramai agar grid terbaca
+// sebagai satu sistem yang profesional (bukan tumpukan tombol berwarna).
 const TONE: Record<Service["tone"], string> = {
-  navy: "from-[#0e1f55] to-[#071e49] text-[#b5e0ea] ring-1 ring-inset ring-white/10",
-  sky: "from-[#5b8bff] to-[#3464e6] text-white ring-1 ring-inset ring-white/15",
-  gold: "from-[#e0a92e] to-[#c08e1e] text-[#fff7e6] ring-1 ring-inset ring-white/15",
+  navy: "text-sky-300",
+  sky: "text-ember-400",
+  gold: "text-emas-400",
 };
 
 export default function DapurQuickMenu() {
@@ -135,11 +137,11 @@ export default function DapurQuickMenu() {
           >
             <span
               className={
-                "grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br shadow-[0_8px_20px_-10px_rgba(2,8,40,0.7)] transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-95 " +
+                "grid h-14 w-14 place-items-center rounded-2xl border border-white/10 bg-white/5 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-white/20 group-hover:bg-white/10 group-active:scale-95 " +
                 TONE[s.tone]
               }
             >
-              <s.Icon className="h-7 w-7" />
+              <s.Icon className="h-6 w-6" />
             </span>
             <span className="text-[11px] font-medium leading-tight text-slate-300">
               {s.label}
