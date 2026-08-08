@@ -5,12 +5,14 @@ import BebanHariIni from "@/components/BebanHariIni";
 import PengingatAbsen from "@/components/PengingatAbsen";
 import HariIstimewa from "@/components/HariIstimewa";
 import DapurQuickMenu from "@/components/DapurQuickMenu";
+import DapurHero from "@/components/DapurHero";
 
 export const dynamic = "force-dynamic";
 
 export default function DapurPage() {
   return (
     <div className="space-y-4">
+      <DapurHero />
       <HariIstimewa />
       <PengumumanCard />
       <PengingatAbsen />

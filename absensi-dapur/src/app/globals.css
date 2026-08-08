@@ -49,6 +49,18 @@ html[data-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
   border-color: rgba(15, 23, 42, 0.08);
 }
 
+/* Teks aksen (biru/sky/emas) di tema terang: pada latar putih warna terang
+   gagal kontras AA. Turunkan ke varian lebih gelap agar semua fitur tetap
+   terbaca & seirama tanpa mengubah tampilan tema gelap. */
+html[data-theme="light"] .text-gold-400,
+html[data-theme="light"] .text-gold-500 { color: #2450c8; }
+html[data-theme="light"] .text-ember-400,
+html[data-theme="light"] .text-ember-500 { color: #0369a1; }
+html[data-theme="light"] .text-sky-300,
+html[data-theme="light"] .text-sky-400 { color: #0369a1; }
+html[data-theme="light"] .text-emas-400,
+html[data-theme="light"] .text-emas-500 { color: #a1740b; }
+
 /* Kelas komponen (@apply meng-compile warna gelap ke aturannya sendiri, jadi
    utilitas di atas tak menjangkaunya) — sesuaikan untuk tema terang. */
 html[data-theme="light"] .card { border-color: rgba(15, 23, 42, 0.1); }
