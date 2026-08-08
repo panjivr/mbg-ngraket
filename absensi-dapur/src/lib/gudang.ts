@@ -6,6 +6,7 @@ export type Kategori =
   | "olahan_dasar"
   | "fermentasi"
   | "protein_hewani"
+  | "sayur"
   | "susu_olahan"
   | "bahan_baku"
   | "operasional"
@@ -45,6 +46,7 @@ export const KATEGORI_LABEL: Record<Kategori, string> = {
   olahan_dasar: "Produk Olahan Dasar",
   fermentasi: "Bahan Fermentasi/Pelengkap",
   protein_hewani: "Protein Hewani",
+  sayur: "Sayur & Buah Segar",
   susu_olahan: "Susu & Olahannya",
   bahan_baku: "Bahan Baku Lainnya",
   operasional: "Operasional",
@@ -57,6 +59,7 @@ export const KATEGORI_INFO: Record<Kategori, string> = {
   olahan_dasar: "perisa, pasta, agar-agar, essence, pewarna",
   fermentasi: "baking powder, terasi, SP",
   protein_hewani: "telur",
+  sayur: "wortel, kentang, bayam, kol, cabai, tomat, buah",
   susu_olahan: "SKM, keju, margarin",
   bahan_baku: "kategori umum untuk data lama",
   operasional: "plastik, hair net, sarung tangan, dll",
@@ -68,6 +71,7 @@ export const KATEGORI_LIST: Kategori[] = [
   "olahan_dasar",
   "fermentasi",
   "protein_hewani",
+  "sayur",
   "susu_olahan",
   "bahan_baku",
   "operasional",

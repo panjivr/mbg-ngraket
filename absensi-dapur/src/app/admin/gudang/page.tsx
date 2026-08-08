@@ -101,7 +101,7 @@ export default function GudangPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📦 Gudang</h1>
+          <h1 className="text-xl font-bold">Gudang</h1>
           <p className="text-sm text-slate-400">Dashboard nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
         </div>
         {tab === "kelola" && (
@@ -110,7 +110,7 @@ export default function GudangPage() {
       </div>
 
       <div className="scroll-x flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-ink-900/50 p-1">
-        {([["dashboard", "📊 Dashboard"], ["kelola", "🗃️ Kelola Stok"], ["kartu", "🧾 Kartu Stok"]] as const).map(([k, l]) => (
+        {([["dashboard", "Dashboard"], ["kelola", "Kelola Stok"], ["kartu", "Kartu Stok"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
             className={"shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition " + (tab === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
             {l}
@@ -124,19 +124,19 @@ export default function GudangPage() {
       {tab === "kelola" && (
       <>
       <div className="grid grid-cols-3 gap-3">
-        <div className="card p-3"><p className="text-xs text-slate-400">Total Barang</p><p className="mt-0.5 text-2xl font-bold">{stat.total}</p></div>
-        <div className="card p-3"><p className="text-xs text-slate-400">Menipis</p><p className="mt-0.5 text-2xl font-bold text-amber-300">{stat.menipis}</p></div>
-        <div className="card p-3"><p className="text-xs text-slate-400">Habis</p><p className="mt-0.5 text-2xl font-bold text-red-300">{stat.habis}</p></div>
+        <div className="stat-card"><p className="stat-label">Total Barang</p><p className="stat-value">{stat.total}</p></div>
+        <div className="stat-card"><span className="absolute inset-y-0 left-0 w-0.5 bg-amber-400" /><p className="stat-label">Menipis</p><p className="stat-value text-amber-300">{stat.menipis}</p></div>
+        <div className="stat-card"><span className="absolute inset-y-0 left-0 w-0.5 bg-red-400" /><p className="stat-label">Habis</p><p className="stat-value text-red-300">{stat.habis}</p></div>
       </div>
 
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{msg}</p>}
 
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-slate-400">Kategori:</span>
+      <div className="flex flex-wrap items-center gap-1.5 text-sm">
+        <span className="mr-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">Kategori</span>
         {(["all", ...KATEGORI_LIST] as const).map((k) => (
           <button key={k} onClick={() => setFilter(k)}
             title={k === "all" ? "Semua kategori" : KATEGORI_INFO[k]}
-            className={"rounded-lg px-3 py-1.5 " + (filter === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
+            className={"rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " + (filter === k ? "border-gold-500/40 bg-gold-500/15 text-gold-300" : "border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5")}>
             {k === "all" ? "Semua" : KATEGORI_LABEL[k]}
           </button>
         ))}
@@ -226,9 +226,9 @@ export default function GudangPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Kode Akun (opsional)</label><input className="input" value={bForm.kode_akun} onChange={(e) => setBForm({ ...bForm, kode_akun: e.target.value })} placeholder="mis. 2115" /></div>
-                <div><label className="label">Harga Satuan (Rp)</label><input type="number" min={0} step="0.01" className="input" value={bForm.harga} onChange={(e) => setBForm({ ...bForm, harga: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+                <div><label className="label">Harga Satuan (Rp)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.harga} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, harga: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               </div>
-              <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" className="input" value={bForm.stok_min} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+              <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.stok_min} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               <div><label className="label">Catatan (opsional)</label><input className="input" value={bForm.catatan} onChange={(e) => setBForm({ ...bForm, catatan: e.target.value })} /></div>
               {bForm.id && <p className="text-xs text-slate-500">Stok saat ini diubah lewat tombol Masuk/Keluar/Opname, bukan di sini.</p>}
               <div className="flex gap-2 pt-2">
@@ -250,7 +250,7 @@ export default function GudangPage() {
               <div><label className="label">Tanggal</label><input type="date" className="input" value={mForm.tanggal} onChange={(e) => setMForm({ ...mForm, tanggal: e.target.value })} /></div>
               <div>
                 <label className="label">{mForm.tipe === "opname" ? "Jumlah fisik hasil hitung" : `Jumlah ${mForm.tipe === "masuk" ? "masuk" : "keluar"}`} ({mForm.barang.satuan})</label>
-                <input type="number" min={0} step="0.01" className="input" value={mForm.jumlah} onChange={(e) => setMForm({ ...mForm, jumlah: Math.max(0, parseFloat(e.target.value) || 0) })} />
+                <input type="number" min={0} step="0.01" inputMode="decimal" autoFocus className="input" value={mForm.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setMForm({ ...mForm, jumlah: Math.max(0, parseFloat(e.target.value) || 0) })} />
                 {mForm.tipe === "opname" && <p className="mt-1 text-xs text-slate-500">Selisih vs sistem: {fmtNum(mForm.jumlah - mForm.barang.stok)}</p>}
               </div>
               <div><label className="label">Keterangan (opsional)</label><input className="input" value={mForm.keterangan} onChange={(e) => setMForm({ ...mForm, keterangan: e.target.value })} placeholder={mForm.tipe === "masuk" ? "mis. beli dari supplier X" : mForm.tipe === "keluar" ? "mis. dipakai produksi" : "mis. koreksi stok"} /></div>
