@@ -60,6 +60,23 @@ html[data-theme="light"] .text-sky-300,
 html[data-theme="light"] .text-sky-400 { color: #0369a1; }
 html[data-theme="light"] .text-emas-400,
 html[data-theme="light"] .text-emas-500 { color: #a1740b; }
+html[data-theme="light"] .text-gold-300 { color: #2450c8; }
+html[data-theme="light"] .text-sky-200 { color: #0369a1; }
+html[data-theme="light"] .text-emas-300 { color: #a1740b; }
+
+/* Tint status (amber/emerald/red) di tema terang: varian 200–400 terlalu muda
+   di atas permukaan putih sehingga gagal kontras AA. Turunkan ke varian pekat
+   agar terbaca di kedua tema (nirmana: keseimbangan & keterbacaan; UI Pro Max:
+   kontras ≥4.5:1 di light & dark). */
+html[data-theme="light"] .text-amber-200,
+html[data-theme="light"] .text-amber-300,
+html[data-theme="light"] .text-amber-400 { color: #b45309; }
+html[data-theme="light"] .text-emerald-200,
+html[data-theme="light"] .text-emerald-300,
+html[data-theme="light"] .text-emerald-400 { color: #047857; }
+html[data-theme="light"] .text-red-200,
+html[data-theme="light"] .text-red-300,
+html[data-theme="light"] .text-red-400 { color: #b91c1c; }
 
 /* Kelas komponen (@apply meng-compile warna gelap ke aturannya sendiri, jadi
    utilitas di atas tak menjangkaunya) — sesuaikan untuk tema terang. */
