@@ -134,11 +134,11 @@ export default function PenerimaPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold">🏫 Data Penerima (Sekolah &amp; B3)</h1>
+          <h1 className="text-xl font-bold">Data Penerima (Sekolah &amp; B3)</h1>
           <Link href="/admin/distribusi" className="text-sm text-gold-400 hover:underline">← Distribusi Harian</Link>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => window.open("/cetak/penerima", "_blank")} className="btn-ghost">🖨️ Cetak</button>
+          <button onClick={() => window.open("/cetak/penerima", "_blank")} className="btn-ghost">Cetak</button>
           <button onClick={() => bukaForm({ ...empty })} className="btn-gold">+ Tambah Penerima</button>
         </div>
       </div>

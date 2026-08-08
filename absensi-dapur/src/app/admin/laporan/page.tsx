@@ -82,12 +82,12 @@ export default function LaporanPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📋 Laporan Kegiatan Harian</h1>
+          <h1 className="text-xl font-bold">Laporan Kegiatan Harian</h1>
           <p className="text-sm text-slate-400">{fmtTgl(tanggal)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input type="date" className="input" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
-          <button onClick={() => window.open(`/cetak/laporan?tanggal=${tanggal}`, "_blank")} className="btn-ghost">🖨️ Cetak</button>
+          <button onClick={() => window.open(`/cetak/laporan?tanggal=${tanggal}`, "_blank")} className="btn-ghost">Cetak</button>
         </div>
       </div>
 
@@ -99,7 +99,7 @@ export default function LaporanPage() {
         <>
           {/* Menu */}
           <div className="card space-y-3 p-4">
-            <h2 className="text-sm font-semibold text-gold-400">🍚 Menu Hari Ini</h2>
+            <h2 className="text-sm font-semibold text-gold-400">Menu Hari Ini</h2>
             <div>
               <label className="label">Ringkasan menu (opsional)</label>
               <input className="input" value={isi.menu_teks} onChange={(e) => patchIsi({ menu_teks: e.target.value })} placeholder="mis. Nasi, Ayam Bawang, Sayur Lodeh, Susu, Buah" />
@@ -118,7 +118,7 @@ export default function LaporanPage() {
           {/* Personel */}
           <div className="card space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gold-400">👥 Kehadiran Personel <span className="font-normal text-slate-500">(total {totalPersonel} orang)</span></h2>
+              <h2 className="text-sm font-semibold text-gold-400">Kehadiran Personel <span className="font-normal text-slate-500">(total {totalPersonel} orang)</span></h2>
               <button onClick={() => setPersonel([...isi.personel, { label: "", jumlah: 0 }])} className="btn-ghost px-2.5 py-1 text-xs">+ Baris</button>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -135,25 +135,25 @@ export default function LaporanPage() {
 
           {/* Kegiatan */}
           <div className="card space-y-2 p-4">
-            <h2 className="text-sm font-semibold text-gold-400">🕒 Rangkaian Kegiatan <span className="font-normal text-slate-500">(satu kegiatan per baris)</span></h2>
+            <h2 className="text-sm font-semibold text-gold-400">Rangkaian Kegiatan <span className="font-normal text-slate-500">(satu kegiatan per baris)</span></h2>
             <textarea className="input min-h-[160px]" value={isi.kegiatan.join("\n")} onChange={(e) => patchIsi({ kegiatan: e.target.value.split("\n") })} />
           </div>
 
           {/* Kendala & Solusi */}
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="card space-y-2 p-4">
-              <h2 className="text-sm font-semibold text-gold-400">⚠️ Kendala</h2>
+              <h2 className="text-sm font-semibold text-gold-400">Kendala</h2>
               <textarea className="input min-h-[120px]" value={isi.kendala} onChange={(e) => patchIsi({ kendala: e.target.value })} />
             </div>
             <div className="card space-y-2 p-4">
-              <h2 className="text-sm font-semibold text-gold-400">✅ Solusi</h2>
+              <h2 className="text-sm font-semibold text-gold-400">Solusi</h2>
               <textarea className="input min-h-[120px]" value={isi.solusi} onChange={(e) => patchIsi({ solusi: e.target.value })} />
             </div>
           </div>
 
           {/* Foto */}
           <div className="card space-y-3 p-4">
-            <h2 className="text-sm font-semibold text-gold-400">📷 Foto (menu &amp; dokumentasi)</h2>
+            <h2 className="text-sm font-semibold text-gold-400">Foto (menu &amp; dokumentasi)</h2>
             <p className="text-xs text-slate-500">
               Menu 2 foto (tampil di atas rincian menu). Dokumentasi 3 foto per kegiatan. Semua rasio disamakan (4:3) &amp; dikompres otomatis.
             </p>
@@ -187,8 +187,8 @@ export default function LaporanPage() {
           </div>
 
           <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-ink-900/90 p-3 backdrop-blur">
-            <button onClick={simpan} className="btn-gold" disabled={saving}>{saving ? "Menyimpan…" : "💾 Simpan Laporan"}</button>
-            <button onClick={() => window.open(`/cetak/laporan?tanggal=${tanggal}`, "_blank")} className="btn-ghost">🖨️ Cetak / PDF</button>
+            <button onClick={simpan} className="btn-gold" disabled={saving}>{saving ? "Menyimpan…" : "Simpan Laporan"}</button>
+            <button onClick={() => window.open(`/cetak/laporan?tanggal=${tanggal}`, "_blank")} className="btn-ghost">Cetak / PDF</button>
             <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar data terbaru ikut.</span>
             <Link href="/admin/distribusi" className="btn-ghost ml-auto">← Distribusi</Link>
           </div>

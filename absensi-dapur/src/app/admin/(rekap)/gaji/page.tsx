@@ -211,14 +211,14 @@ export default function GajiPage() {
         </button>
         <div className="ml-auto flex gap-2">
           <a href={excelHref} className="btn-ghost">
-            ⬇ Excel
+            Excel
           </a>
           <button
             onClick={unduhPdf}
             className="btn-gold"
             disabled={pdfBusy || !totalPegawai}
           >
-            {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
+            {pdfBusy ? "Menyiapkan…" : "PDF"}
           </button>
         </div>
       </div>

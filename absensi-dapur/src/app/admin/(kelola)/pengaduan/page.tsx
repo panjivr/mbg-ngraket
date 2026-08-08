@@ -68,7 +68,7 @@ export default function AdminPengaduanPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">📮 Kotak Aspirasi Pegawai</h1>
+        <h1 className="text-xl font-bold">Kotak Aspirasi Pegawai</h1>
         {jmlBaru > 0 && (
           <span className="badge text-rose-300">{jmlBaru} baru</span>
         )}
@@ -123,7 +123,7 @@ export default function AdminPengaduanPage() {
               </div>
               <p className="text-xs text-slate-400">
                 {p.anonim ? (
-                  <span className="italic">🕶️ Anonim</span>
+                  <span className="italic">Anonim</span>
                 ) : (
                   <>
                     {p.pelapor || "—"}

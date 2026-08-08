@@ -67,10 +67,10 @@ export default function DokumentasiPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📷 Dokumentasi Foto Kegiatan</h1>
+          <h1 className="text-xl font-bold">Dokumentasi Foto Kegiatan</h1>
           <p className="text-sm text-slate-400">{fmtTgl(tanggal)} · {kegiatan || "—"}</p>
         </div>
-        <button onClick={cetak} className="btn-ghost">🖨️ Cetak</button>
+        <button onClick={cetak} className="btn-ghost">Cetak</button>
       </div>
 
       <div className="card grid gap-3 p-4 sm:grid-cols-2">
@@ -118,8 +118,8 @@ export default function DokumentasiPage() {
       )}
 
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-ink-900/90 p-3 backdrop-blur">
-        <button onClick={simpan} className="btn-gold" disabled={saving}>{saving ? "Menyimpan…" : "💾 Simpan Dokumentasi"}</button>
-        <button onClick={cetak} className="btn-ghost">🖨️ Cetak / PDF</button>
+        <button onClick={simpan} className="btn-gold" disabled={saving}>{saving ? "Menyimpan…" : "Simpan Dokumentasi"}</button>
+        <button onClick={cetak} className="btn-ghost">Cetak / PDF</button>
         <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar foto terbaru ikut.</span>
       </div>
     </div>

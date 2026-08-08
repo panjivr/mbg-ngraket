@@ -100,7 +100,7 @@ export default function PengaturanPage() {
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">Lokasi & Geofence</p>
           <button onClick={useMyLocation} className="btn-ghost px-3 py-1.5 text-xs">
-            📍 Gunakan Lokasi Saya
+            Gunakan Lokasi Saya
           </button>
         </div>
         <div className="grid grid-cols-2 gap-3">

@@ -96,7 +96,7 @@ export default function AuditPage() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={exportCsv} disabled={loading || rows.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
-            ⬇️ Ekspor CSV
+            Ekspor CSV
           </button>
           <button onClick={load} disabled={loading} className="btn-ghost px-3 py-1.5 text-xs">
             {loading ? "Memuat…" : "Segarkan"}

@@ -273,7 +273,7 @@ export default function DivisiPage() {
                           className="btn-ghost px-2.5 py-1 text-xs"
                           title="Kelola sub-shift (mis. keamanan pagi/siang/malam)"
                         >
-                          🕒 Shift{d.shifts?.length ? ` (${d.shifts.length})` : ""}
+                          Shift{d.shifts?.length ? ` (${d.shifts.length})` : ""}
                         </button>
                         <button
                           onClick={() => openEdit(d)}

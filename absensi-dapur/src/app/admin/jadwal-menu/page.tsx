@@ -132,7 +132,7 @@ export default function JadwalMenuPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">📅 Jadwal Menu & Belanja</h1>
+          <h1 className="text-lg font-bold">Jadwal Menu & Belanja</h1>
           <p className="text-xs text-slate-400">
             Tempel menu Reguler & B3 ke tiap tanggal. Porsi dari penerima terdaftar, bisa diubah per hari.
           </p>
@@ -142,7 +142,7 @@ export default function JadwalMenuPage() {
             href={`/admin/belanja?mulai=${data.mulai}&hari=${data.hari}`}
             className="btn-gold px-3 py-1.5 text-sm"
           >
-            🛒 Belanja periode ini
+            Belanja periode ini
           </Link>
         )}
       </div>

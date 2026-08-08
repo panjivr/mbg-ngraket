@@ -220,7 +220,7 @@ export default function SopPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📋 Standar Operasional Prosedur (SOP)</h1>
+          <h1 className="text-xl font-bold">Standar Operasional Prosedur (SOP)</h1>
           <p className="text-sm text-slate-400">
             Kelola SOP dapur MBG/SPPG — dari penerimaan bahan, pengolahan, higiene,
             hingga distribusi. Satu SOP satu prosedur baku.
@@ -233,10 +233,10 @@ export default function SopPage() {
             className="btn-ghost"
             title="Analisa kelengkapan & rekomendasi SOP"
           >
-            {analisisLoading ? "Menganalisa…" : "🔍 Analisa Kelengkapan SOP"}
+            {analisisLoading ? "Menganalisa…" : "Analisa Kelengkapan SOP"}
           </button>
           <button onClick={() => openNew()} className="btn-gold">
-            ➕ Tambah SOP
+            Tambah SOP
           </button>
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function SopPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="flex items-center gap-2 text-sm font-semibold text-emas-400">
-                🔍 Analisa Kelengkapan SOP
+                Analisa Kelengkapan SOP
               </p>
               <p className="mt-1 text-xs text-slate-400">
                 Skor kelengkapan dihitung dari SOP yang mengisi seluruh komponen wajib.
@@ -340,7 +340,7 @@ export default function SopPage() {
         <div className="card p-6 text-center text-slate-400">Memuat…</div>
       ) : list.length === 0 ? (
         <div className="card p-6 text-center text-slate-400">
-          Belum ada SOP. Klik <span className="font-semibold">➕ Tambah SOP</span> untuk
+          Belum ada SOP. Klik <span className="font-semibold">Tambah SOP</span> untuk
           membuat yang pertama.
         </div>
       ) : (

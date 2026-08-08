@@ -108,7 +108,7 @@ export default function RekapDistribusiPage() {
             className="input px-3 py-1.5 text-sm"
           />
           <button onClick={exportCsv} disabled={loading || !data || data.hari.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
-            ⬇️ Ekspor CSV
+            Ekspor CSV
           </button>
         </div>
       </div>

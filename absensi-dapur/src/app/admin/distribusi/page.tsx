@@ -242,14 +242,14 @@ export default function DistribusiPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">🚚 Distribusi Harian</h1>
+          <h1 className="text-xl font-bold">Distribusi Harian</h1>
           <p className="text-sm text-slate-400">{fmtTgl(tanggal)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input type="date" className="input" value={tanggal} onChange={(e) => gantiTanggal(e.target.value)} />
-          <Link href="/admin/distribusi/penerima" className="btn-ghost">🏫 Data Penerima</Link>
+          <Link href="/admin/distribusi/penerima" className="btn-ghost">Data Penerima</Link>
           <button onClick={muatMaster} className="btn-ghost">↻ Muat dari Master</button>
-          <button onClick={bukaSetel} className="btn-ghost">⚙️ Harga & Kepala</button>
+          <button onClick={bukaSetel} className="btn-ghost">Harga & Kepala</button>
         </div>
       </div>
 
@@ -292,9 +292,9 @@ export default function DistribusiPage() {
 
       {/* Menu terstruktur untuk form Uji Organoleptik (bisa diisi & diganti tiap hari) */}
       <div className="grid gap-3 lg:grid-cols-3">
-        <MenuEditor judul="🍚 Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={(v) => { setMenuSekolah(v); setDirty(true); }} />
-        <MenuEditor judul="👶 Menu Balita — Uji Organoleptik" warna="text-amber-300" value={menuBalita} onChange={(v) => { setMenuBalita(v); setDirty(true); }} />
-        <MenuEditor judul="🤰 Menu B2 (Bumil & Busui) — Uji Organoleptik" warna="text-pink-300" value={menuB2} onChange={(v) => { setMenuB2(v); setDirty(true); }} />
+        <MenuEditor judul="Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={menuSekolah} onChange={(v) => { setMenuSekolah(v); setDirty(true); }} />
+        <MenuEditor judul="Menu Balita — Uji Organoleptik" warna="text-amber-300" value={menuBalita} onChange={(v) => { setMenuBalita(v); setDirty(true); }} />
+        <MenuEditor judul="Menu B2 (Bumil & Busui) — Uji Organoleptik" warna="text-pink-300" value={menuB2} onChange={(v) => { setMenuB2(v); setDirty(true); }} />
       </div>
 
       {msg && (
@@ -389,16 +389,16 @@ export default function DistribusiPage() {
       {/* Aksi */}
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-ink-900/90 p-3 backdrop-blur">
         <button onClick={simpan} className="btn-gold" disabled={saving}>
-          {saving ? "Menyimpan…" : "💾 Simpan Distribusi"}
+          {saving ? "Menyimpan…" : "Simpan Distribusi"}
         </button>
         {dirty && <span className="text-xs font-semibold text-amber-300">● Ada perubahan belum disimpan</span>}
         <span className="mx-1 text-xs text-slate-500">Cetak dokumen:</span>
-        <button onClick={unduhCSV} className="btn-ghost text-sm" disabled={baris.length === 0}>📊 Unduh CSV</button>
-        <button onClick={() => cetak("bast")} className="btn-ghost text-sm">🧾 BAST</button>
-        <button onClick={() => cetak("surat-jalan")} className="btn-ghost text-sm">🚚 Surat Jalan</button>
-        <button onClick={() => cetak("organoleptik")} className="btn-ghost text-sm">🔬 Organoleptik</button>
-        <button onClick={() => cetak("semua", "dokumen")} className="btn-ghost text-sm" title="Semua dokumen dikelompokkan per jenis: semua BAST, lalu semua Surat Jalan, lalu semua Organoleptik">📚 Semua (per dokumen)</button>
-        <button onClick={() => cetak("semua", "lembaga")} className="btn-ghost text-sm" title="Per lembaga berurutan: BAST → Surat Jalan → Organoleptik untuk tiap lembaga, urut nama">📑 Semua (per lembaga)</button>
+        <button onClick={unduhCSV} className="btn-ghost text-sm" disabled={baris.length === 0}>Unduh CSV</button>
+        <button onClick={() => cetak("bast")} className="btn-ghost text-sm">BAST</button>
+        <button onClick={() => cetak("surat-jalan")} className="btn-ghost text-sm">Surat Jalan</button>
+        <button onClick={() => cetak("organoleptik")} className="btn-ghost text-sm">Organoleptik</button>
+        <button onClick={() => cetak("semua", "dokumen")} className="btn-ghost text-sm" title="Semua dokumen dikelompokkan per jenis: semua BAST, lalu semua Surat Jalan, lalu semua Organoleptik">Semua (per dokumen)</button>
+        <button onClick={() => cetak("semua", "lembaga")} className="btn-ghost text-sm" title="Per lembaga berurutan: BAST → Surat Jalan → Organoleptik untuk tiap lembaga, urut nama">Semua (per lembaga)</button>
         {!data?.tersimpan && (
           <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar angka terbaru ikut.</span>
         )}

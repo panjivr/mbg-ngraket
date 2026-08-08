@@ -771,7 +771,7 @@ export default function AdminDashboard() {
               className="btn-ghost px-2.5 py-1 text-xs text-gold-400 disabled:opacity-40"
               title="Unduh tabel ini sebagai CSV (buka di Excel)"
             >
-              ⬇ CSV
+              CSV
             </button>
             <span className="text-xs text-slate-400">{rowsTampil.length} entri</span>
           </div>
@@ -855,7 +855,7 @@ export default function AdminDashboard() {
                               className="btn-ghost px-2 py-0.5 text-[11px]"
                               title="Tutup absen pulang (untuk yang lupa menekan pulang)"
                             >
-                              ⏹ Tutup
+                              Tutup
                             </button>
                           </span>
                         ) : (

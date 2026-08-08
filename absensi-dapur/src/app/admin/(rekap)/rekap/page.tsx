@@ -383,7 +383,7 @@ export default function RekapPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">Rekap Absensi</h1>
         <button onClick={openManual} className="btn-gold">
-          ➕ Absen Manual
+          Absen Manual
         </button>
       </div>
 
@@ -413,10 +413,10 @@ export default function RekapPage() {
         </button>
         <div className="ml-auto flex gap-2">
           <a href={`/api/admin/export-xlsx?from=${from}&to=${to}`} className="btn-ghost">
-            ⬇ Excel
+            Excel
           </a>
           <button onClick={unduhPdf} className="btn-gold" disabled={pdfBusy || !view.length}>
-            {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
+            {pdfBusy ? "Menyiapkan…" : "PDF"}
           </button>
         </div>
       </div>
@@ -562,7 +562,7 @@ export default function RekapPage() {
                           className="btn-ghost px-2 py-0.5 text-[11px]"
                           title="Tutup absen pulang (untuk yang lupa menekan pulang)"
                         >
-                          ⏹ Tutup
+                          Tutup
                         </button>
                       ) : (
                         fmtTime(r.check_out)
@@ -583,14 +583,14 @@ export default function RekapPage() {
                           className="btn-ghost px-2.5 py-1 text-xs"
                           title="Edit jam masuk / pulang"
                         >
-                          ✏️ Edit
+                          Edit
                         </button>
                         <button
                           onClick={() => hapusAbsen(r.id, r.nama, r.tanggal)}
                           className="btn-danger px-2.5 py-1 text-xs"
                           title="Hapus catatan absensi"
                         >
-                          🗑 Hapus
+                          Hapus
                         </button>
                       </div>
                     </td>

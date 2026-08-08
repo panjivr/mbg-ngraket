@@ -75,7 +75,7 @@ export default function JadwalPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">🗓️ Jadwal Kerja</h1>
+        <h1 className="text-xl font-bold">Jadwal Kerja</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => setWeekStart(addDays(weekStart, -7))} className="btn-ghost px-3 py-1.5 text-sm">
             ← Minggu lalu
@@ -240,7 +240,7 @@ function CellEditor({
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" checked={libur} onChange={(e) => setLibur(e.target.checked)} />
-          🏖️ Libur
+          Libur
         </label>
         {!libur && (
           <>

@@ -109,7 +109,7 @@ export default async function AhliGiziHubPage() {
             href="/admin/ahli-gizi/arsip"
             className="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-200 shadow-sm transition hover:bg-emerald-500/20"
           >
-            🗓️ Arsip Laporan
+            Arsip Laporan
           </Link>
         </div>
 

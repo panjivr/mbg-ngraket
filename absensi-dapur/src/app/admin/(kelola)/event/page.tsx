@@ -289,7 +289,7 @@ export default function EventPage() {
                 );
               }}
             >
-              📍 Lokasi Saya
+              Lokasi Saya
             </button>
           </div>
           <p className="mt-1 text-xs text-slate-500">
@@ -373,7 +373,7 @@ export default function EventPage() {
                         )}
                         {e.lat !== null && e.lng !== null && (
                           <span className="badge ml-2 bg-sky-500/15 text-sky-300">
-                            📌 titik GPS sendiri
+                            titik GPS sendiri
                           </span>
                         )}
                       </td>

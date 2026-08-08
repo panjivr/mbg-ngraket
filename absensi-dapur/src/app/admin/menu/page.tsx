@@ -239,7 +239,7 @@ export default function MenuPage() {
       <QuoteBanner />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold">🍱 Bank Menu &amp; Kalkulasi Bahan</h1>
+          <h1 className="text-xl font-bold">Bank Menu &amp; Kalkulasi Bahan</h1>
           <p className="text-xs text-slate-400">
             Kunci bahan pada satu porsi dasar (mis. 2000). Sistem membagi/mengalikan otomatis ke
             porsi berapa pun.
@@ -545,7 +545,7 @@ function MenuEditor({
                 className="btn-ghost px-2.5 py-1 text-xs"
                 title="Cocokkan nama bahan ke komoditas pasar & isi harganya otomatis"
               >
-                🎯 Cocokkan otomatis
+                Cocokkan otomatis
               </button>
               <button
                 onClick={() => setPasteOpen((v) => !v)}
@@ -615,7 +615,7 @@ function MenuEditor({
                   <tr key={i}>
                     <td className="px-2 py-1.5">
                       <select className="input py-1" value={b.barang_id ?? ""} onChange={(e) => pilihBarang(i, e.target.value)}>
-                        <option value="">✍️ Ketik bebas</option>
+                        <option value="">Ketik bebas</option>
                         {barang.map((x) => (
                           <option key={x.id} value={x.id}>
                             📦 {x.nama}
@@ -737,17 +737,17 @@ function MenuEditor({
           </div>
           {kurang.length > 0 && (
             <p className="mt-2 text-[11px] text-amber-300/90">
-              ⚠️ Komponen inti belum ada: {kurang.map((k) => KOMPONEN_GIZI[k].label).join(", ")}.
+              Komponen inti belum ada: {kurang.map((k) => KOMPONEN_GIZI[k].label).join(", ")}.
               Menu makan utama idealnya memuat karbohidrat, protein hewani, sayur, dan buah.
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={simpan} disabled={saving} className="btn-primary">
-            {saving ? "Menyimpan…" : "💾 Simpan Menu"}
+            {saving ? "Menyimpan…" : "Simpan Menu"}
           </button>
           <button onClick={onDuplikat} className="btn-ghost px-3 py-1.5 text-sm">
-            📑 Duplikat menu
+            Duplikat menu
           </button>
           <button onClick={hapus} className="btn-ghost px-3 py-1.5 text-sm text-red-400">
             Hapus menu
@@ -759,7 +759,7 @@ function MenuEditor({
       {/* HPP / Food Cost — biaya bahan per porsi vs pagu */}
       <div className="card space-y-3 p-4">
         <div>
-          <h3 className="text-sm font-semibold">💰 HPP / Food Cost</h3>
+          <h3 className="text-sm font-semibold">HPP / Food Cost</h3>
           <p className="text-[11px] text-slate-500">
             Biaya bahan per porsi dibanding pagu porsi besar ({rupiah(pagu.besar)}).
           </p>
@@ -797,7 +797,7 @@ function MenuEditor({
           )}
           {hpp.tanpaHarga === 0 && hpp.marginBesar < 0 && (
             <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-300">
-              ⚠️ Biaya bahan melebihi pagu — menu ini rugi.
+              Biaya bahan melebihi pagu — menu ini rugi.
             </span>
           )}
         </div>
@@ -807,7 +807,7 @@ function MenuEditor({
       <div className="card space-y-3 p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold">🧮 Hitung kebutuhan bahan</h3>
+            <h3 className="text-sm font-semibold">Hitung kebutuhan bahan</h3>
             <p className="text-[11px] text-slate-500">
               Faktor skala: {fmtJumlah(Number(faktor.toFixed(4)))}× (dari {fmtJumlah(porsiDasar)} porsi)
             </p>
@@ -829,7 +829,7 @@ function MenuEditor({
               rel="noreferrer"
               className="btn-ghost px-3 py-2 text-sm"
             >
-              🖨️ Cetak Belanja
+              Cetak Belanja
             </a>
           </div>
         </div>
