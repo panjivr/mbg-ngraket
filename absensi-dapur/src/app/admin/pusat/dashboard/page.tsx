@@ -73,7 +73,7 @@ export default function DashboardPusatPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">📊 Dashboard Semua Dapur</h1>
+          <h1 className="text-xl font-bold">Dashboard Semua Dapur</h1>
           <p className="text-sm text-slate-400">Ringkasan pagu, kehadiran, karyawan, porsi &amp; menu — pilih tanggal &amp; dapur.</p>
         </div>
         <div className="flex items-center gap-2">

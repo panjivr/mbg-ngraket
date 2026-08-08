@@ -437,7 +437,7 @@ export default function AdminDashboard() {
       {ring && (
         <div className="space-y-3">
           {ring.menu && (
-            <p className="text-sm text-slate-400">🍽️ Menu hari ini: <span className="text-slate-200">{ring.menu}</span></p>
+            <p className="text-sm text-slate-400">Menu hari ini: <span className="font-medium text-slate-200">{ring.menu}</span></p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="stat-card"><p className="stat-label">Porsi Besar (+PJ)</p><p className="stat-value text-emerald-300">{ring.distribusi.besar}</p></div>
