@@ -4,6 +4,7 @@ import PengumumanCard from "@/components/PengumumanCard";
 import BebanHariIni from "@/components/BebanHariIni";
 import PengingatAbsen from "@/components/PengingatAbsen";
 import HariIstimewa from "@/components/HariIstimewa";
+import DapurQuickMenu from "@/components/DapurQuickMenu";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default function DapurPage() {
       <PengingatAbsen />
       <BebanHariIni />
       <AbsenPanel />
+      <DapurQuickMenu />
       <StaffLeaderboard compact />
     </div>
   );
