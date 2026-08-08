@@ -149,6 +149,25 @@ export default function DistribusiPage() {
     };
   }, [baris, harga]);
 
+  // Ekspor daftar distribusi (per penerima) ke CSV untuk arsip/rekap.
+  function unduhCSV() {
+    if (baris.length === 0) return;
+    const head = ["Nama", "Jenis", "Jenjang", "Kategori", "Jam Kirim", "Besar", "Kecil", "B3", "PJ", "Ikut"];
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const rows = baris.map((b) =>
+      [b.nama, b.jenis, b.jenjang, b.kategori || "-", b.jam_kirim || "-", b.besar || 0, b.kecil || 0, b.b3 || 0, b.pj || 0, b.ikut ? "ya" : "tidak"]
+        .map(esc)
+        .join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...rows].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `distribusi-${tanggal || "hari-ini"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function simpan() {
     setSaving(true);
     setMsg(null);
@@ -374,6 +393,7 @@ export default function DistribusiPage() {
         </button>
         {dirty && <span className="text-xs font-semibold text-amber-300">● Ada perubahan belum disimpan</span>}
         <span className="mx-1 text-xs text-slate-500">Cetak dokumen:</span>
+        <button onClick={unduhCSV} className="btn-ghost text-sm" disabled={baris.length === 0}>📊 Unduh CSV</button>
         <button onClick={() => cetak("bast")} className="btn-ghost text-sm">🧾 BAST</button>
         <button onClick={() => cetak("surat-jalan")} className="btn-ghost text-sm">🚚 Surat Jalan</button>
         <button onClick={() => cetak("organoleptik")} className="btn-ghost text-sm">🔬 Organoleptik</button>

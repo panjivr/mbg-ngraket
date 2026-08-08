@@ -210,10 +210,33 @@ function DataGaji() {
     }
   };
 
+  function unduhCSV() {
+    if (rows.length === 0) return;
+    const head = ["Nama", "Divisi", "Upah/Hari", "Lembur/Hari", "Potongan/Telat", "BPJS TK", "Tampilkan Slip"];
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const body = rows.map((r) =>
+      [r.nama, r.divisi_nama || "-", Math.round(r.gaji_harian || 0), Math.round(r.lembur_per_hari || 0), Math.round(r.potongan_per_telat || 0), r.bpjs_tk ? "ya" : "tidak", r.slip_show ? "ya" : "tidak"]
+        .map(esc)
+        .join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "data-gaji-pegawai.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (loading) return <div className="card p-6 text-center text-slate-400">Memuat…</div>;
 
   return (
-    <div className="card scroll-x overflow-x-auto">
+    <div className="card p-0">
+      <div className="flex items-center justify-between gap-2 border-b border-white/5 px-3 py-2">
+        <p className="text-xs font-semibold text-slate-400">Data Gaji Pegawai</p>
+        <button onClick={unduhCSV} disabled={rows.length === 0} className="btn-ghost px-2.5 py-1 text-xs">Unduh CSV</button>
+      </div>
+      <div className="scroll-x overflow-x-auto">
       <table className="w-full min-w-[720px] text-sm">
         <thead className="text-left text-xs uppercase text-slate-400">
           <tr className="border-b border-white/5">
@@ -263,6 +286,7 @@ function DataGaji() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
