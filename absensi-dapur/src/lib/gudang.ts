@@ -26,6 +26,30 @@ export interface Barang {
   catatan: string;
   aktif: boolean;
   urutan: number;
+  tanggal_kadaluarsa: string | null;
+}
+
+const TANGGAL_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Normalkan input tanggal → 'YYYY-MM-DD' valid atau null (kosong/salah). */
+export function normalizeTanggal(v: unknown): string | null {
+  const s = String(v ?? "").trim();
+  return TANGGAL_RE.test(s) ? s : null;
+}
+
+export type StatusKadaluarsa = "kadaluarsa" | "segera" | "aman";
+/**
+ * Status kadaluarsa relatif hari ini (Asia/Jakarta, format YYYY-MM-DD).
+ * null bila tanggal tidak diisi. "segera" = ≤ `ambang` hari lagi (default 7).
+ */
+export function statusKadaluarsa(iso: string | null, today: string, ambang = 7): StatusKadaluarsa | null {
+  if (!iso) return null;
+  const exp = Date.parse(iso + "T00:00:00");
+  const now = Date.parse(today + "T00:00:00");
+  if (Number.isNaN(exp) || Number.isNaN(now)) return null;
+  const hari = Math.round((exp - now) / 86_400_000);
+  if (hari < 0) return "kadaluarsa";
+  if (hari <= ambang) return "segera";
+  return "aman";
 }
 
 export interface Mutasi {

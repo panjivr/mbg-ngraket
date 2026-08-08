@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireGudang } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
-import { normalizeKategori, type Barang } from "@/lib/gudang";
+import { normalizeKategori, normalizeTanggal, type Barang } from "@/lib/gudang";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const id = parseInt((await ctx.params).id, 10);
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   const cur = (await query<Barang>(
-    `SELECT id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif FROM barang WHERE id = $1 AND sppg_id = $2`,
+    `SELECT id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, tanggal_kadaluarsa::text AS tanggal_kadaluarsa FROM barang WHERE id = $1 AND sppg_id = $2`,
     [id, admin.sppg_id],
   ))[0];
   if (!cur) return fail(404, "Barang tidak ditemukan.");
@@ -27,11 +27,12 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   const kode_akun = b.kode_akun !== undefined ? String(b.kode_akun).trim().slice(0, 30) : cur.kode_akun;
   const catatan = b.catatan !== undefined ? String(b.catatan).trim().slice(0, 300) : cur.catatan;
   const aktif = b.aktif !== undefined ? b.aktif !== false : cur.aktif;
+  const tanggal_kadaluarsa = b.tanggal_kadaluarsa !== undefined ? normalizeTanggal(b.tanggal_kadaluarsa) : cur.tanggal_kadaluarsa;
   // Stok tidak diubah lewat sini (harus lewat mutasi), kecuali edit stok_min/identitas.
   const rows = await query<Barang>(
-    `UPDATE barang SET nama=$1, kategori=$2, satuan=$3, stok_min=$4, harga=$5, kode_akun=$6, catatan=$7, aktif=$8 WHERE id=$9
-     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan`,
-    [nama, kategori, satuan, stok_min, harga, kode_akun, catatan, aktif, id],
+    `UPDATE barang SET nama=$1, kategori=$2, satuan=$3, stok_min=$4, harga=$5, kode_akun=$6, catatan=$7, aktif=$8, tanggal_kadaluarsa=$9 WHERE id=$10
+     RETURNING id, sppg_id, nama, kategori, satuan, stok::float8 AS stok, stok_min::float8 AS stok_min, harga::float8 AS harga, kode_akun, catatan, aktif, urutan, tanggal_kadaluarsa::text AS tanggal_kadaluarsa`,
+    [nama, kategori, satuan, stok_min, harga, kode_akun, catatan, aktif, tanggal_kadaluarsa, id],
   );
   return ok({ barang: rows[0] });
 });

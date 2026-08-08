@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, TIPE_LABEL, statusStok,
+  KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, TIPE_LABEL, statusStok, statusKadaluarsa,
   type Barang, type Kategori, type Mutasi, type TipeMutasi,
 } from "@/lib/gudang";
 import DashboardGudang from "@/components/gudang/DashboardGudang";
@@ -14,8 +14,10 @@ function jakartaToday(): string {
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
 const fmtRp = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 
-type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; harga: number; kode_akun: string; catatan: string; aktif: boolean };
-const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, harga: 0, kode_akun: "", catatan: "", aktif: true };
+type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; harga: number; kode_akun: string; catatan: string; aktif: boolean; tanggal_kadaluarsa: string };
+const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, harga: 0, kode_akun: "", catatan: "", aktif: true, tanggal_kadaluarsa: "" };
+const KAD_BADGE: Record<string, string> = { kadaluarsa: "bg-red-500/15 text-red-300", segera: "bg-amber-500/15 text-amber-300" };
+const KAD_LABEL: Record<string, string> = { kadaluarsa: "Kadaluarsa", segera: "Segera exp" };
 type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: number; keterangan: string; tanggal: string };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -73,6 +75,17 @@ export default function GudangPage() {
     return { total: list.length, habis, menipis, nilai };
   }, [list]);
 
+  // Peringatan kadaluarsa (FEFO): barang kadaluarsa / akan kadaluarsa ≤ 7 hari.
+  const today = jakartaToday();
+  const kadaluarsa = useMemo(
+    () =>
+      list
+        .map((b) => ({ b, k: statusKadaluarsa(b.tanggal_kadaluarsa, today) }))
+        .filter((x) => x.k === "kadaluarsa" || x.k === "segera")
+        .sort((a, b) => (a.k === b.k ? 0 : a.k === "kadaluarsa" ? -1 : 1)),
+    [list, today],
+  );
+
   // Daftar belanja: barang habis/menipis + saran jumlah beli (stok_min − stok)
   // + estimasi biaya (saran × harga satuan).
   const perluBeli = useMemo(
@@ -105,10 +118,10 @@ export default function GudangPage() {
 
   // Ekspor daftar barang (mengikuti filter kategori aktif) ke CSV.
   function unduhCSV() {
-    const head = ["Kategori", "Nama", "Satuan", "Stok", "Stok Min", "Status", "Harga Satuan", "Nilai Persediaan"];
+    const head = ["Kategori", "Nama", "Satuan", "Stok", "Stok Min", "Status", "Harga Satuan", "Nilai Persediaan", "Kadaluarsa"];
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = shown.map((b) =>
-      [KATEGORI_LABEL[b.kategori], b.nama, b.satuan, fmtNum(b.stok), fmtNum(b.stok_min), STATUS_LABEL[statusStok(b)], Math.round(b.harga || 0), Math.round((b.stok || 0) * (b.harga || 0))]
+      [KATEGORI_LABEL[b.kategori], b.nama, b.satuan, fmtNum(b.stok), fmtNum(b.stok_min), STATUS_LABEL[statusStok(b)], Math.round(b.harga || 0), Math.round((b.stok || 0) * (b.harga || 0)), b.tanggal_kadaluarsa || "-"]
         .map(esc)
         .join(","),
     );
@@ -222,6 +235,16 @@ export default function GudangPage() {
         ))}
       </div>
 
+      {kadaluarsa.length > 0 && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-red-300">⚠️ Peringatan kadaluarsa ({kadaluarsa.length})</p>
+          <p className="mt-0.5 text-red-200/80">
+            {kadaluarsa.slice(0, 6).map(({ b, k }) => `${b.nama} (${k === "kadaluarsa" ? "lewat" : "≤7 hari"}: ${b.tanggal_kadaluarsa})`).join(" · ")}
+            {kadaluarsa.length > 6 ? ` … +${kadaluarsa.length - 6} lagi` : ""}
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <div className="card p-6 text-center text-slate-400">Memuat…</div>
       ) : (
@@ -259,7 +282,15 @@ export default function GudangPage() {
                       const st = statusStok(b);
                       return (
                         <tr key={b.id} className="border-b border-white/5">
-                          <td className="px-3 py-1.5 font-medium">{b.nama}{b.catatan && <span className="ml-1 text-xs text-slate-500">· {b.catatan}</span>}</td>
+                          <td className="px-3 py-1.5 font-medium">
+                            {b.nama}{b.catatan && <span className="ml-1 text-xs text-slate-500">· {b.catatan}</span>}
+                            {(() => {
+                              const k = statusKadaluarsa(b.tanggal_kadaluarsa, today);
+                              return k === "kadaluarsa" || k === "segera" ? (
+                                <span className={"badge ml-1.5 " + KAD_BADGE[k]} title={`Kadaluarsa ${b.tanggal_kadaluarsa}`}>{KAD_LABEL[k]}</span>
+                              ) : null;
+                            })()}
+                          </td>
                           <td className="px-3 py-1.5 text-slate-400">{b.satuan}</td>
                           <td className="px-3 py-1.5 font-semibold">{fmtNum(b.stok)}</td>
                           <td className="px-3 py-1.5 text-slate-400">{fmtNum(b.stok_min)}</td>
@@ -270,7 +301,7 @@ export default function GudangPage() {
                               <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: 0, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-sky-300">− Keluar</button>
                               <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: b.stok, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-amber-300">✓ Opname</button>
                               <button onClick={() => bukaRiwayat(b)} className="btn-ghost px-2 py-0.5 text-xs">Riwayat</button>
-                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: b.stok_min, harga: b.harga, kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
+                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: b.stok_min, harga: b.harga, kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif, tanggal_kadaluarsa: b.tanggal_kadaluarsa ?? "" })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={() => hapusBarang(b)} className="btn-danger px-2 py-0.5 text-xs">Hapus</button>
                             </div>
                           </td>
@@ -308,7 +339,10 @@ export default function GudangPage() {
                 <div><label className="label">Kode Akun (opsional)</label><input className="input" value={bForm.kode_akun} onChange={(e) => setBForm({ ...bForm, kode_akun: e.target.value })} placeholder="mis. 2115" /></div>
                 <div><label className="label">Harga Satuan (Rp)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.harga} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, harga: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
               </div>
-              <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.stok_min} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.stok_min} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+                <div><label className="label">Kadaluarsa (opsional)</label><input type="date" className="input" value={bForm.tanggal_kadaluarsa} onChange={(e) => setBForm({ ...bForm, tanggal_kadaluarsa: e.target.value })} /></div>
+              </div>
               <div><label className="label">Catatan (opsional)</label><input className="input" value={bForm.catatan} onChange={(e) => setBForm({ ...bForm, catatan: e.target.value })} /></div>
               {bForm.id && <p className="text-xs text-slate-500">Stok saat ini diubah lewat tombol Masuk/Keluar/Opname, bukan di sini.</p>}
               <div className="flex gap-2 pt-2">
