@@ -12,6 +12,7 @@ function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
+const fmtRp = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 
 type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; harga: number; kode_akun: string; catatan: string; aktif: boolean };
 const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, harga: 0, kode_akun: "", catatan: "", aktif: true };
@@ -60,27 +61,52 @@ export default function GudangPage() {
     return { total: list.length, habis, menipis };
   }, [list]);
 
-  // Daftar belanja: barang habis/menipis + saran jumlah beli (stok_min − stok).
+  // Daftar belanja: barang habis/menipis + saran jumlah beli (stok_min − stok)
+  // + estimasi biaya (saran × harga satuan).
   const perluBeli = useMemo(
     () =>
       list
-        .map((b) => ({ b, s: statusStok(b), saran: Math.max(0, b.stok_min - b.stok) }))
+        .map((b) => {
+          const saran = Math.max(0, b.stok_min - b.stok);
+          return { b, s: statusStok(b), saran, biaya: saran * (b.harga || 0) };
+        })
         .filter((x) => x.s !== "aman")
         .sort((a, b) => (a.s === b.s ? 0 : a.s === "habis" ? -1 : 1)),
     [list],
   );
+  const totalBiaya = useMemo(() => perluBeli.reduce((s, x) => s + x.biaya, 0), [perluBeli]);
   const belanjaTeks = useMemo(() => {
     if (perluBeli.length === 0) return "";
     const tgl = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" }).format(new Date());
-    const baris = perluBeli.map(({ b, s, saran }) => {
+    const baris = perluBeli.map(({ b, s, saran, biaya }) => {
       const beli = saran > 0 ? `beli ±${fmtNum(saran)} ${b.satuan}` : `stok habis`;
-      return `• ${b.nama} — ${beli} (sisa ${fmtNum(b.stok)} ${b.satuan}${s === "habis" ? ", HABIS" : ""})`;
+      const est = biaya > 0 ? ` ≈ ${fmtRp(biaya)}` : "";
+      return `• ${b.nama} — ${beli}${est} (sisa ${fmtNum(b.stok)} ${b.satuan}${s === "habis" ? ", HABIS" : ""})`;
     });
-    return `🛒 Daftar Belanja Gudang · ${tgl}\n\n${baris.join("\n")}\n\nTotal ${perluBeli.length} barang perlu dibeli.`;
-  }, [perluBeli]);
+    const footer = totalBiaya > 0 ? `\nEstimasi total belanja: ${fmtRp(totalBiaya)}` : "";
+    return `🛒 Daftar Belanja Gudang · ${tgl}\n\n${baris.join("\n")}\n\nTotal ${perluBeli.length} barang perlu dibeli.${footer}`;
+  }, [perluBeli, totalBiaya]);
 
   async function salinBelanja() {
     try { await navigator.clipboard.writeText(belanjaTeks); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+  }
+
+  // Ekspor daftar barang (mengikuti filter kategori aktif) ke CSV.
+  function unduhCSV() {
+    const head = ["Kategori", "Nama", "Satuan", "Stok", "Stok Min", "Status", "Harga Satuan", "Nilai Persediaan"];
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const rows = shown.map((b) =>
+      [KATEGORI_LABEL[b.kategori], b.nama, b.satuan, fmtNum(b.stok), fmtNum(b.stok_min), STATUS_LABEL[statusStok(b)], Math.round(b.harga || 0), Math.round((b.stok || 0) * (b.harga || 0))]
+        .map(esc)
+        .join(","),
+    );
+    const csv = "﻿" + [head.map(esc).join(","), ...rows].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stok-gudang-${jakartaToday()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function simpanBarang() {
@@ -130,7 +156,8 @@ export default function GudangPage() {
           <p className="text-sm text-slate-400">Dashboard nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
         </div>
         {tab === "kelola" && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={unduhCSV} disabled={shown.length === 0} className="btn-ghost">Unduh CSV</button>
             <button onClick={() => setBelanja(true)} className="btn-ghost">
               Daftar Belanja
               {perluBeli.length > 0 && (
@@ -336,7 +363,7 @@ export default function GudangPage() {
             ) : (
               <>
                 <div className="scroll-x mt-4 flex-1 space-y-1.5 overflow-y-auto pr-1">
-                  {perluBeli.map(({ b, s, saran }) => (
+                  {perluBeli.map(({ b, s, saran, biaya }) => (
                     <div key={b.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{b.nama}</p>
@@ -345,10 +372,17 @@ export default function GudangPage() {
                       <div className="shrink-0 text-right">
                         <span className={"badge " + STATUS_BADGE[s]}>{STATUS_LABEL[s]}</span>
                         {saran > 0 && <p className="mt-0.5 text-[11px] font-semibold text-amber-300">beli ±{fmtNum(saran)} {b.satuan}</p>}
+                        {biaya > 0 && <p className="text-[11px] text-slate-400">≈ {fmtRp(biaya)}</p>}
                       </div>
                     </div>
                   ))}
                 </div>
+                {totalBiaya > 0 && (
+                  <div className="mt-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                    <span className="text-slate-400">Estimasi total belanja</span>
+                    <span className="font-bold text-gold-400">{fmtRp(totalBiaya)}</span>
+                  </div>
+                )}
                 <div className="mt-4 flex gap-2">
                   <button onClick={salinBelanja} className="btn-ghost flex-1">{copied ? "Tersalin ✓" : "Salin teks"}</button>
                   <a href={`https://wa.me/?text=${encodeURIComponent(belanjaTeks)}`} target="_blank" rel="noopener noreferrer" className="btn-gold flex-1">Bagikan ke WhatsApp</a>
