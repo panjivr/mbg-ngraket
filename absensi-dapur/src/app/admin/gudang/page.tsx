@@ -38,6 +38,7 @@ export default function GudangPage() {
   const [tab, setTab] = useState<"dashboard" | "kelola" | "kartu">("dashboard");
   const [belanja, setBelanja] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,16 +50,27 @@ export default function GudangPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const shown = useMemo(() => list.filter((b) => filter === "all" || b.kategori === filter), [list, filter]);
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter(
+      (b) =>
+        (filter === "all" || b.kategori === filter) &&
+        (needle === "" || b.nama.toLowerCase().includes(needle) || b.catatan.toLowerCase().includes(needle)),
+    );
+  }, [list, filter, q]);
   const grup = useMemo(() => {
     const m = new Map<Kategori, Barang[]>();
     for (const b of shown) { if (!m.has(b.kategori)) m.set(b.kategori, []); m.get(b.kategori)!.push(b); }
     return [...m.entries()];
   }, [shown]);
   const stat = useMemo(() => {
-    let habis = 0, menipis = 0;
-    for (const b of list) { const s = statusStok(b); if (s === "habis") habis++; else if (s === "menipis") menipis++; }
-    return { total: list.length, habis, menipis };
+    let habis = 0, menipis = 0, nilai = 0;
+    for (const b of list) {
+      const s = statusStok(b);
+      if (s === "habis") habis++; else if (s === "menipis") menipis++;
+      nilai += (b.stok || 0) * (b.harga || 0);
+    }
+    return { total: list.length, habis, menipis, nilai };
   }, [list]);
 
   // Daftar belanja: barang habis/menipis + saran jumlah beli (stok_min − stok)
@@ -183,13 +195,21 @@ export default function GudangPage() {
 
       {tab === "kelola" && (
       <>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="stat-card"><p className="stat-label">Total Barang</p><p className="stat-value">{stat.total}</p></div>
         <div className="stat-card"><span className="absolute inset-y-0 left-0 w-0.5 bg-amber-400" /><p className="stat-label">Menipis</p><p className="stat-value text-amber-300">{stat.menipis}</p></div>
         <div className="stat-card"><span className="absolute inset-y-0 left-0 w-0.5 bg-red-400" /><p className="stat-label">Habis</p><p className="stat-value text-red-300">{stat.habis}</p></div>
+        <div className="stat-card"><span className="absolute inset-y-0 left-0 w-0.5 bg-emerald-400" /><p className="stat-label">Nilai Persediaan</p><p className="stat-value !text-lg text-emerald-300">{fmtRp(stat.nilai)}</p></div>
       </div>
 
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{msg}</p>}
+
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Cari nama barang…"
+        className="input"
+      />
 
       <div className="flex flex-wrap items-center gap-1.5 text-sm">
         <span className="mr-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">Kategori</span>
@@ -259,7 +279,7 @@ export default function GudangPage() {
                     })}
                   </Fragment>
                 ))}
-                {shown.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">Belum ada barang.</td></tr>}
+                {shown.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-500">{q.trim() || filter !== "all" ? "Tidak ada barang yang cocok." : "Belum ada barang."}</td></tr>}
               </tbody>
             </table>
           </div>
