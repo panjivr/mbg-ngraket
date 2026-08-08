@@ -363,7 +363,7 @@ export default function PegawaiPage() {
             className="btn-ghost"
             title="Lengkapi tanggal & tempat lahir akun yang sudah ada dari data PDF"
           >
-            {importBusy ? "Mengimpor…" : "📥 Impor Tgl Lahir (PDF)"}
+            {importBusy ? "Mengimpor…" : "Impor Tgl Lahir (PDF)"}
           </button>
           <button
             onClick={exportCsv}
@@ -371,7 +371,7 @@ export default function PegawaiPage() {
             className="btn-ghost"
             title="Unduh seluruh data pegawai sebagai CSV (buka di Excel)"
           >
-            ⬇️ Ekspor CSV
+            Ekspor CSV
           </button>
           <button onClick={openNew} className="btn-gold">
             + Tambah Pegawai
@@ -459,13 +459,13 @@ export default function PegawaiPage() {
                           href={`/admin/pegawai/${e.id}`}
                           className="btn-ghost px-2.5 py-1 text-xs"
                         >
-                          📄 Laporan
+                          Laporan
                         </Link>
                         <button
                           onClick={() => openKartu(e)}
                           className="btn-ghost px-2.5 py-1 text-xs"
                         >
-                          🪪 Kartu
+                          Kartu
                         </button>
                         <button
                           onClick={() => openEdit(e)}
@@ -667,27 +667,27 @@ export default function PegawaiPage() {
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_driver}
                     onChange={(e) => setForm({ ...form, is_driver: e.target.checked })} />
-                  🚗 Driver — mengisi Data Kilometer di menu staf
+                  Driver — mengisi Data Kilometer di menu staf
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_distribusi}
                     onChange={(e) => setForm({ ...form, akses_distribusi: e.target.checked })} />
-                  🚚 Admin Distribusi — akses semua fitur Distribusi
+                  Admin Distribusi — akses semua fitur Distribusi
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_laporan}
                     onChange={(e) => setForm({ ...form, akses_laporan: e.target.checked })} />
-                  📋 Admin Penerimaan — akses Laporan Harian &amp; kelola Gudang
+                  Admin Penerimaan — akses Laporan Harian &amp; kelola Gudang
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_gudang_keluar}
                     onChange={(e) => setForm({ ...form, akses_gudang_keluar: e.target.checked })} />
-                  🗄️ Petugas Gudang Keluar (persiapan/pengolahan/pemorsian) — hanya catat barang keluar
+                  Petugas Gudang Keluar (persiapan/pengolahan/pemorsian) — hanya catat barang keluar
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_hr}
                     onChange={(e) => setForm({ ...form, is_hr: e.target.checked })} />
-                  🧾 HR — kelola data gaji &amp; slip (admin lain tidak bisa)
+                  HR — kelola data gaji &amp; slip (admin lain tidak bisa)
                 </label>
                 <p className="text-[11px] text-slate-500">Setelah diubah, pegawai perlu logout &amp; login ulang agar akses aktif.</p>
               </div>
@@ -705,7 +705,7 @@ export default function PegawaiPage() {
                     }}
                     className="btn-ghost w-full text-sm"
                   >
-                    🔑 Ganti Password
+                    Ganti Password
                   </button>
                 ) : (
                   <input

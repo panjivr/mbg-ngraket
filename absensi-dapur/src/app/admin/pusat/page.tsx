@@ -395,14 +395,14 @@ export default function PusatPage() {
             href={excelHref}
             className={"btn-ghost " + (selected.size ? "" : "pointer-events-none opacity-50")}
           >
-            ⬇ Excel
+            Excel
           </a>
           <button
             onClick={unduhPdf}
             className="btn-gold"
             disabled={pdfBusy || !ringkasan.length}
           >
-            {pdfBusy ? "Menyiapkan…" : "⬇ PDF"}
+            {pdfBusy ? "Menyiapkan…" : "PDF"}
           </button>
         </div>
       </div>

@@ -78,7 +78,7 @@ export default function AdminKilometerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold">🚗 Data Kilometer Kendaraan</h1>
+        <h1 className="text-xl font-bold">Data Kilometer Kendaraan</h1>
         <p className="text-sm text-slate-400">Kelola kendaraan, isi KM harian (foto + baca AI), dan cetak laporan.</p>
       </div>
 
@@ -125,7 +125,7 @@ export default function AdminKilometerPage() {
       <div className="card space-y-3 p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-sm font-semibold text-gold-400">Rekap &amp; Cetak</h2>
-          <button onClick={cetak} className="btn-gold" disabled={!entri.length}>🖨️ Cetak / PDF</button>
+          <button onClick={cetak} className="btn-gold" disabled={!entri.length}>Cetak / PDF</button>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div><label className="label">Dari</label><input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></div>

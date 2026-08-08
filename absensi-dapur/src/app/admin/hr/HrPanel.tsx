@@ -42,15 +42,15 @@ export default function HrPanel() {
   const [tab, setTab] = useState<"slip" | "gaji" | "cetak">("slip");
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">🧾 HR — Gaji & Slip</h1>
+      <h1 className="text-xl font-bold">HR — Gaji & Slip</h1>
       <p className="text-xs text-slate-400">
         Halaman khusus HR. Admin biasa tidak dapat mengubah data gaji atau pengaturan slip.
       </p>
       <div className="flex flex-wrap gap-2">
         {[
-          ["slip", "⚙️ Pengaturan Slip"],
-          ["gaji", "💰 Data Gaji"],
-          ["cetak", "🖨️ Pratinjau / Cetak"],
+          ["slip", "Pengaturan Slip"],
+          ["gaji", "Data Gaji"],
+          ["cetak", "Pratinjau / Cetak"],
         ].map(([v, label]) => (
           <button
             key={v}

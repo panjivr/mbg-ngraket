@@ -112,7 +112,7 @@ export default async function AdminLayout({
       <PaketGuard fitur={fitur} />
       {paketExp && (
         <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          ⏳ Masa aktif langganan dapur ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.
+          Masa aktif langganan dapur ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.
         </div>
       )}
       {children}

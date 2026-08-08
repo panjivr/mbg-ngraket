@@ -147,7 +147,7 @@ export default function LaporanPegawaiPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Data diri */}
         <div className="card p-5">
-          <p className="mb-2 text-sm font-semibold">🧾 Data Diri</p>
+          <p className="mb-2 text-sm font-semibold">Data Diri</p>
           <Row k="Nama Lengkap" v={kartu.nama} />
           <Row k="Username" v={akun?.username || "—"} />
           <Row k="Peran" v={akun?.role === "admin" ? "Admin" : "Staf"} />
@@ -165,7 +165,7 @@ export default function LaporanPegawaiPage() {
           <RamalanLengkap tgl={kartu.tanggal_lahir} nama={kartu.nama} />
         ) : (
           <div className="card p-5 text-sm text-slate-400">
-            🔮 Tanggal lahir belum diisi. Lengkapi di menu Pegawai → Edit untuk melihat
+            Tanggal lahir belum diisi. Lengkapi di menu Pegawai → Edit untuk melihat
             ramalan kepribadian.
           </div>
         )}
@@ -186,7 +186,7 @@ export default function LaporanPegawaiPage() {
 
         {/* Jadwal & tugas */}
         <div className="card p-5">
-          <p className="mb-2 text-sm font-semibold">🗂️ Jadwal & Tugas</p>
+          <p className="mb-2 text-sm font-semibold">Jadwal & Tugas</p>
           <Row k="Divisi" v={kartu.divisi_nama || "—"} />
           <Row
             k="Jam Shift"
@@ -206,7 +206,7 @@ export default function LaporanPegawaiPage() {
 
         {/* Statistik kehadiran */}
         <div className="card p-5">
-          <p className="mb-2 text-sm font-semibold">📊 Statistik Kehadiran</p>
+          <p className="mb-2 text-sm font-semibold">Statistik Kehadiran</p>
           <Row k="Total Shift" v={kartu.jumlah_shift} />
           <Row k="Tepat Waktu" v={<span className="text-emerald-300">{kartu.tepat}</span>} />
           <Row k="Terlambat" v={<span className="text-amber-300">{kartu.terlambat}</span>} />
@@ -223,7 +223,7 @@ export default function LaporanPegawaiPage() {
       {/* Riwayat terakhir */}
       <div className="card overflow-hidden">
         <div className="border-b border-white/5 px-4 py-3 text-sm font-semibold">
-          🕓 Riwayat Kehadiran Terakhir
+          Riwayat Kehadiran Terakhir
         </div>
         {riwayat.length === 0 ? (
           <p className="p-6 text-center text-slate-400">Belum ada catatan absensi.</p>
@@ -272,7 +272,7 @@ export default function LaporanPegawaiPage() {
 
       {/* Kartu pegawai */}
       <div className="card p-5">
-        <p className="mb-3 text-sm font-semibold">🪪 Kartu Pegawai</p>
+        <p className="mb-3 text-sm font-semibold">Kartu Pegawai</p>
         <KartuShare data={kartu} />
       </div>
     </div>

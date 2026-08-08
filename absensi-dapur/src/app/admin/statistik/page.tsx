@@ -132,7 +132,7 @@ export default function StatistikPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold">📊 Statistik Absensi</h1>
+          <h1 className="text-xl font-bold">Statistik Absensi</h1>
           <p className="text-xs text-slate-400">
             Grafik kehadiran, ketepatan waktu, emosi tim & peringkat kinerja.
           </p>
@@ -190,7 +190,7 @@ export default function StatistikPage() {
           {/* Donut ketepatan + tren harian */}
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="card p-4">
-              <p className="mb-3 text-sm font-bold">🎯 Tepat Waktu vs Terlambat</p>
+              <p className="mb-3 text-sm font-bold">Tepat Waktu vs Terlambat</p>
               {kpi.tepat + kpi.telat === 0 ? (
                 <Kosong />
               ) : (
@@ -216,7 +216,7 @@ export default function StatistikPage() {
             </div>
 
             <div className="card p-4 lg:col-span-2">
-              <p className="mb-3 text-sm font-bold">📈 Tren Kehadiran Harian</p>
+              <p className="mb-3 text-sm font-bold">Tren Kehadiran Harian</p>
               {(data?.daily.length ?? 0) === 0 ? (
                 <Kosong />
               ) : (
@@ -226,7 +226,7 @@ export default function StatistikPage() {
 
             <div className="card p-4 lg:col-span-2">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold">🍽️ Tren Porsi &amp; Pagu Distribusi</p>
+                <p className="text-sm font-bold">Tren Porsi &amp; Pagu Distribusi</p>
                 {distTrend.hari > 0 && (
                   <span className="text-xs text-slate-400">
                     Σ {fmtN(distTrend.totalPorsi)} porsi · {rupiah(distTrend.totalPagu)} · rata-rata {fmtN(Math.round(distTrend.totalPorsi / distTrend.hari))}/hari
@@ -280,7 +280,7 @@ export default function StatistikPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="card p-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-bold">😊 Emosi Tim</p>
+                <p className="text-sm font-bold">Emosi Tim</p>
                 {moodData.dominan && moodData.total > 0 && (
                   <span className="text-xs text-slate-400">
                     Dominan {moodData.dominan.emoji} {moodData.dominan.label}
@@ -314,7 +314,7 @@ export default function StatistikPage() {
             </div>
 
             <div className="card p-4">
-              <p className="mb-3 text-sm font-bold">🏆 Peringkat Kinerja (10 besar)</p>
+              <p className="mb-3 text-sm font-bold">Peringkat Kinerja (10 besar)</p>
               {(data?.ranking.length ?? 0) === 0 ? (
                 <Kosong />
               ) : (
@@ -341,7 +341,7 @@ export default function StatistikPage() {
 
           {/* Per divisi */}
           <div className="card p-4">
-            <p className="mb-3 text-sm font-bold">🧩 Ketepatan per Divisi</p>
+            <p className="mb-3 text-sm font-bold">Ketepatan per Divisi</p>
             {(data?.divisi.length ?? 0) === 0 ? (
               <Kosong />
             ) : (

@@ -78,7 +78,7 @@ export default function AdminIzinPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">📝 Izin & Cuti</h1>
+        <h1 className="text-xl font-bold">Izin & Cuti</h1>
         {pending > 0 && (
           <span className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
             {pending} menunggu persetujuan

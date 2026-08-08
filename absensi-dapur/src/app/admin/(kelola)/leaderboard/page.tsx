@@ -188,14 +188,14 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">🏆 Peringkat Kinerja Pegawai</h1>
+        <h1 className="text-xl font-bold">Peringkat Kinerja Pegawai</h1>
       </div>
 
       {/* Periode yang dipublikasikan ke karyawan (papan di layar absen). */}
       <div className="card space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-semibold text-slate-200">
-            📢 Periode yang ditampilkan ke karyawan
+            Periode yang ditampilkan ke karyawan
           </p>
           {savedP.from && savedP.to ? (
             <span className="rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
@@ -264,7 +264,7 @@ export default function LeaderboardPage() {
 
       <div className="card flex flex-wrap items-end gap-3 p-4">
         <p className="w-full text-xs font-medium text-slate-400">
-          🔎 Lihat data (khusus admin — tidak memengaruhi papan karyawan)
+          Lihat data (khusus admin — tidak memengaruhi papan karyawan)
         </p>
         <div>
           <label className="label">Dari Tanggal</label>
@@ -320,7 +320,7 @@ export default function LeaderboardPage() {
           &amp; persen tiap komponen</b> — poinnya selalu dijumlahkan persis
           sama dengan skor, jadi transparan dan tidak ada yang perlu iri.
           Pegawai berjadwal khusus (keamanan/admin) bisa disembunyikan lewat
-          tombol 🚫 agar perbandingan setara.
+          tombol Sembunyikan agar perbandingan setara.
         </p>
       </div>
 
@@ -335,7 +335,7 @@ export default function LeaderboardPage() {
       {excluded.length > 0 && (
         <details className="card overflow-hidden" open>
           <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-slate-300">
-            🚫 Dikecualikan dari peringkat ({excluded.length})
+            Dikecualikan dari peringkat ({excluded.length})
           </summary>
           <BoardTable
             rows={excluded}
@@ -478,7 +478,7 @@ function BoardTable({
                           }
                           className="rounded-md border border-white/10 px-2 py-1 text-xs transition hover:bg-white/5 disabled:opacity-50"
                         >
-                          {r.hidden ? "👁 Tampilkan" : "🚫 Sembunyikan"}
+                          {r.hidden ? "Tampilkan" : "Sembunyikan"}
                         </button>
                       </td>
                     </tr>

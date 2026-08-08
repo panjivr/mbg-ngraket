@@ -77,7 +77,7 @@ export default function ArsipPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">🗓️ Arsip Berita Acara</h1>
+          <h1 className="text-xl font-bold">Arsip Berita Acara</h1>
           <p className="mt-1 text-sm text-slate-400">
             Pilih tanggal untuk melihat semua BA yang tersimpan pada hari itu.
           </p>

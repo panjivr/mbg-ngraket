@@ -114,7 +114,7 @@ export default function PengumumanPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">📢 Pengumuman</h1>
+      <h1 className="text-xl font-bold">Pengumuman</h1>
 
       <div className="card space-y-3 p-4">
         <p className="text-sm font-semibold">Buat Pengumuman</p>
@@ -152,7 +152,7 @@ export default function PengumumanPage() {
         </div>
         <label className="flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
-          📌 Sematkan di atas
+          Sematkan di atas
         </label>
         <button onClick={submit} disabled={saving || !judul.trim()} className="btn-primary w-full">
           {saving ? "Menyimpan…" : "Terbitkan"}
@@ -192,7 +192,7 @@ export default function PengumumanPage() {
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
                   <button onClick={() => patch(p.id, { pinned: !p.pinned })} className="btn-ghost px-2 py-1">
-                    {p.pinned ? "Lepas sematan" : "📌 Sematkan"}
+                    {p.pinned ? "Lepas sematan" : "Sematkan"}
                   </button>
                   <button onClick={() => patch(p.id, { aktif: !p.aktif })} className="btn-ghost px-2 py-1">
                     {p.aktif ? "Nonaktifkan" : "Aktifkan"}

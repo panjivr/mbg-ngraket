@@ -16,35 +16,35 @@ type Group = { key: string; label: string; items: Item[] };
 const GROUPS: Group[] = [
   {
     key: "kinerja",
-    label: "🏆 Kinerja",
+    label: "Kinerja",
     items: [
-      { href: "/dapur/peringkat", label: "🏆 Peringkat" },
-      { href: "/dapur/jadwal", label: "🗓️ Jadwal" },
-      { href: "/dapur/sop", label: "📋 SOP" },
+      { href: "/dapur/peringkat", label: "Peringkat" },
+      { href: "/dapur/jadwal", label: "Jadwal" },
+      { href: "/dapur/sop", label: "SOP" },
     ],
   },
   {
     key: "keuangan",
-    label: "💰 Keuangan",
+    label: "Keuangan",
     items: [
-      { href: "/dapur/slip", label: "🧾 Slip Gaji" },
-      { href: "/dapur/finansial", label: "💰 Finansial" },
+      { href: "/dapur/slip", label: "Slip Gaji" },
+      { href: "/dapur/finansial", label: "Finansial" },
     ],
   },
   {
     key: "pengajuan",
-    label: "📝 Pengajuan",
+    label: "Pengajuan",
     items: [
-      { href: "/dapur/izin", label: "📝 Izin" },
-      { href: "/dapur/pengaduan", label: "📮 Aspirasi" },
+      { href: "/dapur/izin", label: "Izin" },
+      { href: "/dapur/pengaduan", label: "Aspirasi" },
     ],
   },
   {
     key: "saya",
-    label: "👤 Saya",
+    label: "Saya",
     items: [
-      { href: "/dapur/riwayat", label: "🕘 Riwayat Saya" },
-      { href: "/dapur/profil", label: "🪪 Kartu Saya" },
+      { href: "/dapur/riwayat", label: "Riwayat Saya" },
+      { href: "/dapur/profil", label: "Kartu Saya" },
     ],
   },
 ];
@@ -75,11 +75,11 @@ export default function DapurNav({
 
   const groups = [...GROUPS];
   const operasional: Item[] = [
-    ...(isDriver ? [{ href: "/dapur/kilometer", label: "🚗 Kilometer" }] : []),
-    ...(gudangKeluar ? [{ href: "/dapur/gudang", label: "🗄️ Gudang" }] : []),
+    ...(isDriver ? [{ href: "/dapur/kilometer", label: "Kilometer" }] : []),
+    ...(gudangKeluar ? [{ href: "/dapur/gudang", label: "Gudang" }] : []),
   ];
   if (operasional.length)
-    groups.push({ key: "operasional", label: "🛠️ Operasional", items: operasional });
+    groups.push({ key: "operasional", label: "Operasional", items: operasional });
 
   const itemCls = (active: boolean) =>
     "block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
@@ -96,7 +96,7 @@ export default function DapurNav({
           (absenActive ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:bg-white/5 hover:text-slate-100")
         }
       >
-        📍 Absen
+        Absen
       </Link>
 
       {groups.map((g) => {

@@ -142,7 +142,7 @@ export default function BelanjaPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold">🛒 Daftar Belanja Periode</h1>
+          <h1 className="text-lg font-bold">Daftar Belanja Periode</h1>
           <p className="text-xs text-slate-400">
             Kebutuhan bahan otomatis dari jadwal menu × porsi. Harga = patokan (SP).
           </p>
@@ -152,10 +152,10 @@ export default function BelanjaPage() {
             ← Jadwal menu
           </Link>
           <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => window.print()}>
-            🖨️ Cetak
+            Cetak
           </button>
           <button className="btn-gold px-3 py-1.5 text-sm" onClick={exportCsv} disabled={!data}>
-            ⬇️ CSV
+            CSV
           </button>
         </div>
       </div>
