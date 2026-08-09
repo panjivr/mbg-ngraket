@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode, type CSSProperties } from "react";
 import { addDays, durasiMenit, fmtDurasi } from "@/lib/time";
 import FotoAbsen from "@/components/FotoAbsen";
 import RingkasanHarian from "@/components/RingkasanHarian";
@@ -78,6 +78,36 @@ function fmtTgl(d: string): string {
     day: "2-digit",
     month: "short",
   }).format(new Date(d + "T00:00:00"));
+}
+
+// Cincin gauge glowing (command-center). Nilai 0..100 mengisi busur; warna
+// gradien via c1→c2. Isi tengah dioper sebagai children (angka + label).
+function Gauge({
+  value,
+  size = 108,
+  c1,
+  c2,
+  children,
+}: {
+  value: number;
+  size?: number;
+  c1: string;
+  c2: string;
+  children: ReactNode;
+}) {
+  const val = Math.max(0, Math.min(100, value));
+  const style = {
+    width: size,
+    height: size,
+    "--val": val,
+    "--c1": c1,
+    "--c2": c2,
+  } as CSSProperties;
+  return (
+    <div className="gauge" style={style}>
+      <div className="gauge-inner">{children}</div>
+    </div>
+  );
 }
 
 function fmtTime(v: string | null) {
@@ -625,6 +655,10 @@ export default function AdminDashboard() {
       totalHadirPeriode,
       totalLatePeriode,
       onTimeRatePeriode: pct(totalHadirPeriode - totalLatePeriode, totalHadirPeriode),
+      kehadiranRatePeriode: hariBerjalan
+        ? pct(totalHadirPeriode / hariBerjalan, Math.max(byUser.size, 1))
+        : 0,
+      progresPeriode: pct(hariBerjalan, days.length),
       hariBerjalan,
       totalHari: days.length,
       pesertaUnik: byUser.size,
@@ -1069,17 +1103,19 @@ export default function AdminDashboard() {
       {/* === Analitik Periode Q (2 minggu) === */}
       {periodStats && periode?.from && periode?.to && (
         <div className="space-y-4">
-          {/* Header periode + progress */}
-          <div className="card relative overflow-hidden p-5">
-            <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-gold-500/10 blur-2xl" />
+          {/* Hero periode — command center bergaya glowing */}
+          <div className="card sheen grid-glow relative overflow-hidden p-5 ring-glow sm:p-6">
+            <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-sky-500/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-gold-500/10 blur-3xl" />
+
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold-500/15 text-gold-300">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-400/30">
                   <Icon name="calendar" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gold-400">
-                    Analitik Periode · 2 Minggu
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] neon-cyan">
+                    Command Center · Periode 2 Minggu
                   </p>
                   <p className="text-sm font-semibold text-slate-100">
                     {fmtTgl(periode.from)} – {fmtTgl(periode.to)}
@@ -1088,69 +1124,84 @@ export default function AdminDashboard() {
               </div>
               <span
                 className={
-                  "rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset " +
                   (periode.aktif
-                    ? "bg-emerald-500/15 text-emerald-300"
-                    : "bg-slate-500/15 text-slate-300")
+                    ? "bg-emerald-500/15 text-emerald-300 ring-emerald-400/30"
+                    : "bg-slate-500/15 text-slate-300 ring-white/10")
                 }
               >
-                {periode.aktif ? "Periode Aktif" : "Periode Nonaktif"}
+                {periode.aktif && (
+                  <span className="live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                )}
+                {periode.aktif ? "LIVE · Periode Aktif" : "Periode Nonaktif"}
               </span>
             </div>
 
-            {/* Progress bar hari periode */}
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>
-                  Hari ke-{periodStats.hariBerjalan} dari {periodStats.totalHari}
-                </span>
-                <span className="tabular-nums">
-                  {pct(periodStats.hariBerjalan, periodStats.totalHari)}%
-                </span>
+            {/* Radial gauges */}
+            <div className="mt-5 grid grid-cols-3 gap-3 sm:gap-5">
+              <div className="flex flex-col items-center gap-2">
+                <Gauge value={periodStats.onTimeRatePeriode} c1="#38bdf8" c2="#ffd66b">
+                  <div className="text-xl font-bold tabular-nums neon-gold sm:text-2xl">
+                    <AnimatedNumber
+                      value={periodStats.onTimeRatePeriode}
+                      format={(n) => `${Math.round(n)}%`}
+                    />
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">tepat</div>
+                </Gauge>
+                <p className="text-center text-[11px] font-medium text-slate-300">Tepat Waktu</p>
               </div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="bar-grow h-full rounded-full bg-gradient-to-r from-gold-500 to-gold-300"
-                  style={{
-                    width: `${pct(periodStats.hariBerjalan, periodStats.totalHari)}%`,
-                  }}
-                />
+
+              <div className="flex flex-col items-center gap-2">
+                <Gauge value={periodStats.kehadiranRatePeriode} c1="#34d399" c2="#22d3ee">
+                  <div className="text-xl font-bold tabular-nums neon-cyan sm:text-2xl">
+                    <AnimatedNumber
+                      value={periodStats.kehadiranRatePeriode}
+                      format={(n) => `${Math.round(n)}%`}
+                    />
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">hadir</div>
+                </Gauge>
+                <p className="text-center text-[11px] font-medium text-slate-300">Rata Kehadiran</p>
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <Gauge value={periodStats.progresPeriode} c1="#818cf8" c2="#f0abfc">
+                  <div className="text-xl font-bold tabular-nums neon-magenta sm:text-2xl">
+                    <AnimatedNumber
+                      value={periodStats.progresPeriode}
+                      format={(n) => `${Math.round(n)}%`}
+                    />
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide text-slate-400">
+                    {periodStats.hariBerjalan}/{periodStats.totalHari} hari
+                  </div>
+                </Gauge>
+                <p className="text-center text-[11px] font-medium text-slate-300">Progres Periode</p>
               </div>
             </div>
 
-            {/* Ringkasan angka periode */}
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="stat-card">
-                <p className="stat-label">Total Kehadiran</p>
-                <p className="stat-value text-emerald-300">
+            {/* Strip angka mentah — kartu berpendar */}
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Total Hadir</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-emerald-300">
                   <AnimatedNumber value={periodStats.totalHadirPeriode} />
                 </p>
               </div>
-              <div className="stat-card">
-                <p className="stat-label">Total Jam Kerja</p>
-                <p className="stat-value !text-lg text-sky-300">
+              <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.07] p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Jam Kerja</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-sky-300">
                   <AnimatedNumber
                     value={periodStats.totalJamPeriode}
-                    format={(n) => `${n.toLocaleString("id-ID")} j`}
+                    format={(n) => `${n.toLocaleString("id-ID")}j`}
                   />
                 </p>
               </div>
-              <div className="stat-card">
-                <p className="stat-label">Tepat Waktu</p>
-                <p className="stat-value text-gold-400">
-                  <AnimatedNumber
-                    value={periodStats.onTimeRatePeriode}
-                    format={(n) => `${Math.round(n)}%`}
-                  />
-                </p>
-              </div>
-              <div className="stat-card">
-                <p className="stat-label">Rata-rata / Hari</p>
-                <p className="stat-value">
-                  <AnimatedNumber value={periodStats.rerataHarian} />
-                  <span className="ml-1 text-xs font-normal text-slate-500">
-                    dari {periodStats.pesertaUnik}
-                  </span>
+              <div className="rounded-xl border border-gold-400/20 bg-gold-500/[0.07] p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Peserta</p>
+                <p className="mt-0.5 text-xl font-bold tabular-nums text-gold-300">
+                  <AnimatedNumber value={periodStats.pesertaUnik} />
                 </p>
               </div>
             </div>
