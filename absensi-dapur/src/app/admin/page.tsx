@@ -711,6 +711,94 @@ export default function AdminDashboard() {
         </button>
       </div>
 
+      {/* Hero command-center — KPI real-time hari ini (gauge berpendar) */}
+      <div className="card sheen grid-glow ring-glow relative overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-emerald-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-1/4 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
+              <Icon name="gauge" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] neon-cyan">
+                Ringkasan Real-time · Hari Ini
+              </p>
+              <p className="text-sm font-semibold text-slate-100">
+                {derived.hadir}/{derived.total} pegawai hadir
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            LIVE · <span className="font-mono tabular-nums">{jam}</span>
+          </span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-3 sm:gap-5">
+          <div className="flex flex-col items-center gap-2">
+            <Gauge value={derived.hadirPct} c1="#34d399" c2="#22d3ee">
+              <div className="text-xl font-bold tabular-nums neon-cyan sm:text-2xl">
+                <AnimatedNumber value={derived.hadirPct} format={(n) => `${Math.round(n)}%`} />
+              </div>
+              <div className="text-[9px] uppercase tracking-wide text-slate-400">hadir</div>
+            </Gauge>
+            <p className="text-center text-[11px] font-medium text-slate-300">Kehadiran</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <Gauge value={onTimeRate} c1="#38bdf8" c2="#ffd66b">
+              <div className="text-xl font-bold tabular-nums neon-gold sm:text-2xl">
+                <AnimatedNumber value={onTimeRate} format={(n) => `${Math.round(n)}%`} />
+              </div>
+              <div className="text-[9px] uppercase tracking-wide text-slate-400">tepat</div>
+            </Gauge>
+            <p className="text-center text-[11px] font-medium text-slate-300">Ketepatan</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <Gauge value={pct(derived.bekerja.length, Math.max(derived.hadir, 1))} c1="#818cf8" c2="#f0abfc">
+              <div className="text-xl font-bold tabular-nums neon-magenta sm:text-2xl">
+                <AnimatedNumber value={derived.bekerja.length} />
+              </div>
+              <div className="text-[9px] uppercase tracking-wide text-slate-400">di dapur</div>
+            </Gauge>
+            <p className="text-center text-[11px] font-medium text-slate-300">Bertugas</p>
+          </div>
+        </div>
+
+        {/* Sparkline tren kehadiran 7 hari */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Tren kehadiran 7 hari</span>
+            <span
+              className={
+                "font-semibold tabular-nums " +
+                (insight.deltaKemarin > 0
+                  ? "text-emerald-300"
+                  : insight.deltaKemarin < 0
+                    ? "text-red-300"
+                    : "text-slate-400")
+              }
+            >
+              {insight.deltaKemarin > 0 ? "▲ +" : insight.deltaKemarin < 0 ? "▼ " : "• "}
+              {insight.deltaKemarin} vs kemarin
+            </span>
+          </div>
+          <div className="mt-2 flex items-end justify-between gap-1" style={{ height: 44 }}>
+            {trend.map((t) => (
+              <div
+                key={t.date}
+                className="bar-neon w-full max-w-[26px] rounded-t bg-gradient-to-t from-emerald-500/40 to-cyan-300"
+                style={{ height: `${Math.max(6, (t.count / trendMax) * 100)}%`, opacity: t.date === tanggal ? 1 : 0.6 }}
+                title={`${dow(t.date)} · ${t.count} hadir`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Ringkasan operasional: distribusi (porsi & pagu) + stok gudang */}
       {ring && (
         <div className="space-y-3">
@@ -873,8 +961,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Analitik: tingkat kehadiran + ketepatan waktu + sedang bertugas */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* Analitik: tingkat kehadiran + sedang bertugas */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Donut tingkat kehadiran */}
         <div className="card p-5">
           <div className="flex items-center gap-2">
@@ -909,47 +997,6 @@ export default function AdminDashboard() {
                 <span className="ml-auto font-semibold tabular-nums">{derived.belum}</span>
               </li>
             </ul>
-          </div>
-        </div>
-
-        {/* Ketepatan waktu */}
-        <div className="card p-5">
-          <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-amber-500/15 text-amber-300">
-              <Icon name="gauge" />
-            </span>
-            <p className="text-sm font-semibold">Ketepatan Waktu</p>
-          </div>
-          <p className="mt-1 text-xs text-slate-400">Dari {derived.hadir} pegawai yang hadir</p>
-          <div className="mt-5 space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-emerald-300">Tepat Waktu</span>
-                <span className="font-semibold tabular-nums">
-                  {derived.onTime} · {pct(derived.onTime, derived.hadir)}%
-                </span>
-              </div>
-              <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="bar-grow h-full rounded-full bg-emerald-400"
-                  style={{ width: `${pct(derived.onTime, derived.hadir)}%` }}
-                />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-amber-300">Terlambat</span>
-                <span className="font-semibold tabular-nums">
-                  {derived.late} · {pct(derived.late, derived.hadir)}%
-                </span>
-              </div>
-              <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="bar-grow h-full rounded-full bg-amber-400"
-                  style={{ width: `${pct(derived.late, derived.hadir)}%` }}
-                />
-              </div>
-            </div>
           </div>
         </div>
 
