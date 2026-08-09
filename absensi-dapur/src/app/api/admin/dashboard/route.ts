@@ -60,6 +60,11 @@ export const GET = route(async () => {
   return ok({
     tanggal,
     menu: menuRow[0]?.menu || "",
+    periode: {
+      from: sppg?.slip_period_from || null,
+      to: sppg?.slip_period_to || null,
+      aktif: !!sppg?.slip_aktif,
+    },
     distribusi: {
       besar, kecil, b3,
       porsi: besar + kecil + b3,
