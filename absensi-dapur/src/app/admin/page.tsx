@@ -5,6 +5,7 @@ import { addDays, durasiMenit, fmtDurasi } from "@/lib/time";
 import FotoAbsen from "@/components/FotoAbsen";
 import RingkasanHarian from "@/components/RingkasanHarian";
 import AlertAbsensi from "@/components/AlertAbsensi";
+import AnimatedNumber from "@/components/AnimatedNumber";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -383,6 +384,63 @@ export default function AdminDashboard() {
     return { items, max: Math.max(1, ...items.map((i) => i.count)) };
   }, [rows]);
 
+  // Insight cepat: rata-rata jam masuk, datang pertama, rata-rata jarak GPS,
+  // jam tersibuk, dan selisih kehadiran vs kemarin. Semua turunan dari data
+  // yang sudah di-fetch — tanpa endpoint baru.
+  const insight = useMemo(() => {
+    const masuk = rows.filter((r) => r.check_in);
+    let avgJam: string | null = null;
+    let pertama: { nama: string; time: string } | null = null;
+    if (masuk.length) {
+      let sumMin = 0;
+      let earliest = Infinity;
+      for (const r of masuk) {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Jakarta",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).formatToParts(new Date(r.check_in!));
+        const hh = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+        const mm = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+        const tot = hh * 60 + mm;
+        sumMin += tot;
+        if (tot < earliest) {
+          earliest = tot;
+          pertama = { nama: r.nama, time: fmtTime(r.check_in) };
+        }
+      }
+      const a = Math.round(sumMin / masuk.length);
+      avgJam = `${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+    }
+
+    const jarak = rows
+      .filter((r) => r.check_in_jarak != null)
+      .map((r) => r.check_in_jarak as number);
+    const avgJarak = jarak.length
+      ? Math.round(jarak.reduce((s, v) => s + v, 0) / jarak.length)
+      : null;
+
+    const peak = checkin.items.reduce(
+      (best, it) => (it.count > best.count ? it : best),
+      { h: -1, count: -1 },
+    );
+
+    const todayCount = trend.length ? trend[trend.length - 1].count : 0;
+    const yestCount = trend.length > 1 ? trend[trend.length - 2].count : 0;
+    const deltaKemarin = todayCount - yestCount;
+
+    return {
+      avgJam,
+      pertama,
+      avgJarak,
+      peakHour: peak.count > 0 ? peak.h : null,
+      peakCount: peak.count > 0 ? peak.count : 0,
+      deltaKemarin,
+      todayCount,
+    };
+  }, [rows, checkin, trend]);
+
   const totalMenit = useMemo(
     () => rows.reduce((s, r) => s + durasiMenit(r.check_in, r.check_out), 0),
     [rows],
@@ -400,7 +458,7 @@ export default function AdminDashboard() {
   }%, rgba(148,163,184,0.25) ${derived.onTimePct + derived.latePct}% 100%)`;
 
   return (
-    <div className="space-y-6">
+    <div className="dash-stagger space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="border-l-2 border-gold-500/70 pl-3">
@@ -446,11 +504,11 @@ export default function AdminDashboard() {
             </p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="stat-card"><p className="stat-label">Porsi Besar (+PJ)</p><p className="stat-value text-emerald-300">{ring.distribusi.besar}</p></div>
-            <div className="stat-card"><p className="stat-label">Porsi Kecil</p><p className="stat-value text-sky-300">{ring.distribusi.kecil}</p></div>
-            <div className="stat-card"><p className="stat-label">Porsi B3</p><p className="stat-value text-amber-300">{ring.distribusi.b3}</p></div>
-            <div className="stat-card"><p className="stat-label">Total Porsi</p><p className="stat-value">{ring.distribusi.porsi}</p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
-            <div className="stat-card sm:col-span-1"><p className="stat-label">Pagu Hari Ini</p><p className="stat-value !text-lg text-gold-400">{rupiah(ring.distribusi.pagu)}</p></div>
+            <div className="stat-card"><p className="stat-label">Porsi Besar (+PJ)</p><p className="stat-value text-emerald-300"><AnimatedNumber value={ring.distribusi.besar} /></p></div>
+            <div className="stat-card"><p className="stat-label">Porsi Kecil</p><p className="stat-value text-sky-300"><AnimatedNumber value={ring.distribusi.kecil} /></p></div>
+            <div className="stat-card"><p className="stat-label">Porsi B3</p><p className="stat-value text-amber-300"><AnimatedNumber value={ring.distribusi.b3} /></p></div>
+            <div className="stat-card"><p className="stat-label">Total Porsi</p><p className="stat-value"><AnimatedNumber value={ring.distribusi.porsi} /></p><p className="text-[11px] text-slate-500">{ring.distribusi.ikut}/{ring.distribusi.total} penerima</p></div>
+            <div className="stat-card sm:col-span-1"><p className="stat-label">Pagu Hari Ini</p><p className="stat-value !text-lg text-gold-400"><AnimatedNumber value={ring.distribusi.pagu} format={rupiah} /></p></div>
             <div className="stat-card">
               <p className="stat-label">Stok Gudang</p>
               <p className="mt-0.5 text-sm"><b className="text-emerald-300">{ring.gudang.aman}</b> aman · <b className="text-amber-300">{ring.gudang.menipis}</b> menipis · <b className="text-red-300">{ring.gudang.habis}</b> habis</p>
@@ -484,7 +542,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <p className={"stat-value !text-3xl " + c.text}>
-                {val ?? "–"}
+                <AnimatedNumber value={val} />
               </p>
               <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p>
             </div>
@@ -501,7 +559,7 @@ export default function AdminDashboard() {
           <div>
             <p className="text-xs text-slate-400">Total Jam Kerja Hari Ini</p>
             <p className="text-xl font-bold text-gold-300">
-              {loading ? "–" : fmtDurasi(totalMenit)}
+              {loading ? "–" : <AnimatedNumber value={totalMenit} format={fmtDurasi} />}
             </p>
           </div>
         </div>
@@ -512,7 +570,7 @@ export default function AdminDashboard() {
           <div>
             <p className="text-xs text-slate-400">Rata-rata / Pegawai</p>
             <p className="text-xl font-bold text-sky-300">
-              {loading ? "–" : fmtDurasi(avgMenit)}
+              {loading ? "–" : <AnimatedNumber value={avgMenit} format={fmtDurasi} />}
             </p>
           </div>
         </div>
@@ -522,14 +580,77 @@ export default function AdminDashboard() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-slate-400">Ketepatan Waktu</p>
-            <p className="text-xl font-bold text-emerald-300">{onTimeRate}%</p>
+            <p className="text-xl font-bold text-emerald-300">
+              <AnimatedNumber value={onTimeRate} format={(n) => `${Math.round(n)}%`} />
+            </p>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-emerald-400"
+                className="bar-grow h-full rounded-full bg-emerald-400"
                 style={{ width: `${onTimeRate}%` }}
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Insight cepat — metrik ringkas yang sering dilihat, semua turunan data
+          yang sudah ada. Di mobile bisa digeser (snap horizontal). */}
+      <div className="snap-x-mobile -mx-1 flex gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5">
+        <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="stat-label">Rata-rata Jam Masuk</p>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold-500/15 text-gold-300"><Icon name="clock" /></span>
+          </div>
+          <p className="stat-value !text-2xl tabular-nums text-gold-300">{insight.avgJam ?? "—"}</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">rata-rata seluruh yang hadir</p>
+        </div>
+
+        <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="stat-label">Jam Tersibuk</p>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-sky-500/15 text-sky-300"><Icon name="trend" /></span>
+          </div>
+          <p className="stat-value !text-2xl tabular-nums text-sky-300">
+            {insight.peakHour != null ? `${String(insight.peakHour).padStart(2, "0")}:00` : "—"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            {insight.peakHour != null ? `${insight.peakCount} orang absen di jam ini` : "belum ada data"}
+          </p>
+        </div>
+
+        <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="stat-label">Datang Pertama</p>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-300"><Icon name="check" /></span>
+          </div>
+          <p className="stat-value !text-lg truncate text-emerald-300" title={insight.pertama?.nama}>
+            {insight.pertama?.nama ?? "—"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            {insight.pertama ? `masuk ${insight.pertama.time}` : "belum ada"}
+          </p>
+        </div>
+
+        <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="stat-label">Rata-rata Jarak GPS</p>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/15 text-amber-300"><Icon name="gauge" /></span>
+          </div>
+          <p className="stat-value !text-2xl text-amber-300">
+            {insight.avgJarak != null ? <AnimatedNumber value={insight.avgJarak} format={(n) => `${Math.round(n)} m`} /> : "—"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">jarak absen dari titik dapur</p>
+        </div>
+
+        <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="stat-label">Kehadiran vs Kemarin</p>
+            <span className={"grid h-8 w-8 place-items-center rounded-lg " + (insight.deltaKemarin >= 0 ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300")}><Icon name="trend" /></span>
+          </div>
+          <p className={"stat-value !text-2xl tabular-nums " + (insight.deltaKemarin > 0 ? "text-emerald-300" : insight.deltaKemarin < 0 ? "text-red-300" : "text-slate-200")}>
+            {insight.deltaKemarin > 0 ? "+" : ""}{insight.deltaKemarin}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">{insight.todayCount} hadir hari ini</p>
         </div>
       </div>
 
@@ -549,7 +670,7 @@ export default function AdminDashboard() {
               style={{ background: donut }}
             >
               <div className="grid h-20 w-20 place-items-center rounded-full bg-ink-850">
-                <span className="text-2xl font-bold">{derived.hadirPct}%</span>
+                <span className="text-2xl font-bold"><AnimatedNumber value={derived.hadirPct} format={(n) => `${Math.round(n)}%`} /></span>
               </div>
             </div>
             <ul className="space-y-2 text-sm">
@@ -591,7 +712,7 @@ export default function AdminDashboard() {
               </div>
               <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full rounded-full bg-emerald-400 transition-all"
+                  className="bar-grow h-full rounded-full bg-emerald-400"
                   style={{ width: `${pct(derived.onTime, derived.hadir)}%` }}
                 />
               </div>
@@ -605,7 +726,7 @@ export default function AdminDashboard() {
               </div>
               <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full rounded-full bg-amber-400 transition-all"
+                  className="bar-grow h-full rounded-full bg-amber-400"
                   style={{ width: `${pct(derived.late, derived.hadir)}%` }}
                 />
               </div>
@@ -623,7 +744,7 @@ export default function AdminDashboard() {
             </span>
           </div>
           <p className="mt-1 text-3xl font-bold text-emerald-300">
-            {derived.bekerja.length}
+            <AnimatedNumber value={derived.bekerja.length} />
             <span className="ml-1 text-sm font-normal text-slate-400">orang di dapur</span>
           </p>
           <div className="scroll-x mt-3 max-h-32 space-y-2 overflow-y-auto pr-1">
@@ -663,7 +784,7 @@ export default function AdminDashboard() {
               >
                 <span className="text-[11px] text-slate-400">{t.count}</span>
                 <div
-                  className="w-full max-w-[36px] rounded-t-md bg-gradient-to-t from-emerald-500/40 to-emerald-400"
+                  className="bar-grow w-full max-w-[36px] rounded-t-md bg-gradient-to-t from-emerald-500/40 to-emerald-400"
                   style={{ height: `${Math.max(4, (t.count / trendMax) * 100)}%` }}
                   title={`${t.count} hadir`}
                 />
@@ -698,7 +819,7 @@ export default function AdminDashboard() {
                     {it.count > 0 ? it.count : ""}
                   </span>
                   <div
-                    className="w-full rounded-t-md bg-gradient-to-t from-gold-500/40 to-gold-400"
+                    className="bar-grow w-full rounded-t-md bg-gradient-to-t from-gold-500/40 to-gold-400"
                     style={{
                       height: `${Math.max(it.count ? 6 : 2, (it.count / checkin.max) * 100)}%`,
                       opacity: it.count ? 1 : 0.3,
@@ -745,11 +866,11 @@ export default function AdminDashboard() {
                   </div>
                   <div className="mt-1.5 flex h-2.5 overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full bg-emerald-400"
+                      className="bar-grow h-full bg-emerald-400"
                       style={{ width: `${pct(onTime, Math.max(d.hadir, 1))}%` }}
                     />
                     <div
-                      className="h-full bg-amber-400"
+                      className="bar-grow h-full bg-amber-400"
                       style={{ width: `${pct(d.terlambat, Math.max(d.hadir, 1))}%` }}
                     />
                   </div>

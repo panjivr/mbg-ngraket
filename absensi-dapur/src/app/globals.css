@@ -246,3 +246,46 @@ html[data-theme="light"] body::before {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
+
+/*
+ * Animasi entrance bertahap (stagger) untuk dashboard — tiap blok muncul
+ * berurutan dengan naik-halus. Satu kelas di kontainer, anak-anak langsung
+ * ikut. prefers-reduced-motion sudah dinetralkan oleh aturan global di atas
+ * (animation-duration ~0), jadi pengguna sensitif-gerak tetap aman.
+ */
+@keyframes dashReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dash-stagger > * {
+  animation: dashReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dash-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.dash-stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.dash-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.dash-stagger > *:nth-child(4) { animation-delay: 0.17s; }
+.dash-stagger > *:nth-child(5) { animation-delay: 0.22s; }
+.dash-stagger > *:nth-child(6) { animation-delay: 0.27s; }
+.dash-stagger > *:nth-child(7) { animation-delay: 0.32s; }
+.dash-stagger > *:nth-child(8) { animation-delay: 0.37s; }
+.dash-stagger > *:nth-child(n + 9) { animation-delay: 0.42s; }
+
+/* Bar grafik & progress: transisi mulus saat tinggi/lebar berubah. */
+.bar-grow {
+  transition: height 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Snap horizontal untuk KPI di layar sempit (mobile) — geser antar kartu. */
+.snap-x-mobile {
+  scroll-snap-type: x mandatory;
+}
+.snap-x-mobile > * {
+  scroll-snap-align: start;
+}
