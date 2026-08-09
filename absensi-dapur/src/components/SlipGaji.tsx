@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Slip, StatusHari } from "@/lib/slip";
+import SlipShield from "@/components/SlipShield";
 
 // Tampilan ringkas status hari pada checklist kehadiran.
 const STATUS_TAMPIL: Record<StatusHari, { sym: string; cls: string }> = {
@@ -122,6 +123,7 @@ export default function SlipGaji({
         </div>
       )}
 
+      <SlipShield nama={u.nama} nip={u.nip} active={!canPrint}>
       <div className="slip-doc mx-auto max-w-[720px] bg-white p-4 font-serif text-black sm:p-8">
         {/* Peringatan rahasia */}
         <div className="mb-4 rounded-md border-2 border-red-600 bg-red-50 px-3 py-2 text-center text-[11px] font-semibold leading-snug text-red-700 sm:text-xs">
@@ -252,6 +254,7 @@ export default function SlipGaji({
           Uang lembur dihitung per hari kerja yang melewati ambang jam standar.
         </p>
       </div>
+      </SlipShield>
     </div>
   );
 }
