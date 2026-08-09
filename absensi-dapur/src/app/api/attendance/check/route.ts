@@ -13,6 +13,17 @@ export const dynamic = "force-dynamic";
 
 const MAX_SELFIE_CHARS = 2_000_000; // ~1.5 MB base64
 
+// Ekspresi wajah valid dari face-api (selaras dengan MoodAI.tsx).
+const EMOSI_KEYS = [
+  "happy",
+  "sad",
+  "angry",
+  "fearful",
+  "disgusted",
+  "surprised",
+  "neutral",
+];
+
 interface ShiftRow {
   divisi_id: number | null;
   jam_masuk: string | null;
@@ -32,6 +43,15 @@ export const POST = route(async (req: NextRequest) => {
     typeof body.mood === "string" && MOOD_KEYS.includes(body.mood)
       ? body.mood
       : null;
+  // Hasil deteksi emosi wajah AI (opsional, dari perangkat). `emosi` = ekspresi
+  // dominan, `bahagia` = probabilitas 0..1. Disimpan untuk grafik emosi.
+  const emosi =
+    typeof body.emosi === "string" && EMOSI_KEYS.includes(body.emosi)
+      ? body.emosi
+      : null;
+  const bahagiaRaw = toNum(body.bahagia);
+  const bahagia =
+    bahagiaRaw === null ? null : Math.max(0, Math.min(1, bahagiaRaw));
 
   const settings = await getSppg(session.sppg_id as number);
   if (!settings) return fail(500, "Pengaturan dapur belum tersedia.");
@@ -204,8 +224,8 @@ export const POST = route(async (req: NextRequest) => {
           `INSERT INTO attendance
              (user_id, tanggal, shift_tanggal, divisi_id, shift_masuk, shift_pulang,
               check_in, status_masuk, check_in_lat, check_in_lng, check_in_jarak, selfie_in,
-              divisi_shift_id, event_id, lokasi, mood)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+              divisi_shift_id, event_id, lokasi, mood, emosi, bahagia)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
            RETURNING *`,
           [
             session.uid,
@@ -224,6 +244,8 @@ export const POST = route(async (req: NextRequest) => {
             eventId,
             target.nama,
             mood,
+            emosi,
+            bahagia,
           ],
         )
       ).rows[0];

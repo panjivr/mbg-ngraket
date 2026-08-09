@@ -104,10 +104,25 @@ export const GET = route(async () => {
       )
     )[0] ?? null;
 
+  // Riwayat emosi (deteksi wajah AI saat absen masuk) untuk grafik emosi
+  // di laman absen karyawan — ambil 14 hari terakhir yang punya data.
+  const emosiHistory = (
+    await query<{ tanggal: string; emosi: string | null; bahagia: number | null }>(
+      `SELECT to_char(COALESCE(shift_tanggal, tanggal), 'YYYY-MM-DD') AS tanggal,
+              emosi, bahagia
+         FROM attendance
+        WHERE user_id = $1 AND bahagia IS NOT NULL
+        ORDER BY check_in DESC NULLS LAST, id DESC
+        LIMIT 14`,
+      [session.uid],
+    )
+  ).reverse();
+
   return ok({
     current,
     last,
     tanggal,
+    emosiHistory,
     shift: {
       divisi_nama: shiftRow?.divisi_nama ?? null,
       jobdesk: shiftRow?.jobdesk ?? null,

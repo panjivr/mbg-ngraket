@@ -130,6 +130,8 @@ export interface Attendance {
   catatan: string | null;
   lokasi: string | null;
   mood: string | null;
+  emosi: string | null;
+  bahagia: number | null;
 }
 
 export interface AttendanceWithUser extends Attendance {

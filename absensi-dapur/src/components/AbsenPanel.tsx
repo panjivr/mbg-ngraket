@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
-import MoodAI from "@/components/MoodAI";
+import MoodAI, { type MoodAIResult } from "@/components/MoodAI";
 import { MOODS } from "@/lib/mood";
 import { getFaceApiLite, detectLandmarks, type FaceApi, type Pt } from "@/lib/faceapiLite";
 import { STICKERS, computeRefs } from "@/lib/faceStickers";
@@ -73,11 +73,33 @@ interface AbsRow {
   shift_pulang: string | null;
 }
 
+/** Satu titik data grafik emosi (dari deteksi wajah AI saat absen masuk). */
+interface EmosiPoint {
+  tanggal: string; // YYYY-MM-DD
+  emosi: string | null;
+  bahagia: number | null; // 0..1
+}
+
 type Phase = "masuk" | "pulang";
 type Geo = { lat: number; lng: number; accuracy: number };
 
 /** Jendela waktu pembatalan absen terakhir (selaras dengan server). */
 const CANCEL_WINDOW_MS = 180 * 60_000;
+
+/** Label + emoji per ekspresi wajah (dari deteksi AI face-api). */
+const EMOSI_LABEL: Record<string, { emoji: string; label: string }> = {
+  happy: { emoji: "😄", label: "Bahagia" },
+  sad: { emoji: "😢", label: "Sedih" },
+  angry: { emoji: "😠", label: "Marah" },
+  fearful: { emoji: "😨", label: "Takut" },
+  disgusted: { emoji: "🤢", label: "Jijik" },
+  surprised: { emoji: "😲", label: "Terkejut" },
+  neutral: { emoji: "😐", label: "Netral" },
+};
+
+function emosiInfo(key: string | null): { emoji: string; label: string } {
+  return (key && EMOSI_LABEL[key]) || { emoji: "🙂", label: "—" };
+}
 
 export default function AbsenPanel() {
   const [loading, setLoading] = useState(true);
@@ -101,6 +123,8 @@ export default function AbsenPanel() {
   const [stikerIdx, setStikerIdx] = useState(-1); // -1 = tanpa filter wajah
   const [moodOpen, setMoodOpen] = useState(false);
   const [mood, setMood] = useState<string | null>(null); // suasana hati saat masuk
+  const [emosiAI, setEmosiAI] = useState<MoodAIResult | null>(null); // hasil deteksi wajah AI
+  const [emosiHistory, setEmosiHistory] = useState<EmosiPoint[]>([]); // riwayat emosi untuk grafik
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
@@ -183,6 +207,7 @@ export default function AbsenPanel() {
     setCurrent(data.current);
     setLast(data.last);
     setTanggal(data.tanggal);
+    setEmosiHistory(Array.isArray(data.emosiHistory) ? data.emosiHistory : []);
     // Default pilihan shift ke opsi pertama bila belum dipilih.
     setSelectedShiftId((prev) =>
       prev ?? (data.shifts && data.shifts.length ? data.shifts[0].id : null),
@@ -339,6 +364,9 @@ export default function AbsenPanel() {
           titik: pakaiEvent ? "event" : "dapur",
           // suasana hati hanya relevan saat absen masuk.
           mood: phase === "masuk" ? mood : null,
+          // hasil deteksi emosi wajah AI (disimpan untuk grafik emosi).
+          emosi: emosiAI?.emosi ?? null,
+          bahagia: emosiAI?.bahagia ?? null,
         }),
       });
       const data = await res.json();
@@ -351,6 +379,7 @@ export default function AbsenPanel() {
       setQuote(quoteAcak());
       setSelfie(null);
       setMood(null);
+      setEmosiAI(null);
       await loadToday();
     } catch {
       setMessage({ kind: "err", text: "Tidak dapat terhubung ke server." });
@@ -868,6 +897,67 @@ export default function AbsenPanel() {
         </div>
       </div>
 
+      {/* Grafik emosi — dari deteksi wajah AI saat absen masuk */}
+      {(() => {
+        const pts = emosiHistory.filter((p) => p.bahagia !== null);
+        if (pts.length === 0) return null;
+        const avg =
+          pts.reduce((s, p) => s + (p.bahagia ?? 0), 0) / pts.length;
+        const avgInfo = emosiInfo(
+          avg >= 0.5 ? "happy" : avg >= 0.25 ? "neutral" : "sad",
+        );
+        return (
+          <div className="card p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">🙂 Grafik Emosi Absen</p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Tingkat kebahagiaan dari deteksi wajah saat absen masuk
+                  ({pts.length} hari terakhir).
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-emas-300">
+                  {Math.round(avg * 100)}%
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  {avgInfo.emoji} rata-rata
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-end justify-between gap-1.5">
+              {pts.map((p, i) => {
+                const pct = Math.max(0, Math.min(100, (p.bahagia ?? 0) * 100));
+                const info = emosiInfo(p.emosi);
+                const hari = new Intl.DateTimeFormat("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  timeZone: settings?.tz,
+                }).format(new Date(p.tanggal + "T00:00:00"));
+                return (
+                  <div
+                    key={p.tanggal + i}
+                    className="flex flex-1 flex-col items-center gap-1"
+                    title={`${hari} · ${info.label} ${Math.round(pct)}%`}
+                  >
+                    <span className="text-[11px] leading-none">{info.emoji}</span>
+                    <div className="flex h-24 w-full items-end overflow-hidden rounded-md bg-white/5">
+                      <div
+                        className="w-full rounded-md bg-gradient-to-t from-emas-500 to-emas-300 transition-all"
+                        style={{ height: `${Math.max(6, pct)}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] leading-none text-slate-500">
+                      {hari}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Pop-up analisis AI wajah saat absen masuk/pulang */}
       {needSelfie && moodOpen && selfie && (
         <div
@@ -890,7 +980,7 @@ export default function AbsenPanel() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={selfie} alt="Foto wajah" className="mx-auto max-h-56 w-full object-cover" />
             </div>
-            <MoodAI selfie={selfie} phase={phase} />
+            <MoodAI selfie={selfie} phase={phase} onResult={setEmosiAI} />
             <button
               onClick={() => setMoodOpen(false)}
               className="btn-gold w-full"

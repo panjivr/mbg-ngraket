@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-08a.akses-keuangan-gizi";
+const SCHEMA_VERSION = "2026-08-10a.emosi-ai-wajah";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -256,6 +256,15 @@ async function doEnsureSchema(): Promise<void> {
     // Suasana hati (mood) yang dilaporkan pegawai saat absen masuk (opsional).
     await client.query(
       `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS mood TEXT`,
+    );
+    // Deteksi emosi wajah oleh AI (face-api) saat absen — dipakai untuk grafik
+    // emosi di laman karyawan. `emosi` = kunci ekspresi dominan (happy/sad/…),
+    // `bahagia` = probabilitas ekspresi "happy" (0..1) untuk tren kebahagiaan.
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS emosi TEXT`,
+    );
+    await client.query(
+      `ALTER TABLE attendance ADD COLUMN IF NOT EXISTS bahagia DOUBLE PRECISION`,
     );
     // Backfill tanggal kerja shift untuk baris lama.
     await client.query(

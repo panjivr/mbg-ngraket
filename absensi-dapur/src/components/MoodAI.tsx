@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Asisten AI deteksi ekspresi wajah. Memuat face-api.js dari CDN (di browser
@@ -166,14 +166,28 @@ type Status =
   | { kind: "unavailable" }
   | { kind: "result"; data: MoodData };
 
+/** Hasil ringkas deteksi yang diangkat ke induk untuk disimpan sebagai grafik. */
+export interface MoodAIResult {
+  /** Kunci ekspresi dominan (happy/sad/angry/…). */
+  emosi: string;
+  /** Probabilitas ekspresi "happy" (0..1) — dipakai untuk tren kebahagiaan. */
+  bahagia: number;
+}
+
 export default function MoodAI({
   selfie,
   phase,
+  onResult,
 }: {
   selfie: string | null;
   phase: Phase;
+  /** Dipanggil sekali saat deteksi berhasil, agar induk bisa menyimpannya. */
+  onResult?: (r: MoodAIResult) => void;
 }) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // Simpan callback di ref agar perubahan identitasnya tidak memicu deteksi ulang.
+  const onResultRef = useRef(onResult);
+  onResultRef.current = onResult;
 
   useEffect(() => {
     if (!selfie) {
@@ -200,16 +214,18 @@ export default function MoodAI({
         let det: DetResult | undefined;
         if (ssd) {
           det = await faceapi
-            .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
             .withFaceLandmarks()
             .withFaceExpressions()
             .withAgeAndGender();
         }
         if (!det) {
+          // Cadangan: input lebih besar (608) + ambang lebih rendah agar wajah
+          // pada foto beresolusi kecil/temaram tetap tertangkap → lebih presisi.
           det = await faceapi
             .detectSingleFace(
               img,
-              new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 }),
+              new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.25 }),
             )
             .withFaceLandmarks()
             .withFaceExpressions()
@@ -223,6 +239,7 @@ export default function MoodAI({
         const sorted = Object.entries(det.expressions).sort((a, b) => b[1] - a[1]);
         const top = sorted[0];
         const key = top?.[0] && MOODS[top[0]] ? top[0] : "neutral";
+        const bahagia = det.expressions.happy ?? 0;
         setStatus({
           kind: "result",
           data: {
@@ -235,6 +252,8 @@ export default function MoodAI({
               typeof det.genderProbability === "number" ? det.genderProbability : null,
           },
         });
+        // Angkat hasil ke induk (AbsenPanel) agar bisa ikut disimpan ke server.
+        onResultRef.current?.({ emosi: key, bahagia });
       } catch {
         if (alive) setStatus({ kind: "unavailable" });
       }
@@ -327,8 +346,8 @@ export default function MoodAI({
       </div>
 
       <p className="mt-3 text-[10px] text-slate-500">
-        Analisa wajah (ekspresi, perkiraan usia/gender) berjalan di perangkatmu — privasi
-        terjaga, hasil tidak disimpan; hanya untuk menyemangati.
+        Analisa wajah berjalan di perangkatmu — foto tidak dikirim. Yang disimpan hanya
+        ringkasan emosi (mis. “bahagia 80%”) untuk grafik suasana hatimu di riwayat absen.
       </p>
     </div>
   );

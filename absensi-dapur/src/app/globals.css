@@ -308,7 +308,7 @@ html[data-theme="light"] body::before {
     conic-gradient(from -90deg,
       var(--c1, #38bdf8) 0,
       var(--c2, #5b8bff) calc(var(--val, 0) * 1%),
-      rgba(148, 163, 184, 0.12) calc(var(--val, 0) * 1%) 100%);
+      var(--track, rgba(148, 163, 184, 0.12)) calc(var(--val, 0) * 1%) 100%);
   transition: background 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .gauge::before {
@@ -427,3 +427,32 @@ html[data-theme="light"] .grid-glow::before {
 html[data-theme="light"] .neon-cyan { color: #0369a1; text-shadow: none; }
 html[data-theme="light"] .neon-gold { color: #a1740b; text-shadow: none; }
 html[data-theme="light"] .neon-magenta { color: #a21caf; text-shadow: none; }
+
+/* Track gauge lebih pekat di tema terang agar sisa cincin tetap terlihat. */
+html[data-theme="light"] .gauge {
+  --track: rgba(15, 23, 42, 0.14);
+}
+/* Glow ujung busur nyaris tak tampak di putih → beri cincin tepi tegas. */
+html[data-theme="light"] .gauge::after {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+  opacity: 1;
+}
+/* Ring-glow: ganti cahaya cyan (hilang di putih) dengan border + bayangan lembut. */
+html[data-theme="light"] .ring-glow {
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.1),
+    0 10px 30px -12px rgba(15, 23, 42, 0.25);
+}
+/* Bar sparkline: drop-shadow neon tak terlihat di putih → tegaskan warna solid. */
+html[data-theme="light"] .bar-neon {
+  filter: none;
+}
+/* Kilau putih tak terbaca di atas kartu terang → redupkan jadi kilau biru tipis. */
+html[data-theme="light"] .sheen::after {
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(36, 80, 200, 0.06),
+    transparent
+  );
+}
