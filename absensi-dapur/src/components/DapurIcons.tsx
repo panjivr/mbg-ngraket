@@ -22,7 +22,15 @@ export type IconName =
   | "box"
   | "shield"
   | "truck"
-  | "clipboard";
+  | "clipboard"
+  | "gauge"
+  | "users"
+  | "settings"
+  | "chart"
+  | "building"
+  | "utensils"
+  | "leaf"
+  | "coins";
 
 const PATHS: Record<IconName, ReactNode> = {
   trophy: (
@@ -130,6 +138,59 @@ const PATHS: Record<IconName, ReactNode> = {
       <rect x="5" y="4.5" width="14" height="16" rx="2.2" />
       <path d="M9 3.5h6v3H9z" />
       <path d="M8.5 11h7M8.5 14.5h5" />
+    </>
+  ),
+  gauge: (
+    <>
+      <path d="M4 18a8 8 0 1 1 16 0" />
+      <path d="M12 18l3.5-4.5" />
+      <circle cx="12" cy="18" r="1.1" />
+    </>
+  ),
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 20c0-3.2 2.5-5 5.5-5s5.5 1.8 5.5 5" />
+      <path d="M16 5.4a3 3 0 0 1 0 5.7M17 15.4c2.1.5 3.5 2.1 3.5 4.6" />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1" />
+    </>
+  ),
+  chart: (
+    <>
+      <path d="M4 4v16h16" />
+      <rect x="7.3" y="12" width="2.6" height="5" rx="0.6" />
+      <rect x="11.7" y="8.5" width="2.6" height="8.5" rx="0.6" />
+      <rect x="16.1" y="14" width="2.6" height="3" rx="0.6" />
+    </>
+  ),
+  building: (
+    <>
+      <path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" />
+      <path d="M14 21V9h5a1 1 0 0 1 1 1v11M2.5 21h19" />
+      <path d="M7 8h2M7 12h2M7 16h2M11 8v.01M11 12v.01" />
+    </>
+  ),
+  utensils: (
+    <>
+      <path d="M6.5 3v6a2 2 0 0 0 4 0V3M8.5 9v12" />
+      <path d="M16.5 3c-1.8 0-3 2-3 5s1.2 4 3 4v9" />
+    </>
+  ),
+  leaf: (
+    <>
+      <path d="M4 20c0-8 6-14 16-14 0 10-6 14-16 14z" />
+      <path d="M4.5 19.5c4-6 8-8.5 12-9.5" />
+    </>
+  ),
+  coins: (
+    <>
+      <circle cx="8" cy="8" r="5" />
+      <path d="M12 4.6A5 5 0 1 1 15.4 15" />
     </>
   ),
 };

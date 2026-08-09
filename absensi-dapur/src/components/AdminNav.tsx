@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import DapurIcon, { type IconName } from "@/components/DapurIcons";
 
 interface Flags {
   fullAdmin: boolean;
@@ -23,6 +24,7 @@ interface Flags {
 interface Item {
   label: string;
   href: string;
+  icon: IconName;
   also?: string[];
   exact?: boolean;
   show: boolean;
@@ -30,6 +32,8 @@ interface Item {
 interface Group {
   key: string;
   label: string;
+  /** Ikon grup (dipakai pada tombol dropdown). */
+  icon: IconName;
   /** Item tunggal (tautan langsung, tanpa dropdown). */
   solo?: Item;
   items?: Item[];
@@ -38,51 +42,56 @@ interface Group {
 function buildGroups(f: Flags): Group[] {
   const has = (k: string) => f.fitur.includes(k);
   return [
-    { key: "dash", label: "Dashboard", solo: { label: "Dashboard", href: "/admin", exact: true, show: f.fullAdmin } },
+    { key: "dash", label: "Dashboard", icon: "gauge", solo: { label: "Dashboard", href: "/admin", icon: "gauge", exact: true, show: f.fullAdmin } },
     {
       key: "ops",
       label: "Operasional",
+      icon: "truck",
       items: [
-        { label: "🚚 Distribusi", href: "/admin/distribusi", show: f.aksesDistribusi && has("distribusi") },
-        { label: "🍱 Menu", href: "/admin/menu", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
-        { label: "📅 Jadwal & Belanja", href: "/admin/jadwal-menu", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
-        { label: "📋 Laporan Harian", href: "/admin/laporan", show: f.aksesLaporan && has("distribusi") },
-        { label: "🥗 Ahli Gizi", href: "/admin/ahli-gizi", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
-        { label: "📦 Gudang", href: "/admin/gudang", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
+        { label: "Distribusi", href: "/admin/distribusi", icon: "truck", show: f.aksesDistribusi && has("distribusi") },
+        { label: "Menu", href: "/admin/menu", icon: "utensils", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
+        { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
+        { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", show: f.aksesLaporan && has("distribusi") },
+        { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
+        { label: "Gudang", href: "/admin/gudang", icon: "box", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
       ],
     },
     {
       key: "peg",
       label: "Kepegawaian",
+      icon: "users",
       items: [
-        { label: "👥 Pegawai", href: "/admin/pegawai", also: ["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"], show: f.fullAdmin && has("pegawai") },
-        { label: "📊 Statistik", href: "/admin/statistik", show: f.fullAdmin && has("pegawai") },
-        { label: "🧾 HR / Gaji", href: "/admin/hr", show: f.isHr && has("hr") },
+        { label: "Pegawai", href: "/admin/pegawai", icon: "users", also: ["/admin/divisi", "/admin/leaderboard", "/admin/event", "/admin/sop", "/admin/jadwal", "/admin/izin", "/admin/pengumuman"], show: f.fullAdmin && has("pegawai") },
+        { label: "Statistik", href: "/admin/statistik", icon: "chart", show: f.fullAdmin && has("pegawai") },
+        { label: "HR / Gaji", href: "/admin/hr", icon: "receipt", show: f.isHr && has("hr") },
       ],
     },
     {
       key: "keu",
       label: "Keuangan",
+      icon: "coins",
       items: [
-        { label: "📊 Rekap", href: "/admin/rekap", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
-        { label: "🧮 Akuntan", href: "/admin/akuntan", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+        { label: "Rekap", href: "/admin/rekap", icon: "wallet", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
+        { label: "Akuntan", href: "/admin/akuntan", icon: "coins", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
       ],
     },
     {
       key: "sys",
       label: "Sistem",
+      icon: "settings",
       items: [
-        { label: "🧾 Aktivitas", href: "/admin/audit", show: f.fullAdmin },
-        { label: "⚙️ Pengaturan", href: "/admin/pengaturan", show: f.fullAdmin },
+        { label: "Aktivitas", href: "/admin/audit", icon: "history", show: f.fullAdmin },
+        { label: "Pengaturan", href: "/admin/pengaturan", icon: "settings", show: f.fullAdmin },
       ],
     },
     {
       key: "pusat",
       label: "Semua Dapur",
+      icon: "building",
       items: [
-        { label: "📊 Dashboard Dapur", href: "/admin/pusat/dashboard", show: f.isSuper },
-        { label: "🗓️ Rekap Absensi", href: "/admin/pusat", exact: true, show: f.isSuper },
-        { label: "🏢 Kelola Dapur", href: "/admin/sppg", show: f.isSuper },
+        { label: "Dashboard Dapur", href: "/admin/pusat/dashboard", icon: "gauge", show: f.isSuper },
+        { label: "Rekap Absensi", href: "/admin/pusat", icon: "calendar", exact: true, show: f.isSuper },
+        { label: "Kelola Dapur", href: "/admin/sppg", icon: "building", show: f.isSuper },
       ],
     },
   ];
@@ -93,10 +102,6 @@ function isActive(pathname: string, it: Item): boolean {
   if (pathname === it.href || pathname.startsWith(it.href + "/")) return true;
   return it.also?.some((p) => pathname === p || pathname.startsWith(p + "/")) ?? false;
 }
-
-// Navigasi profesional tanpa emoji: buang emoji di awal label (ikon struktural
-// sebaiknya bukan emoji). Label sumber tetap beremoji agar dipakai tempat lain.
-const clean = (s: string) => s.replace(/^(?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}️‍]+\s*)/u, "");
 
 const linkCls = (active: boolean) =>
   "shrink-0 cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
@@ -143,8 +148,9 @@ export default function AdminNav(flags: Flags) {
         if (g.solo) {
           if (!g.solo.show) return null;
           return (
-            <Link key={g.key} href={g.solo.href} className={linkCls(isActive(pathname, g.solo))}>
-              {clean(g.solo.label)}
+            <Link key={g.key} href={g.solo.href} className={linkCls(isActive(pathname, g.solo)) + " inline-flex items-center gap-1.5"}>
+              <DapurIcon name={g.solo.icon} className="h-[18px] w-[18px] shrink-0" />
+              {g.solo.label}
             </Link>
           );
         }
@@ -154,8 +160,9 @@ export default function AdminNav(flags: Flags) {
         if (vis.length === 1) {
           const it = vis[0];
           return (
-            <Link key={g.key} href={it.href} className={linkCls(isActive(pathname, it))}>
-              {clean(it.label)}
+            <Link key={g.key} href={it.href} className={linkCls(isActive(pathname, it)) + " inline-flex items-center gap-1.5"}>
+              <DapurIcon name={it.icon} className="h-[18px] w-[18px] shrink-0" />
+              {it.label}
             </Link>
           );
         }
@@ -166,10 +173,11 @@ export default function AdminNav(flags: Flags) {
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : g.key)}
-              className={linkCls(groupActive) + " inline-flex items-center gap-1"}
+              className={linkCls(groupActive) + " inline-flex items-center gap-1.5"}
               aria-expanded={isOpen}
               aria-haspopup="menu"
             >
+              <DapurIcon name={g.icon} className="h-[18px] w-[18px] shrink-0" />
               {g.label}
               <ChevronIcon open={isOpen} />
             </button>
@@ -181,11 +189,15 @@ export default function AdminNav(flags: Flags) {
                     href={it.href}
                     onClick={() => setOpen(null)}
                     className={
-                      "block rounded-lg px-3 py-2 text-sm transition " +
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition " +
                       (isActive(pathname, it) ? "bg-gold-500/15 text-gold-400" : "text-slate-300 hover:bg-white/5 hover:text-slate-100")
                     }
                   >
-                    {clean(it.label)}
+                    <DapurIcon
+                      name={it.icon}
+                      className={"h-[18px] w-[18px] shrink-0 " + (isActive(pathname, it) ? "text-gold-400" : "text-slate-400")}
+                    />
+                    {it.label}
                   </Link>
                 ))}
               </div>
