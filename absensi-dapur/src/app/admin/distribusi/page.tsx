@@ -74,6 +74,9 @@ export default function DistribusiPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [setel, setSetel] = useState<Pengaturan | null>(null);
   const [dirty, setDirty] = useState(false); // ada perubahan belum disimpan?
+  // Modal "Cetak Uji": salinan pilihan lembaga yang TERPISAH dari tabel asli,
+  // jadi milih lembaga di sini tidak menyentuh/mengubah data yang tersimpan.
+  const [uji, setUji] = useState<Baris[] | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -235,23 +238,50 @@ export default function DistribusiPage() {
     return [...m.entries()];
   }, [baris]);
 
+  // Kelompok per jenjang untuk daftar centang di modal "Cetak Uji".
+  const grupUji = useMemo(() => {
+    if (!uji) return [];
+    const m = new Map<string, Baris[]>();
+    for (const b of uji) {
+      const k = b.jenjang || "Lainnya";
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(b);
+    }
+    return [...m.entries()];
+  }, [uji]);
+
   const cetak = (dok: string, urut: "dokumen" | "lembaga" = "dokumen") =>
     window.open(
       `/cetak/distribusi?tanggal=${tanggal}&dok=${dok}&urut=${urut}`,
       "_blank",
     );
 
-  // Cetak UJI (tanpa simpan): pakai pilihan & angka di layar saat ini sebagai
-  // "snapshot" sementara — tidak menyentuh/menimpa data distribusi tersimpan.
-  // Berguna untuk audit: cetak ulang beberapa lembaga saja tanpa mengubah data.
+  // ── Modal "Cetak Uji" ──────────────────────────────────────────────────
+  // Buka modal dgn SALINAN independen dari baris saat ini (porsi ikut terbawa),
+  // tapi mencentang/uncentang di modal TIDAK mengubah tabel/pilihan asli.
+  function bukaUji() {
+    setUji(baris.map((b) => ({ ...b })));
+  }
+  function updUji(id: number, patch: Partial<Baris>) {
+    setUji((prev) => (prev ? prev.map((b) => (b.penerima_id === id ? { ...b, ...patch } : b)) : prev));
+  }
+  function pilihSemuaUji(v: boolean) {
+    setUji((prev) => (prev ? prev.map((b) => ({ ...b, ikut: v })) : prev));
+  }
+  function pilihGrupUji(jenjang: string, v: boolean) {
+    setUji((prev) => (prev ? prev.map((b) => (b.jenjang === jenjang ? { ...b, ikut: v } : b)) : prev));
+  }
+
+  // Cetak UJI (tanpa simpan): pakai SALINAN pilihan di modal sebagai snapshot
+  // sementara — tidak menyentuh/menimpa data distribusi tersimpan.
   const cetakUji = (dok: string, urut: "dokumen" | "lembaga" = "dokumen") => {
-    if (baris.every((b) => !b.ikut)) {
-      alert("Pilih minimal satu penerima (centang) sebelum cetak uji.");
+    if (!uji || uji.every((b) => !b.ikut)) {
+      alert("Pilih minimal satu lembaga sebelum cetak uji.");
       return;
     }
     const snapshot = {
       tanggal,
-      baris,
+      baris: uji,
       distribusi: {
         driver, menu, catatan,
         menu_sekolah: menuSekolah, menu_balita: menuBalita, menu_b2: menuB2,
@@ -434,19 +464,14 @@ export default function DistribusiPage() {
           <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar angka terbaru ikut.</span>
         )}
 
-        {/* Cetak UJI — pakai pilihan di layar TANPA menyimpan / menimpa data */}
+        {/* Cetak UJI — dibuka di modal terpisah, tidak menyentuh pilihan asli */}
         <div className="mt-1 flex w-full flex-wrap items-center gap-2 border-t border-white/10 pt-2.5">
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-2 py-1 text-xs font-semibold text-sky-200">
-            🧪 Cetak Uji (tanpa simpan)
-          </span>
+          <button onClick={bukaUji} className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-400/10 px-3 py-1.5 text-sm font-semibold text-sky-200 hover:bg-sky-400/20">
+            🧪 Cetak Uji / Audit…
+          </button>
           <span className="text-xs text-slate-400">
-            Cetak sesuai centang &amp; angka di layar sekarang — data tersimpan tidak berubah. Cocok untuk cetak ulang beberapa lembaga saat audit.
+            Pilih lembaga di jendela terpisah lalu cetak — <b>tanpa menyimpan</b> &amp; tanpa mengubah pilihan/data yang sudah tersimpan.
           </span>
-          <button onClick={() => cetakUji("bast")} className="btn-ghost text-sm">BAST</button>
-          <button onClick={() => cetakUji("surat-jalan")} className="btn-ghost text-sm">Surat Jalan</button>
-          <button onClick={() => cetakUji("organoleptik")} className="btn-ghost text-sm">Organoleptik</button>
-          <button onClick={() => cetakUji("semua", "dokumen")} className="btn-ghost text-sm">Semua (per dokumen)</button>
-          <button onClick={() => cetakUji("semua", "lembaga")} className="btn-ghost text-sm">Semua (per lembaga)</button>
         </div>
       </div>
 
@@ -487,6 +512,80 @@ export default function DistribusiPage() {
                 <button onClick={() => setSetel(null)} className="btn-ghost flex-1">Batal</button>
                 <button onClick={simpanSetel} className="btn-gold flex-1">Simpan</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal "Cetak Uji / Audit" — pilihan lembaga TERPISAH & mandiri.
+          Mencentang di sini tidak mengubah tabel/data yang tersimpan. */}
+      {uji && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4" onClick={() => setUji(null)}>
+          <div className="card flex max-h-[90vh] w-full max-w-2xl flex-col p-0" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-sky-200">🧪 Cetak Uji / Audit</h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  Centang lembaga yang mau dicetak ulang lalu pilih dokumennya. Ini <b>hanya untuk output cetak</b> — tidak menyimpan &amp; tidak mengubah data/pilihan yang sudah tersimpan.
+                </p>
+              </div>
+              <button onClick={() => setUji(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Tutup">✕</button>
+            </div>
+
+            {/* Toolbar pilih */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-5 py-2.5">
+              <span className="text-xs font-semibold text-slate-300">
+                Terpilih: {uji.filter((b) => b.ikut).length}/{uji.length}
+              </span>
+              <span className="mx-1 h-4 w-px bg-white/10" />
+              <button onClick={() => pilihSemuaUji(true)} className="btn-ghost text-xs">Pilih semua</button>
+              <button onClick={() => pilihSemuaUji(false)} className="btn-ghost text-xs">Kosongkan</button>
+            </div>
+
+            {/* Daftar lembaga per jenjang */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
+              {grupUji.map(([jenjang, rows]) => {
+                const terpilih = rows.filter((r) => r.ikut).length;
+                return (
+                  <div key={jenjang} className="mb-4">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gold-400">
+                        {jenjang} <span className="font-normal text-slate-500">({terpilih}/{rows.length})</span>
+                      </span>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => pilihGrupUji(jenjang, true)} className="text-[11px] text-sky-300 hover:underline">semua</button>
+                        <span className="text-slate-600">·</span>
+                        <button onClick={() => pilihGrupUji(jenjang, false)} className="text-[11px] text-slate-400 hover:underline">kosong</button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                      {rows.map((b) => (
+                        <label key={b.penerima_id} className={"flex cursor-pointer items-center gap-2 rounded-lg border border-white/5 px-2.5 py-1.5 text-sm " + (b.ikut ? "bg-sky-400/10" : "opacity-60 hover:opacity-100")}>
+                          <input type="checkbox" className="h-4 w-4 accent-sky-500" checked={b.ikut}
+                            onChange={(e) => updUji(b.penerima_id, { ikut: e.target.checked })} />
+                          <span className="min-w-0 flex-1 truncate font-medium">{b.nama}</span>
+                          <span className="text-xs text-slate-500">{b.jam_kirim}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {grupUji.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-500">Tidak ada data penerima untuk tanggal ini.</p>
+              )}
+            </div>
+
+            {/* Footer cetak */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/10 p-4">
+              <span className="text-xs font-semibold text-slate-300">Cetak uji:</span>
+              <button onClick={() => cetakUji("bast")} className="btn-ghost text-sm">BAST</button>
+              <button onClick={() => cetakUji("surat-jalan")} className="btn-ghost text-sm">Surat Jalan</button>
+              <button onClick={() => cetakUji("organoleptik")} className="btn-ghost text-sm">Organoleptik</button>
+              <button onClick={() => cetakUji("semua", "dokumen")} className="btn-ghost text-sm" title="Semua dokumen dikelompokkan per jenis">Semua (per dokumen)</button>
+              <button onClick={() => cetakUji("semua", "lembaga")} className="btn-ghost text-sm" title="Per lembaga berurutan: BAST → Surat Jalan → Organoleptik">Semua (per lembaga)</button>
+              <button onClick={() => setUji(null)} className="btn-ghost ml-auto text-sm">Tutup</button>
             </div>
           </div>
         </div>
