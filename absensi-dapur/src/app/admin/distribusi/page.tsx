@@ -4,6 +4,9 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { MenuGrup } from "@/lib/distribusi-types";
 
+// Kunci localStorage untuk snapshot "Cetak Uji" (pratinjau tanpa simpan).
+const KEY_PREVIEW = "mbg:distribusi-preview";
+
 interface Baris {
   penerima_id: number;
   jenis: "serdik" | "b3";
@@ -238,6 +241,34 @@ export default function DistribusiPage() {
       "_blank",
     );
 
+  // Cetak UJI (tanpa simpan): pakai pilihan & angka di layar saat ini sebagai
+  // "snapshot" sementara — tidak menyentuh/menimpa data distribusi tersimpan.
+  // Berguna untuk audit: cetak ulang beberapa lembaga saja tanpa mengubah data.
+  const cetakUji = (dok: string, urut: "dokumen" | "lembaga" = "dokumen") => {
+    if (baris.every((b) => !b.ikut)) {
+      alert("Pilih minimal satu penerima (centang) sebelum cetak uji.");
+      return;
+    }
+    const snapshot = {
+      tanggal,
+      baris,
+      distribusi: {
+        driver, menu, catatan,
+        menu_sekolah: menuSekolah, menu_balita: menuBalita, menu_b2: menuB2,
+      },
+    };
+    try {
+      localStorage.setItem(KEY_PREVIEW, JSON.stringify(snapshot));
+    } catch {
+      alert("Tidak bisa menyiapkan pratinjau (penyimpanan browser penuh/diblokir).");
+      return;
+    }
+    window.open(
+      `/cetak/distribusi?tanggal=${tanggal}&dok=${dok}&urut=${urut}&preview=1`,
+      "_blank",
+    );
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -402,6 +433,21 @@ export default function DistribusiPage() {
         {!data?.tersimpan && (
           <span className="text-xs text-amber-300">Simpan dulu sebelum cetak agar angka terbaru ikut.</span>
         )}
+
+        {/* Cetak UJI — pakai pilihan di layar TANPA menyimpan / menimpa data */}
+        <div className="mt-1 flex w-full flex-wrap items-center gap-2 border-t border-white/10 pt-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-2 py-1 text-xs font-semibold text-sky-200">
+            🧪 Cetak Uji (tanpa simpan)
+          </span>
+          <span className="text-xs text-slate-400">
+            Cetak sesuai centang &amp; angka di layar sekarang — data tersimpan tidak berubah. Cocok untuk cetak ulang beberapa lembaga saat audit.
+          </span>
+          <button onClick={() => cetakUji("bast")} className="btn-ghost text-sm">BAST</button>
+          <button onClick={() => cetakUji("surat-jalan")} className="btn-ghost text-sm">Surat Jalan</button>
+          <button onClick={() => cetakUji("organoleptik")} className="btn-ghost text-sm">Organoleptik</button>
+          <button onClick={() => cetakUji("semua", "dokumen")} className="btn-ghost text-sm">Semua (per dokumen)</button>
+          <button onClick={() => cetakUji("semua", "lembaga")} className="btn-ghost text-sm">Semua (per lembaga)</button>
+        </div>
       </div>
 
       {/* Modal pengaturan harga & kepala */}

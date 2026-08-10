@@ -132,16 +132,39 @@ function Inner() {
   const tanggal = /^\d{4}-\d{2}-\d{2}$/.test(sp.get("tanggal") || "") ? sp.get("tanggal")! : jakartaToday();
   const dok = sp.get("dok") || "semua";
   const urut = sp.get("urut") === "lembaga" ? "lembaga" : "dokumen";
+  // Mode UJI (pratinjau): ambil pilihan/angka dari snapshot layar, bukan data tersimpan.
+  const preview = sp.get("preview") === "1";
   const [data, setData] = useState<DistData | null>(null);
   const [err, setErr] = useState(false);
   const [paper, setPaper] = useState("A4");
 
   useEffect(() => {
+    // Selalu GET (read-only) untuk ambil identitas/kop SPPG. Di mode uji, isi
+    // baris & menu ditimpa dari snapshot localStorage — tanpa menulis apa pun.
     fetch(`/api/admin/distribusi?tanggal=${tanggal}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: DistData) => setData(d))
+      .then((d: DistData) => {
+        if (preview) {
+          try {
+            const raw = localStorage.getItem("mbg:distribusi-preview");
+            if (raw) {
+              const snap = JSON.parse(raw) as Partial<DistData>;
+              setData({
+                ...d,
+                tanggal: snap.tanggal || d.tanggal,
+                baris: snap.baris || d.baris,
+                distribusi: snap.distribusi || d.distribusi,
+              });
+              return;
+            }
+          } catch {
+            /* snapshot rusak → pakai data tersimpan sebagai fallback */
+          }
+        }
+        setData(d);
+      })
       .catch(() => setErr(true));
-  }, [tanggal]);
+  }, [tanggal, preview]);
 
   if (err) return <p className="p-8 text-center">Gagal memuat data distribusi.</p>;
   if (!data) return <p className="p-8 text-center">Memuat…</p>;
@@ -451,6 +474,12 @@ function Inner() {
   return (
     <div className="min-h-screen bg-white py-6 text-black">
       <style>{`@media print{@page{size:${PAPERS[paper]?.size || PAPERS.A4.size};margin:14mm}.no-print{display:none}.doc{page-break-after:always}}.doc:last-child{page-break-after:auto}`}</style>
+      {preview && (
+        <div className="no-print mx-auto mb-3 max-w-[760px] rounded-lg border border-sky-300 bg-sky-50 px-4 py-2.5 text-sm text-sky-900">
+          🧪 <b>Mode Uji</b> — pratinjau ini memakai pilihan &amp; angka dari layar Distribusi Harian.
+          Tidak memengaruhi data yang sudah tersimpan. Aman untuk cetak ulang beberapa lembaga saat audit.
+        </div>
+      )}
       <div className="no-print mx-auto mb-4 flex max-w-[760px] flex-wrap items-center justify-between gap-3 px-4">
         <p className="text-sm text-gray-600">{serdik.length} sekolah · {desaSet.size} desa posyandu · {tglLong(tanggal)}</p>
         <div className="flex items-center gap-2">
