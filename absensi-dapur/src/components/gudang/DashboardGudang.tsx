@@ -7,7 +7,7 @@
  * rincian per kategori, dan mutasi terbaru.
  * Membaca /api/admin/gudang/barang + /mutasi (read-only).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   KATEGORI_LABEL, KATEGORI_LIST, TIPE_LABEL, statusStok, statusKadaluarsa,
   type Barang, type Kategori, type Mutasi,
@@ -16,6 +16,7 @@ import {
 const WINDOW_DAYS = 30;          // jendela analitik konsumsi/aktivitas
 const REORDER_HORIZON = 14;      // tampilkan barang yang habis ≤ N hari
 const EXPIRY_AMBANG = 7;         // "segera kadaluarsa" bila ≤ N hari
+const TREND_DAYS = 14;           // panjang sparkline aktivitas harian
 
 const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString("id-ID") : n.toLocaleString("id-ID", { maximumFractionDigits: 2 }));
 const fmtRp = (n: number) => "Rp " + Math.round(n).toLocaleString("id-ID");
@@ -105,6 +106,23 @@ export default function DashboardGudang() {
     return { masukQty, keluarQty, masukRp, keluarRp, opnameCount, tx, konsumsiById };
   }, [mutasi, today, barangById]);
 
+  // Tren aktivitas harian (TREND_DAYS terakhir) untuk sparkline
+  const trend = useMemo(() => {
+    const start = parseIso(today) - (TREND_DAYS - 1) * dayMs;
+    const masuk = new Array<number>(TREND_DAYS).fill(0);
+    const keluar = new Array<number>(TREND_DAYS).fill(0);
+    for (const m of mutasi) {
+      const t = parseIso(m.tanggal);
+      if (Number.isNaN(t)) continue;
+      const idx = Math.round((t - start) / dayMs);
+      if (idx < 0 || idx >= TREND_DAYS) continue;
+      if (m.tipe === "masuk") masuk[idx] += m.jumlah;
+      else if (m.tipe === "keluar") keluar[idx] += m.jumlah;
+    }
+    const max = Math.max(1, ...masuk, ...keluar);
+    return { masuk, keluar, max };
+  }, [mutasi, today]);
+
   // Estimasi habis / reorder — berdasarkan laju pemakaian harian
   const reorder = useMemo(() => {
     const rows: { b: Barang; laju: number; hari: number; tglHabis: string }[] = [];
@@ -145,42 +163,32 @@ export default function DashboardGudang() {
 
   if (loading) return <div className="card p-6 text-center text-slate-400">Memuat…</div>;
 
-  return (
-    <div className="space-y-5">
-      {/* Kartu ringkasan */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Total Nilai Persediaan</p>
-          <p className="mt-1 text-xl font-bold text-emerald-300 sm:text-2xl">{fmtRp(stat.nilai)}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Jumlah Barang</p>
-          <p className="mt-1 text-xl font-bold sm:text-2xl">{stat.total}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Stok Menipis</p>
-          <p className="mt-1 text-xl font-bold text-amber-300 sm:text-2xl">{stat.menipis}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Stok Habis</p>
-          <p className="mt-1 text-xl font-bold text-red-300 sm:text-2xl">{stat.habis}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Segera Kadaluarsa <span className="text-slate-500">(≤{EXPIRY_AMBANG}h)</span></p>
-          <p className="mt-1 text-xl font-bold text-orange-300 sm:text-2xl">{kad.segera}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-400">Kadaluarsa</p>
-          <p className="mt-1 text-xl font-bold text-red-300 sm:text-2xl">{kad.kadaluarsa}</p>
-        </div>
-      </div>
+  const amanPct = stat.total > 0 ? Math.round((stat.aman / stat.total) * 100) : 0;
+  const gaugeVar = {
+    "--val": amanPct,
+    "--c1": "#34d399",
+    "--c2": "#22d3ee",
+  } as CSSProperties;
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* Kesehatan stok + aktivitas 30 hari */}
-        <div className="card p-4">
-          <h3 className="mb-3 text-sm font-bold">Kesehatan Stok</h3>
-          <div className="flex items-center gap-5">
-            <HealthDonut aman={stat.aman} menipis={stat.menipis} habis={stat.habis} />
+  return (
+    <div className="dash-stagger space-y-5">
+      {/* Hero command-center: gauge kesehatan + tren aktivitas */}
+      <div className="card grid-glow ring-glow overflow-hidden p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="live-dot inline-block h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Pusat Kendali Gudang</span>
+          <span className="ml-auto text-xs text-slate-500">{today}</span>
+        </div>
+
+        <div className="grid items-center gap-6 md:grid-cols-[auto,1fr]">
+          {/* Gauge kesehatan stok */}
+          <div className="flex items-center gap-4">
+            <div className="gauge h-28 w-28 shrink-0" style={gaugeVar}>
+              <div className="gauge-inner">
+                <div className="text-2xl font-bold neon-cyan">{amanPct}%</div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">stok aman</div>
+              </div>
+            </div>
             <div className="space-y-1.5 text-sm">
               <LegendRow color="bg-emerald-400" label="Aman" value={stat.aman} total={stat.total} />
               <LegendRow color="bg-amber-400" label="Menipis" value={stat.menipis} total={stat.total} />
@@ -188,15 +196,66 @@ export default function DashboardGudang() {
             </div>
           </div>
 
-          <h3 className="mb-2 mt-5 text-sm font-bold">Aktivitas {WINDOW_DAYS} Hari Terakhir</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-            <MiniStat label="Masuk" value={fmtNum(aktivitas.masukQty)} sub={fmtRp(aktivitas.masukRp)} tone="text-emerald-300" />
-            <MiniStat label="Keluar" value={fmtNum(aktivitas.keluarQty)} sub={fmtRp(aktivitas.keluarRp)} tone="text-sky-300" />
-            <MiniStat label="Opname" value={fmtNum(aktivitas.opnameCount)} sub="penyesuaian" tone="text-amber-300" />
-            <MiniStat label="Transaksi" value={fmtNum(aktivitas.tx)} sub="total mutasi" tone="text-slate-200" />
+          {/* Sparkline aktivitas harian */}
+          <div>
+            <div className="mb-2 flex items-center gap-3 text-xs">
+              <span className="font-semibold uppercase tracking-wide text-slate-300">Tren Aktivitas {TREND_DAYS} Hari</span>
+              <span className="flex items-center gap-1 text-slate-400"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-400" /> Masuk</span>
+              <span className="flex items-center gap-1 text-slate-400"><span className="inline-block h-2 w-2 rounded-sm bg-sky-400" /> Keluar</span>
+            </div>
+            <div className="flex h-20 items-end gap-1">
+              {trend.keluar.map((k, i) => (
+                <div key={i} className="flex h-full flex-1 items-end justify-center gap-0.5">
+                  <div className="bar-neon bar-grow w-1/2 rounded-t bg-emerald-400/70" style={{ height: `${(trend.masuk[i] / trend.max) * 100}%` }} title={`Masuk ${fmtNum(trend.masuk[i])}`} />
+                  <div className="bar-neon bar-grow w-1/2 rounded-t bg-sky-400/80" style={{ height: `${(k / trend.max) * 100}%` }} title={`Keluar ${fmtNum(k)}`} />
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <MiniStat label="Masuk 30h" value={fmtNum(aktivitas.masukQty)} sub={fmtRp(aktivitas.masukRp)} tone="text-emerald-300" />
+              <MiniStat label="Keluar 30h" value={fmtNum(aktivitas.keluarQty)} sub={fmtRp(aktivitas.keluarRp)} tone="text-sky-300" />
+              <MiniStat label="Opname 30h" value={fmtNum(aktivitas.opnameCount)} sub="penyesuaian" tone="text-amber-300" />
+              <MiniStat label="Transaksi" value={fmtNum(aktivitas.tx)} sub="total mutasi" tone="text-slate-200" />
+            </div>
           </div>
         </div>
+      </div>
 
+      {/* Kartu ringkasan */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="stat-card sheen">
+          <span className="absolute inset-y-0 left-0 w-1 bg-emerald-400/70" />
+          <p className="text-xs text-slate-400">Total Nilai Persediaan</p>
+          <p className="mt-1 text-xl font-bold text-emerald-300 sm:text-2xl">{fmtRp(stat.nilai)}</p>
+        </div>
+        <div className="stat-card">
+          <span className="absolute inset-y-0 left-0 w-1 bg-sky-400/70" />
+          <p className="text-xs text-slate-400">Jumlah Barang</p>
+          <p className="mt-1 text-xl font-bold sm:text-2xl">{stat.total}</p>
+        </div>
+        <div className="stat-card">
+          <span className="absolute inset-y-0 left-0 w-1 bg-amber-400/70" />
+          <p className="text-xs text-slate-400">Stok Menipis</p>
+          <p className="mt-1 text-xl font-bold text-amber-300 sm:text-2xl">{stat.menipis}</p>
+        </div>
+        <div className="stat-card">
+          <span className="absolute inset-y-0 left-0 w-1 bg-red-400/70" />
+          <p className="text-xs text-slate-400">Stok Habis</p>
+          <p className="mt-1 text-xl font-bold text-red-300 sm:text-2xl">{stat.habis}</p>
+        </div>
+        <div className="stat-card">
+          <span className="absolute inset-y-0 left-0 w-1 bg-orange-400/70" />
+          <p className="text-xs text-slate-400">Segera Kadaluarsa <span className="text-slate-500">(≤{EXPIRY_AMBANG}h)</span></p>
+          <p className="mt-1 text-xl font-bold text-orange-300 sm:text-2xl">{kad.segera}</p>
+        </div>
+        <div className="stat-card">
+          <span className="absolute inset-y-0 left-0 w-1 bg-red-500/70" />
+          <p className="text-xs text-slate-400">Kadaluarsa</p>
+          <p className="mt-1 text-xl font-bold text-red-300 sm:text-2xl">{kad.kadaluarsa}</p>
+        </div>
+      </div>
+
+      <div>
         {/* Nilai per kategori */}
         <div className="card p-4">
           <h3 className="mb-3 text-sm font-bold">Nilai Persediaan per Kategori</h3>
@@ -370,41 +429,6 @@ export default function DashboardGudang() {
             </table>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-/** Donut ringkas kesehatan stok (SVG, tanpa dependensi). */
-function HealthDonut({ aman, menipis, habis }: { aman: number; menipis: number; habis: number }) {
-  const total = Math.max(1, aman + menipis + habis);
-  const r = 34, c = 2 * Math.PI * r;
-  const segs = [
-    { v: aman, cls: "text-emerald-400" },
-    { v: menipis, cls: "text-amber-400" },
-    { v: habis, cls: "text-red-400" },
-  ];
-  let offset = 0;
-  const pct = Math.round((aman / total) * 100);
-  return (
-    <div className="relative h-24 w-24 shrink-0">
-      <svg viewBox="0 0 90 90" className="h-24 w-24 -rotate-90">
-        <circle cx="45" cy="45" r={r} fill="none" stroke="currentColor" strokeWidth="10" className="text-white/5" />
-        {segs.map((s, i) => {
-          const len = (s.v / total) * c;
-          const el = (
-            <circle
-              key={i} cx="45" cy="45" r={r} fill="none" stroke="currentColor" strokeWidth="10"
-              className={s.cls} strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} strokeLinecap="butt"
-            />
-          );
-          offset += len;
-          return el;
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-bold leading-none">{pct}%</span>
-        <span className="text-[10px] text-slate-400">aman</span>
       </div>
     </div>
   );
