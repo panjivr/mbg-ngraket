@@ -28,6 +28,16 @@ interface DistData {
   baris: Baris[];
   total: { besar: number; kecil: number; balita: number; bumil: number; busui: number; b3: number; porsi: number; pagu: number };
 }
+// Salinan lengkap form untuk modal "Cetak Uji" (independen dari state utama).
+interface UjiState {
+  baris: Baris[];
+  driver: string;
+  menu: string;
+  catatan: string;
+  menuSekolah: MenuGrup[];
+  menuBalita: MenuGrup[];
+  menuB2: MenuGrup[];
+}
 interface Pengaturan {
   nama_sppg: string;
   alamat: string;
@@ -74,9 +84,10 @@ export default function DistribusiPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [setel, setSetel] = useState<Pengaturan | null>(null);
   const [dirty, setDirty] = useState(false); // ada perubahan belum disimpan?
-  // Modal "Cetak Uji": salinan pilihan lembaga yang TERPISAH dari tabel asli,
-  // jadi milih lembaga di sini tidak menyentuh/mengubah data yang tersimpan.
-  const [uji, setUji] = useState<Baris[] | null>(null);
+  // Modal "Cetak Uji": SALINAN mandiri dari SELURUH form (pilihan lembaga +
+  // menu/driver/catatan + 3 menu organoleptik). Mengubah apa pun di sini TIDAK
+  // menyentuh/menimpa data yang tersimpan — murni untuk output cetak uji/audit.
+  const [uji, setUji] = useState<UjiState | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -242,7 +253,7 @@ export default function DistribusiPage() {
   const grupUji = useMemo(() => {
     if (!uji) return [];
     const m = new Map<string, Baris[]>();
-    for (const b of uji) {
+    for (const b of uji.baris) {
       const k = b.jenjang || "Lainnya";
       if (!m.has(k)) m.set(k, []);
       m.get(k)!.push(b);
@@ -257,34 +268,46 @@ export default function DistribusiPage() {
     );
 
   // ── Modal "Cetak Uji" ──────────────────────────────────────────────────
-  // Buka modal dgn SALINAN independen dari baris saat ini (porsi ikut terbawa),
-  // tapi mencentang/uncentang di modal TIDAK mengubah tabel/pilihan asli.
+  // Buka modal dgn SALINAN independen dari SELURUH form saat ini (pilihan
+  // lembaga + porsi + menu/driver/catatan + 3 menu organoleptik). Mengubah apa
+  // pun di modal TIDAK mengubah tabel/form/data yang tersimpan.
   function bukaUji() {
-    setUji(baris.map((b) => ({ ...b })));
+    setUji({
+      baris: baris.map((b) => ({ ...b })),
+      driver,
+      menu,
+      catatan,
+      menuSekolah: menuSekolah.map((g) => ({ ...g, items: [...g.items] })),
+      menuBalita: menuBalita.map((g) => ({ ...g, items: [...g.items] })),
+      menuB2: menuB2.map((g) => ({ ...g, items: [...g.items] })),
+    });
   }
   function updUji(id: number, patch: Partial<Baris>) {
-    setUji((prev) => (prev ? prev.map((b) => (b.penerima_id === id ? { ...b, ...patch } : b)) : prev));
+    setUji((prev) => (prev ? { ...prev, baris: prev.baris.map((b) => (b.penerima_id === id ? { ...b, ...patch } : b)) } : prev));
   }
   function pilihSemuaUji(v: boolean) {
-    setUji((prev) => (prev ? prev.map((b) => ({ ...b, ikut: v })) : prev));
+    setUji((prev) => (prev ? { ...prev, baris: prev.baris.map((b) => ({ ...b, ikut: v })) } : prev));
   }
   function pilihGrupUji(jenjang: string, v: boolean) {
-    setUji((prev) => (prev ? prev.map((b) => (b.jenjang === jenjang ? { ...b, ikut: v } : b)) : prev));
+    setUji((prev) => (prev ? { ...prev, baris: prev.baris.map((b) => (b.jenjang === jenjang ? { ...b, ikut: v } : b)) } : prev));
+  }
+  function setUjiField<K extends keyof UjiState>(key: K, val: UjiState[K]) {
+    setUji((prev) => (prev ? { ...prev, [key]: val } : prev));
   }
 
-  // Cetak UJI (tanpa simpan): pakai SALINAN pilihan di modal sebagai snapshot
+  // Cetak UJI (tanpa simpan): pakai SALINAN mandiri di modal sebagai snapshot
   // sementara — tidak menyentuh/menimpa data distribusi tersimpan.
   const cetakUji = (dok: string, urut: "dokumen" | "lembaga" = "dokumen") => {
-    if (!uji || uji.every((b) => !b.ikut)) {
+    if (!uji || uji.baris.every((b) => !b.ikut)) {
       alert("Pilih minimal satu lembaga sebelum cetak uji.");
       return;
     }
     const snapshot = {
       tanggal,
-      baris: uji,
+      baris: uji.baris,
       distribusi: {
-        driver, menu, catatan,
-        menu_sekolah: menuSekolah, menu_balita: menuBalita, menu_b2: menuB2,
+        driver: uji.driver, menu: uji.menu, catatan: uji.catatan,
+        menu_sekolah: uji.menuSekolah, menu_balita: uji.menuBalita, menu_b2: uji.menuB2,
       },
     };
     try {
@@ -521,13 +544,13 @@ export default function DistribusiPage() {
           Mencentang di sini tidak mengubah tabel/data yang tersimpan. */}
       {uji && (
         <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4" onClick={() => setUji(null)}>
-          <div className="card flex max-h-[90vh] w-full max-w-2xl flex-col p-0" onClick={(e) => e.stopPropagation()}>
+          <div className="card flex max-h-[90vh] w-full max-w-4xl flex-col p-0" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
               <div>
                 <h2 className="flex items-center gap-2 text-lg font-bold text-sky-200">🧪 Cetak Uji / Audit</h2>
                 <p className="mt-1 text-xs text-slate-400">
-                  Centang lembaga yang mau dicetak ulang lalu pilih dokumennya. Ini <b>hanya untuk output cetak</b> — tidak menyimpan &amp; tidak mengubah data/pilihan yang sudah tersimpan.
+                  Atur menu/driver/catatan &amp; centang lembaga, lalu pilih dokumennya. Semua di sini <b>salinan mandiri</b> — <b>hanya untuk output cetak</b>, tidak menyimpan &amp; tidak mengubah data/pilihan yang sudah tersimpan.
                 </p>
               </div>
               <button onClick={() => setUji(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Tutup">✕</button>
@@ -536,15 +559,40 @@ export default function DistribusiPage() {
             {/* Toolbar pilih */}
             <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-5 py-2.5">
               <span className="text-xs font-semibold text-slate-300">
-                Terpilih: {uji.filter((b) => b.ikut).length}/{uji.length}
+                Terpilih: {uji.baris.filter((b) => b.ikut).length}/{uji.baris.length}
               </span>
               <span className="mx-1 h-4 w-px bg-white/10" />
               <button onClick={() => pilihSemuaUji(true)} className="btn-ghost text-xs">Pilih semua</button>
               <button onClick={() => pilihSemuaUji(false)} className="btn-ghost text-xs">Kosongkan</button>
             </div>
 
-            {/* Daftar lembaga per jenjang */}
+            {/* Isi form: menu/driver/catatan + menu organoleptik + daftar lembaga.
+                Semua ini salinan mandiri — diedit di sini tanpa mengubah data asli. */}
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3">
+              {/* Info hari itu (salinan uji) */}
+              <div className="mb-3 grid gap-2 sm:grid-cols-3">
+                <div>
+                  <label className="label">Menu Hari Ini</label>
+                  <input className="input" value={uji.menu} onChange={(e) => setUjiField("menu", e.target.value)} placeholder="mis. Nasi, Ayam, Sayur, Buah" />
+                </div>
+                <div>
+                  <label className="label">Driver</label>
+                  <input className="input" value={uji.driver} onChange={(e) => setUjiField("driver", e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Catatan</label>
+                  <input className="input" value={uji.catatan} onChange={(e) => setUjiField("catatan", e.target.value)} />
+                </div>
+              </div>
+
+              {/* Menu organoleptik (salinan uji) */}
+              <div className="mb-4 grid gap-2 lg:grid-cols-3">
+                <MenuEditor judul="Menu Sekolah — Uji Organoleptik" warna="text-sky-300" value={uji.menuSekolah} onChange={(v) => setUjiField("menuSekolah", v)} />
+                <MenuEditor judul="Menu Balita — Uji Organoleptik" warna="text-amber-300" value={uji.menuBalita} onChange={(v) => setUjiField("menuBalita", v)} />
+                <MenuEditor judul="Menu B2 (Bumil & Busui) — Uji Organoleptik" warna="text-pink-300" value={uji.menuB2} onChange={(v) => setUjiField("menuB2", v)} />
+              </div>
+
+              <div className="mb-2 border-t border-white/10 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Pilih lembaga</div>
               {grupUji.map(([jenjang, rows]) => {
                 const terpilih = rows.filter((r) => r.ikut).length;
                 return (
