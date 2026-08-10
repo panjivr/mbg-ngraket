@@ -22,13 +22,40 @@ export const GET = route(async (req: Request) => {
   const hk = sppg?.harga_kecil ?? 8000;
   const h3 = sppg?.harga_b3 ?? 8000;
 
-  // Bulan target "YYYY-MM"; default bulan berjalan.
+  // Dua mode:
+  //  - Rentang tanggal: ?dari=YYYY-MM-DD&sampai=YYYY-MM-DD (inklusif)
+  //  - Bulanan: ?bulan=YYYY-MM (default bulan berjalan)
+  // Rentang tanggal diprioritaskan bila kedua param valid.
   const url = new URL(req.url);
-  const bulanParam = url.searchParams.get("bulan") || "";
-  const bulan = /^\d{4}-\d{2}$/.test(bulanParam) ? bulanParam : localDate(tz).slice(0, 7);
-  const awal = `${bulan}-01`;
-  const [y, m] = bulan.split("-").map(Number);
-  const akhir = `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01`;
+  const isTgl = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const dariParam = url.searchParams.get("dari") || "";
+  const sampaiParam = url.searchParams.get("sampai") || "";
+  const pakaiRentang = isTgl(dariParam) && isTgl(sampaiParam);
+
+  let mode: "rentang" | "bulan";
+  let bulan = "";
+  let dari = "";
+  let sampai = "";
+  let awal: string;
+  let akhir: string;
+
+  if (pakaiRentang) {
+    mode = "rentang";
+    // Normalisasi bila dari > sampai (tukar) agar rentang selalu valid.
+    [dari, sampai] = dariParam <= sampaiParam ? [dariParam, sampaiParam] : [sampaiParam, dariParam];
+    awal = dari;
+    // Batas atas eksklusif = hari setelah `sampai`.
+    const next = new Date(`${sampai}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    akhir = next.toISOString().slice(0, 10);
+  } else {
+    mode = "bulan";
+    const bulanParam = url.searchParams.get("bulan") || "";
+    bulan = /^\d{4}-\d{2}$/.test(bulanParam) ? bulanParam : localDate(tz).slice(0, 7);
+    awal = `${bulan}-01`;
+    const [y, m] = bulan.split("-").map(Number);
+    akhir = `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01`;
+  }
 
   const rows = await query<{
     tanggal: string;
@@ -90,7 +117,10 @@ export const GET = route(async (req: Request) => {
   );
 
   return ok({
+    mode,
     bulan,
+    dari,
+    sampai,
     harga: { besar: hb, kecil: hk, b3: h3 },
     hariAktif: hari.length,
     hari,

@@ -19,12 +19,17 @@ interface Total {
   pagu: number;
 }
 interface Data {
+  mode: "rentang" | "bulan";
   bulan: string;
+  dari: string;
+  sampai: string;
   harga: { besar: number; kecil: number; b3: number };
   hariAktif: number;
   hari: Hari[];
   total: Total;
 }
+
+type Mode = "bulan" | "rentang";
 
 const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(n);
 
@@ -36,6 +41,20 @@ function bulanIni(): string {
   })
     .format(new Date())
     .slice(0, 7);
+}
+
+function tglHariIni(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Awal bulan berjalan (YYYY-MM-01) untuk nilai default rentang. */
+function awalBulanIni(): string {
+  return `${bulanIni()}-01`;
 }
 
 function labelTgl(v: string) {
@@ -53,20 +72,27 @@ function labelBulan(v: string) {
 }
 
 export default function RekapDistribusiPage() {
+  const [mode, setMode] = useState<Mode>("bulan");
   const [bulan, setBulan] = useState(bulanIni());
+  const [dari, setDari] = useState(awalBulanIni());
+  const [sampai, setSampai] = useState(tglHariIni());
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/admin/rekap-distribusi?bulan=${bulan}`, { cache: "no-store" });
+      const qs =
+        mode === "rentang"
+          ? `dari=${dari}&sampai=${sampai}`
+          : `bulan=${bulan}`;
+      const r = await fetch(`/api/admin/rekap-distribusi?${qs}`, { cache: "no-store" });
       const d = await r.json();
       setData(d && Array.isArray(d.hari) ? d : null);
     } finally {
       setLoading(false);
     }
-  }, [bulan]);
+  }, [mode, bulan, dari, sampai]);
 
   useEffect(() => {
     load();
@@ -86,27 +112,74 @@ export default function RekapDistribusiPage() {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `rekap-distribusi-${bulan}.csv`;
+    const suffix = mode === "rentang" ? `${dari}_sd_${sampai}` : bulan;
+    a.download = `rekap-distribusi-${suffix}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const t = data?.total;
+  // Label periode aktif untuk header tabel & empty state.
+  const labelPeriode =
+    mode === "rentang" ? `${labelTgl(dari)} – ${labelTgl(sampai)}` : labelBulan(bulan);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold sm:text-2xl">Rekap Bulanan Distribusi & Pagu</h1>
-          <p className="text-sm text-slate-400">Porsi dan biaya pagu per hari — untuk laporan bulanan.</p>
+          <h1 className="text-xl font-bold sm:text-2xl">Rekap Distribusi & Pagu</h1>
+          <p className="text-sm text-slate-400">
+            Porsi dan biaya pagu per hari — pilih laporan per bulan atau rentang tanggal.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="month"
-            value={bulan}
-            onChange={(e) => setBulan(e.target.value)}
-            className="input px-3 py-1.5 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Pemilih mode: Bulanan / Rentang tanggal */}
+          <div className="inline-flex overflow-hidden rounded-lg border border-ink-700 bg-ink-900/60 p-0.5">
+            {(["bulan", "rentang"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  mode === m
+                    ? "bg-gold-500/20 text-gold-200 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {m === "bulan" ? "Bulanan" : "Rentang"}
+              </button>
+            ))}
+          </div>
+
+          {mode === "bulan" ? (
+            <input
+              type="month"
+              value={bulan}
+              onChange={(e) => setBulan(e.target.value)}
+              className="input px-3 py-1.5 text-sm"
+            />
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={dari}
+                max={sampai}
+                onChange={(e) => setDari(e.target.value)}
+                className="input px-3 py-1.5 text-sm"
+                aria-label="Tanggal mulai"
+              />
+              <span className="text-xs text-slate-500">s/d</span>
+              <input
+                type="date"
+                value={sampai}
+                min={dari}
+                onChange={(e) => setSampai(e.target.value)}
+                className="input px-3 py-1.5 text-sm"
+                aria-label="Tanggal akhir"
+              />
+            </div>
+          )}
+
           <button onClick={exportCsv} disabled={loading || !data || data.hari.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
             Ekspor CSV
           </button>
@@ -132,7 +205,7 @@ export default function RekapDistribusiPage() {
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
         ) : !data || data.hari.length === 0 ? (
-          <p className="p-8 text-center text-slate-500">Belum ada distribusi di {labelBulan(bulan)}.</p>
+          <p className="p-8 text-center text-slate-500">Belum ada distribusi di {labelPeriode}.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
@@ -165,7 +238,7 @@ export default function RekapDistribusiPage() {
               <tfoot>
                 <tr className="border-t border-white/10 bg-white/[0.03] font-semibold">
                   <td className="px-4 py-2.5" colSpan={2}>
-                    TOTAL {labelBulan(bulan)}
+                    TOTAL {labelPeriode}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{t!.besar}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{t!.kecil}</td>
