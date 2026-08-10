@@ -314,6 +314,33 @@ export default function DistribusiPage() {
   // Variabel gauge cakupan (emerald → cyan) untuk cincin di kartu hero.
   const coverageVar = { "--val": papan.coverage, "--c1": "#34d399", "--c2": "#22d3ee" } as CSSProperties;
 
+  // Timeline pengiriman: petakan slot jam ke sumbu waktu horizontal.
+  const timeline = useMemo(() => {
+    const toMin = (jam: string): number | null => {
+      const m = /^(\d{1,2}):(\d{2})/.exec(jam);
+      return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+    };
+    const noTime = papan.jadwal.filter((s) => toMin(s.jam) === null);
+    const timed = papan.jadwal
+      .map((s) => ({ ...s, min: toMin(s.jam) }))
+      .filter((s): s is typeof s & { min: number } => s.min !== null);
+    if (timed.length === 0) return { pts: [], noTime, ticks: [] as { label: string; pct: number }[] };
+
+    let lo = Math.floor((Math.min(...timed.map((p) => p.min)) - 30) / 60) * 60;
+    let hi = Math.ceil((Math.max(...timed.map((p) => p.min)) + 30) / 60) * 60;
+    if (hi - lo < 120) hi = lo + 120; // rentang minimal 2 jam agar tidak sempit
+    const span = hi - lo || 1;
+    const place = (min: number) => 4 + ((min - lo) / span) * 92; // sisipkan 4%..96%
+
+    const ticks: { label: string; pct: number }[] = [];
+    for (let t = lo; t <= hi; t += 60) {
+      ticks.push({ label: String(Math.floor(t / 60)).padStart(2, "0") + ":00", pct: place(t) });
+    }
+    const maxP = Math.max(1, ...timed.map((p) => p.porsi));
+    const pts = timed.map((p) => ({ ...p, pct: place(p.min), size: 20 + (p.porsi / maxP) * 26 }));
+    return { pts, noTime, ticks };
+  }, [papan.jadwal]);
+
   // Kelompok per jenjang untuk daftar centang di modal "Cetak Uji".
   const grupUji = useMemo(() => {
     if (!uji) return [];
@@ -481,33 +508,64 @@ export default function DistribusiPage() {
 
         {/* Jadwal pengiriman + cakupan per jenjang */}
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Jadwal pengiriman per jam kirim */}
-          <div className="card p-5">
+          {/* Jadwal pengiriman — timeline sumbu waktu */}
+          <div className="card grid-glow relative overflow-hidden p-5">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-200">🕒 Jadwal Pengiriman</p>
               <span className="text-xs text-slate-500">{papan.jadwal.length} slot jam</span>
             </div>
-            <div className="mt-3 space-y-2.5">
-              {papan.jadwal.map((s) => (
-                <div key={s.jam} className="flex items-center gap-3">
-                  <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-sky-300">{s.jam}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="h-6 overflow-hidden rounded-md bg-white/5 ring-1 ring-white/5">
-                      <div
-                        className="bar-neon bar-grow flex h-full items-center rounded-md bg-gradient-to-r from-sky-400 to-sky-500/30 px-2"
-                        style={{ width: Math.max(10, (s.porsi / papan.maxSlotPorsi) * 100) + "%" }}
-                      >
-                        <span className="truncate text-[11px] font-bold text-sky-950">{s.lembaga} lembaga</span>
-                      </div>
-                    </div>
+
+            {timeline.pts.length > 0 ? (
+              <div className="relative mx-1 mt-10 mb-4 h-28">
+                {/* Garis sumbu */}
+                <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
+                {/* Penanda jam */}
+                {timeline.ticks.map((t) => (
+                  <div key={t.label} className="absolute top-1/2 -translate-x-1/2" style={{ left: t.pct + "%" }}>
+                    <div className="mx-auto h-2 w-px bg-white/15" />
+                    <span className="mt-1 block text-[10px] tabular-nums text-slate-500">{t.label}</span>
                   </div>
-                  <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-300">{s.porsi} porsi</span>
-                </div>
-              ))}
-              {papan.jadwal.length === 0 && (
-                <p className="py-4 text-center text-xs text-slate-500">Belum ada lembaga terpilih untuk dijadwalkan.</p>
-              )}
-            </div>
+                ))}
+                {/* Lolipop tiap slot: ukuran bubble ∝ porsi */}
+                {timeline.pts.map((p) => (
+                  <div
+                    key={p.jam}
+                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: p.pct + "%" }}
+                  >
+                    <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold tabular-nums text-sky-300">
+                      {p.jam}
+                    </span>
+                    <div
+                      className="bar-neon grid place-items-center rounded-full bg-gradient-to-br from-sky-300 to-sky-500 ring-2 ring-sky-300/40 transition-transform hover:scale-110"
+                      style={{ width: p.size, height: p.size }}
+                      title={`${p.jam} · ${p.lembaga} lembaga · ${p.porsi} porsi`}
+                    >
+                      <span className="text-[10px] font-bold text-sky-950">{p.lembaga}</span>
+                    </div>
+                    <span className="absolute top-full left-1/2 mt-1 -translate-x-1/2 whitespace-nowrap text-[10px] tabular-nums text-slate-400">
+                      {p.porsi} porsi
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-xs text-slate-500">
+                {papan.jadwal.length === 0 ? "Belum ada lembaga terpilih untuk dijadwalkan." : "Lembaga terpilih belum punya jam kirim."}
+              </p>
+            )}
+
+            {/* Slot tanpa jam kirim */}
+            {timeline.noTime.length > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                <span className="text-[11px] font-semibold text-slate-400">Tanpa jam:</span>
+                {timeline.noTime.map((s) => (
+                  <span key={s.jam} className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-slate-300 ring-1 ring-white/10">
+                    {s.lembaga} lembaga · {s.porsi} porsi
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Cakupan per jenjang */}
