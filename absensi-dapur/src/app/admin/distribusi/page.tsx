@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import type { MenuGrup } from "@/lib/distribusi-types";
 
@@ -311,6 +311,9 @@ export default function DistribusiPage() {
     [grup, porsiOf],
   );
 
+  // Variabel gauge cakupan (emerald → cyan) untuk cincin di kartu hero.
+  const coverageVar = { "--val": papan.coverage, "--c1": "#34d399", "--c2": "#22d3ee" } as CSSProperties;
+
   // Kelompok per jenjang untuk daftar centang di modal "Cetak Uji".
   const grupUji = useMemo(() => {
     if (!uji) return [];
@@ -401,34 +404,41 @@ export default function DistribusiPage() {
 
       {/* ── Papan Distribusi: cakupan, komposisi porsi & jadwal kirim ── */}
       <div className="dash-stagger space-y-4">
-        {/* Baris hero: cakupan lembaga · komposisi porsi · estimasi pagu */}
+        {/* Baris hero: cakupan (gauge) · komposisi porsi · estimasi pagu */}
         <div className="grid gap-4 lg:grid-cols-[1.05fr_1.45fr_1fr]">
-          {/* Cakupan lembaga */}
-          <div className="card relative overflow-hidden p-5">
+          {/* Cakupan lembaga — cincin gauge pendar */}
+          <div className="card grid-glow ring-glow relative overflow-hidden p-5">
             <div className="flex items-center gap-2">
-              <span className="live-dot" />
+              <span className="live-dot inline-block h-2 w-2 rounded-full bg-emerald-400" />
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cakupan Distribusi</p>
             </div>
-            <div className="mt-3 flex items-end gap-2">
-              <p className="text-4xl font-bold leading-none text-emerald-300">
-                {papan.lembagaIkut}
-                <span className="text-xl text-slate-500">/{papan.lembagaTotal}</span>
-              </p>
-              <p className="mb-0.5 text-sm text-slate-400">lembaga</p>
+            <div className="mt-3 flex items-center gap-4">
+              <div className="gauge h-28 w-28 shrink-0" style={coverageVar}>
+                <div className="gauge-inner">
+                  <p className="text-2xl font-bold neon-cyan">{papan.coverage}%</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400">tercakup</p>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-3xl font-bold leading-none text-emerald-300">
+                  {papan.lembagaIkut}
+                  <span className="text-lg text-slate-500">/{papan.lembagaTotal}</span>
+                </p>
+                <p className="mt-0.5 text-sm text-slate-400">lembaga terpilih</p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {papan.lembagaTotal - papan.lembagaIkut} lembaga belum masuk pilihan
+                </p>
+              </div>
             </div>
-            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-              <div className="bar-grow h-full rounded-full bg-gradient-to-r from-emerald-400 to-sky-400" style={{ width: papan.coverage + "%" }} />
-            </div>
-            <p className="mt-1.5 text-right text-xs font-semibold text-emerald-300">{papan.coverage}% tercakup</p>
           </div>
 
-          {/* Komposisi porsi — segmen proporsional */}
+          {/* Komposisi porsi — segmen proporsional pendar */}
           <div className="card p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Komposisi Porsi</p>
             <p className="mt-1 text-3xl font-bold leading-none text-slate-100">
               {total.porsi} <span className="text-sm font-normal text-slate-400">porsi total</span>
             </p>
-            <div className="mt-4 flex h-4 w-full overflow-hidden rounded-full bg-white/5">
+            <div className="bar-neon mt-4 flex h-5 w-full overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
               {papan.komposisi.map((s) => (
                 <div
                   key={s.key}
@@ -450,18 +460,18 @@ export default function DistribusiPage() {
             </div>
           </div>
 
-          {/* Estimasi pagu + ringkas menu/driver */}
-          <div className="card flex flex-col justify-between p-5">
+          {/* Estimasi pagu + ringkas menu/driver — kartu kilau */}
+          <div className="card sheen grid-glow relative flex flex-col justify-between overflow-hidden p-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Estimasi Pagu</p>
-              <p className="mt-1 text-3xl font-bold leading-none text-gold-400">{rupiah(total.pagu)}</p>
+              <p className="mt-1 text-3xl font-bold leading-none neon-gold">{rupiah(total.pagu)}</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
+              <div className="rounded-lg bg-white/5 px-2.5 py-2 ring-1 ring-white/5">
                 <p className="text-slate-500">Menu</p>
                 <p className="truncate font-semibold text-slate-200" title={menu || "—"}>{menu || "—"}</p>
               </div>
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
+              <div className="rounded-lg bg-white/5 px-2.5 py-2 ring-1 ring-white/5">
                 <p className="text-slate-500">Driver</p>
                 <p className="truncate font-semibold text-slate-200" title={driver || "—"}>{driver || "—"}</p>
               </div>
@@ -482,12 +492,12 @@ export default function DistribusiPage() {
                 <div key={s.jam} className="flex items-center gap-3">
                   <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-sky-300">{s.jam}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="h-6 overflow-hidden rounded-md bg-white/5">
+                    <div className="h-6 overflow-hidden rounded-md bg-white/5 ring-1 ring-white/5">
                       <div
-                        className="bar-grow flex h-full items-center rounded-md bg-gradient-to-r from-sky-500/50 to-sky-400/20 px-2"
+                        className="bar-neon bar-grow flex h-full items-center rounded-md bg-gradient-to-r from-sky-400 to-sky-500/30 px-2"
                         style={{ width: Math.max(10, (s.porsi / papan.maxSlotPorsi) * 100) + "%" }}
                       >
-                        <span className="truncate text-[11px] font-medium text-sky-50">{s.lembaga} lembaga</span>
+                        <span className="truncate text-[11px] font-bold text-sky-950">{s.lembaga} lembaga</span>
                       </div>
                     </div>
                   </div>
