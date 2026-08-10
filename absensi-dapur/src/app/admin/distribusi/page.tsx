@@ -249,6 +249,68 @@ export default function DistribusiPage() {
     return [...m.entries()];
   }, [baris]);
 
+  // Total porsi satu baris (besar + PJ + kecil + b3) — dipakai papan & jadwal.
+  const porsiOf = useCallback(
+    (b: Baris) => (b.besar || 0) + (b.pj || 0) + (b.kecil || 0) + (b.b3 || 0),
+    [],
+  );
+
+  // ── Papan Distribusi: cakupan lembaga, komposisi porsi, & jadwal kirim ──
+  const papan = useMemo(() => {
+    const ikut = baris.filter((b) => b.ikut);
+    const lembagaIkut = ikut.length;
+    const lembagaTotal = baris.length;
+    const coverage = lembagaTotal ? Math.round((lembagaIkut / lembagaTotal) * 100) : 0;
+
+    // Segmen proporsional komposisi porsi (hanya yang > 0).
+    const komposisi = [
+      { key: "besar", label: "Besar (+PJ)", val: total.besar, cls: "bg-emerald-400", dot: "text-emerald-300" },
+      { key: "kecil", label: "Kecil", val: total.kecil, cls: "bg-sky-400", dot: "text-sky-300" },
+      { key: "balita", label: "Balita", val: total.balita, cls: "bg-amber-400", dot: "text-amber-300" },
+      { key: "bumil", label: "Bumil", val: total.bumil, cls: "bg-orange-400", dot: "text-orange-300" },
+      { key: "busui", label: "Busui", val: total.busui, cls: "bg-pink-400", dot: "text-pink-300" },
+    ].filter((s) => s.val > 0);
+
+    // Jadwal pengiriman: kelompokkan lembaga terpilih per jam kirim.
+    const slotMap = new Map<string, { nama: string; porsi: number }[]>();
+    for (const b of ikut) {
+      const jam = (b.jam_kirim || "").trim() || "Tanpa jam";
+      if (!slotMap.has(jam)) slotMap.set(jam, []);
+      slotMap.get(jam)!.push({ nama: b.nama, porsi: porsiOf(b) });
+    }
+    const jadwal = [...slotMap.entries()]
+      .map(([jam, list]) => ({
+        jam,
+        lembaga: list.length,
+        porsi: list.reduce((a, c) => a + c.porsi, 0),
+      }))
+      .sort((a, b) => {
+        if (a.jam === "Tanpa jam") return 1; // slot tanpa jam selalu di akhir
+        if (b.jam === "Tanpa jam") return -1;
+        return a.jam.localeCompare(b.jam);
+      });
+    const maxSlotPorsi = Math.max(1, ...jadwal.map((s) => s.porsi));
+
+    return { lembagaIkut, lembagaTotal, coverage, komposisi, jadwal, maxSlotPorsi };
+  }, [baris, total, porsiOf]);
+
+  // Cakupan per jenjang (progress terpilih/total + porsi).
+  const cakupan = useMemo(
+    () =>
+      grup.map(([jenjang, rows]) => {
+        const dipilih = rows.filter((r) => r.ikut);
+        const porsi = dipilih.reduce((a, b) => a + porsiOf(b), 0);
+        return {
+          jenjang,
+          terpilih: dipilih.length,
+          total: rows.length,
+          porsi,
+          pct: rows.length ? Math.round((dipilih.length / rows.length) * 100) : 0,
+        };
+      }),
+    [grup, porsiOf],
+  );
+
   // Kelompok per jenjang untuk daftar centang di modal "Cetak Uji".
   const grupUji = useMemo(() => {
     if (!uji) return [];
@@ -337,24 +399,130 @@ export default function DistribusiPage() {
         </div>
       </div>
 
-      {/* Ringkasan porsi & pagu */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
-        {[
-          { l: "Porsi Besar (+PJ)", v: total.besar, c: "text-emerald-300" },
-          { l: "Porsi Kecil", v: total.kecil, c: "text-sky-300" },
-          { l: "Porsi Balita", v: total.balita, c: "text-amber-300" },
-          { l: "Porsi Bumil", v: total.bumil, c: "text-orange-300" },
-          { l: "Porsi Busui", v: total.busui, c: "text-pink-300" },
-          { l: "Total Porsi", v: total.porsi, c: "text-slate-100" },
-        ].map((s) => (
-          <div key={s.l} className="card p-3">
-            <p className="text-xs text-slate-400">{s.l}</p>
-            <p className={"mt-0.5 text-2xl font-bold " + s.c}>{s.v}</p>
+      {/* ── Papan Distribusi: cakupan, komposisi porsi & jadwal kirim ── */}
+      <div className="dash-stagger space-y-4">
+        {/* Baris hero: cakupan lembaga · komposisi porsi · estimasi pagu */}
+        <div className="grid gap-4 lg:grid-cols-[1.05fr_1.45fr_1fr]">
+          {/* Cakupan lembaga */}
+          <div className="card relative overflow-hidden p-5">
+            <div className="flex items-center gap-2">
+              <span className="live-dot" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cakupan Distribusi</p>
+            </div>
+            <div className="mt-3 flex items-end gap-2">
+              <p className="text-4xl font-bold leading-none text-emerald-300">
+                {papan.lembagaIkut}
+                <span className="text-xl text-slate-500">/{papan.lembagaTotal}</span>
+              </p>
+              <p className="mb-0.5 text-sm text-slate-400">lembaga</p>
+            </div>
+            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="bar-grow h-full rounded-full bg-gradient-to-r from-emerald-400 to-sky-400" style={{ width: papan.coverage + "%" }} />
+            </div>
+            <p className="mt-1.5 text-right text-xs font-semibold text-emerald-300">{papan.coverage}% tercakup</p>
           </div>
-        ))}
-        <div className="card p-3">
-          <p className="text-xs text-slate-400">Pagu (Rp)</p>
-          <p className="mt-0.5 text-lg font-bold text-gold-400">{rupiah(total.pagu)}</p>
+
+          {/* Komposisi porsi — segmen proporsional */}
+          <div className="card p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Komposisi Porsi</p>
+            <p className="mt-1 text-3xl font-bold leading-none text-slate-100">
+              {total.porsi} <span className="text-sm font-normal text-slate-400">porsi total</span>
+            </p>
+            <div className="mt-4 flex h-4 w-full overflow-hidden rounded-full bg-white/5">
+              {papan.komposisi.map((s) => (
+                <div
+                  key={s.key}
+                  className={"bar-grow h-full " + s.cls}
+                  style={{ width: (s.val / Math.max(1, total.porsi)) * 100 + "%" }}
+                  title={s.label + ": " + s.val}
+                />
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+              {papan.komposisi.map((s) => (
+                <div key={s.key} className="flex items-center gap-1.5 text-xs">
+                  <span className={"inline-block h-2.5 w-2.5 rounded-sm " + s.cls} />
+                  <span className="text-slate-400">{s.label}</span>
+                  <span className={"font-semibold tabular-nums " + s.dot}>{s.val}</span>
+                </div>
+              ))}
+              {papan.komposisi.length === 0 && <span className="text-xs text-slate-500">Belum ada porsi terpilih.</span>}
+            </div>
+          </div>
+
+          {/* Estimasi pagu + ringkas menu/driver */}
+          <div className="card flex flex-col justify-between p-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Estimasi Pagu</p>
+              <p className="mt-1 text-3xl font-bold leading-none text-gold-400">{rupiah(total.pagu)}</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                <p className="text-slate-500">Menu</p>
+                <p className="truncate font-semibold text-slate-200" title={menu || "—"}>{menu || "—"}</p>
+              </div>
+              <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                <p className="text-slate-500">Driver</p>
+                <p className="truncate font-semibold text-slate-200" title={driver || "—"}>{driver || "—"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Jadwal pengiriman + cakupan per jenjang */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Jadwal pengiriman per jam kirim */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-200">🕒 Jadwal Pengiriman</p>
+              <span className="text-xs text-slate-500">{papan.jadwal.length} slot jam</span>
+            </div>
+            <div className="mt-3 space-y-2.5">
+              {papan.jadwal.map((s) => (
+                <div key={s.jam} className="flex items-center gap-3">
+                  <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-sky-300">{s.jam}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="h-6 overflow-hidden rounded-md bg-white/5">
+                      <div
+                        className="bar-grow flex h-full items-center rounded-md bg-gradient-to-r from-sky-500/50 to-sky-400/20 px-2"
+                        style={{ width: Math.max(10, (s.porsi / papan.maxSlotPorsi) * 100) + "%" }}
+                      >
+                        <span className="truncate text-[11px] font-medium text-sky-50">{s.lembaga} lembaga</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="w-16 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-300">{s.porsi} porsi</span>
+                </div>
+              ))}
+              {papan.jadwal.length === 0 && (
+                <p className="py-4 text-center text-xs text-slate-500">Belum ada lembaga terpilih untuk dijadwalkan.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Cakupan per jenjang */}
+          <div className="card p-5">
+            <p className="text-sm font-semibold text-slate-200">📊 Cakupan per Jenjang</p>
+            <div className="mt-3 space-y-2.5">
+              {cakupan.map((c) => (
+                <div key={c.jenjang}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-200">{c.jenjang}</span>
+                    <span className="text-slate-400">
+                      {c.terpilih}/{c.total} · <span className="font-semibold tabular-nums text-amber-300">{c.porsi} porsi</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={"bar-grow h-full rounded-full " + (c.pct === 100 ? "bg-emerald-400" : c.pct > 0 ? "bg-amber-400" : "bg-white/10")}
+                      style={{ width: c.pct + "%" }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {cakupan.length === 0 && <p className="py-4 text-center text-xs text-slate-500">Tidak ada data penerima.</p>}
+            </div>
+          </div>
         </div>
       </div>
 
