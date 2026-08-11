@@ -248,6 +248,27 @@ interface Ringkasan {
 }
 const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(n);
 
+// Filter status untuk tabel kehadiran hari ini (turunan dari field baris).
+type StatusFilter = "semua" | "tepat" | "telat" | "bertugas" | "pulang" | "belum";
+
+// Cocokkan satu baris kehadiran dengan filter status terpilih.
+function cocokStatus(r: RekapRow, f: StatusFilter): boolean {
+  switch (f) {
+    case "tepat":
+      return !!r.check_in && r.status_masuk !== "Terlambat";
+    case "telat":
+      return r.status_masuk === "Terlambat";
+    case "bertugas":
+      return !!r.check_in && !r.check_out;
+    case "pulang":
+      return !!r.check_out;
+    case "belum":
+      return !r.check_in;
+    default:
+      return true;
+  }
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [ring, setRing] = useState<Ringkasan | null>(null);
@@ -260,6 +281,7 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const [cari, setCari] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("semua");
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -307,8 +329,8 @@ export default function AdminDashboard() {
     load();
   }, [load]);
 
-  // Filter tabel kehadiran hari ini berdasarkan pencarian nama/divisi/jabatan.
-  const rowsTampil = useMemo(() => {
+  // Baris tabel yang lolos pencarian nama/divisi/jabatan (sebelum filter status).
+  const rowsCari = useMemo(() => {
     const q = cari.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
@@ -318,6 +340,32 @@ export default function AdminDashboard() {
         (r.jabatan || "").toLowerCase().includes(q),
     );
   }, [rows, cari]);
+
+  // Jumlah baris per status (dari hasil pencarian) untuk badge di tiap chip.
+  const statusCount = useMemo(() => {
+    const c: Record<StatusFilter, number> = {
+      semua: rowsCari.length,
+      tepat: 0,
+      telat: 0,
+      bertugas: 0,
+      pulang: 0,
+      belum: 0,
+    };
+    for (const r of rowsCari) {
+      if (cocokStatus(r, "tepat")) c.tepat++;
+      if (cocokStatus(r, "telat")) c.telat++;
+      if (cocokStatus(r, "bertugas")) c.bertugas++;
+      if (cocokStatus(r, "pulang")) c.pulang++;
+      if (cocokStatus(r, "belum")) c.belum++;
+    }
+    return c;
+  }, [rowsCari]);
+
+  // Filter tabel kehadiran hari ini: pencarian + status terpilih.
+  const rowsTampil = useMemo(
+    () => rowsCari.filter((r) => cocokStatus(r, statusFilter)),
+    [rowsCari, statusFilter],
+  );
 
   // Ekspor tabel kehadiran hari ini ke CSV (murni sisi klien, tanpa server).
   function exportCsv() {
@@ -1498,6 +1546,37 @@ export default function AdminDashboard() {
             <span className="text-xs text-slate-400">{rowsTampil.length} entri</span>
           </div>
         </div>
+
+        {/* Chip filter status — klik untuk saring baris tabel */}
+        {!loading && rows.length > 0 && (
+          <div className="scroll-x flex items-center gap-1.5 overflow-x-auto border-b border-white/5 px-4 py-2.5">
+            {(
+              [
+                ["semua", "Semua", "bg-gold-500/20 text-gold-200 ring-gold-500/40"],
+                ["tepat", "Tepat", "bg-emerald-500/20 text-emerald-200 ring-emerald-400/40"],
+                ["telat", "Telat", "bg-red-500/20 text-red-200 ring-red-400/40"],
+                ["bertugas", "Bertugas", "bg-sky-500/20 text-sky-200 ring-sky-400/40"],
+                ["pulang", "Sudah pulang", "bg-violet-500/20 text-violet-200 ring-violet-400/40"],
+                ["belum", "Belum absen", "bg-slate-500/25 text-slate-200 ring-white/20"],
+              ] as const
+            ).map(([val, lbl, aktif]) => (
+              <button
+                key={val}
+                onClick={() => setStatusFilter(val)}
+                className={
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 transition " +
+                  (statusFilter === val
+                    ? aktif
+                    : "bg-white/5 text-slate-400 ring-white/10 hover:text-white")
+                }
+              >
+                {lbl}
+                <span className="tabular-nums opacity-70">{statusCount[val]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
         ) : rows.length === 0 ? (
@@ -1506,7 +1585,9 @@ export default function AdminDashboard() {
           </p>
         ) : rowsTampil.length === 0 ? (
           <p className="p-6 text-center text-slate-400">
-            Tidak ada yang cocok dengan pencarian “{cari}”.
+            {cari
+              ? `Tidak ada yang cocok dengan pencarian “${cari}”.`
+              : "Tidak ada baris pada status ini."}
           </p>
         ) : (
           <div className="scroll-x overflow-x-auto">
