@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import type { MenuGrup } from "@/lib/distribusi-types";
 
@@ -83,6 +83,7 @@ export default function DistribusiPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [q, setQ] = useState(""); // pencarian penerima di tabel
+  const [filterStatus, setFilterStatus] = useState<"semua" | "ikut" | "belum" | "tanpa-jam">("semua");
   const [setel, setSetel] = useState<Pengaturan | null>(null);
   const [dirty, setDirty] = useState(false); // ada perubahan belum disimpan?
   // Modal "Cetak Uji": SALINAN mandiri dari SELURUH form (pilihan lembaga +
@@ -122,6 +123,20 @@ export default function DistribusiPage() {
     return () => window.removeEventListener("beforeunload", h);
   }, [dirty]);
 
+  // Pintasan Ctrl/Cmd+S untuk simpan cepat. Ref selalu memegang handler terbaru
+  // agar tidak menyimpan snapshot state basi (stale closure).
+  const simpanShortcutRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        simpanShortcutRef.current();
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
   // Ganti tanggal: konfirmasi dulu bila ada perubahan belum disimpan.
   function gantiTanggal(t: string) {
     if (dirty && !confirm("Ada perubahan belum disimpan. Pindah tanggal & buang perubahan?")) return;
@@ -144,6 +159,20 @@ export default function DistribusiPage() {
   const semuaIkut = baris.length > 0 && jmlIkut === baris.length;
   const sebagianIkut = jmlIkut > 0 && jmlIkut < baris.length;
   const qq = q.trim().toLowerCase(); // query pencarian ternormalisasi
+  const filterAktif = qq !== "" || filterStatus !== "semua";
+  // Predikat tampil baris: gabungan pencarian nama + filter status.
+  const lolos = useCallback(
+    (b: Baris) => {
+      if (qq && !b.nama.toLowerCase().includes(qq)) return false;
+      if (filterStatus === "ikut" && !b.ikut) return false;
+      if (filterStatus === "belum" && b.ikut) return false;
+      if (filterStatus === "tanpa-jam" && (b.jam_kirim || "").trim() !== "") return false;
+      return true;
+    },
+    [qq, filterStatus],
+  );
+  // Jaga ref pintasan Ctrl+S selalu menunjuk ke keadaan terbaru.
+  simpanShortcutRef.current = () => { if (dirty && !saving) simpan(); };
 
   const harga = data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" };
   const total = useMemo(() => {
@@ -338,6 +367,23 @@ export default function DistribusiPage() {
 
   // Variabel gauge cakupan (emerald → cyan) untuk cincin di kartu hero.
   const coverageVar = { "--val": papan.coverage, "--c1": "#34d399", "--c2": "#22d3ee" } as CSSProperties;
+
+  // Peringatan pra-cetak: temukan masalah umum sebelum dokumen dicetak.
+  const peringatan = useMemo(() => {
+    const out: string[] = [];
+    const ikut = baris.filter((b) => b.ikut);
+    if (ikut.length === 0) {
+      out.push("Belum ada lembaga terpilih untuk didistribusikan.");
+    } else {
+      const tanpaJam = ikut.filter((b) => !(b.jam_kirim || "").trim()).length;
+      const nolPorsi = ikut.filter((b) => porsiOf(b) === 0).length;
+      if (tanpaJam > 0) out.push(`${tanpaJam} lembaga terpilih belum punya jam kirim.`);
+      if (nolPorsi > 0) out.push(`${nolPorsi} lembaga terpilih porsinya masih 0.`);
+    }
+    if (!menu.trim()) out.push("Menu hari ini belum diisi.");
+    if (!driver.trim()) out.push("Driver belum diisi.");
+    return out;
+  }, [baris, menu, driver, porsiOf]);
 
   // Timeline pengiriman: petakan slot jam ke sumbu waktu horizontal.
   const timeline = useMemo(() => {
@@ -646,6 +692,23 @@ export default function DistribusiPage() {
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{msg}</p>
       )}
 
+      {/* Panel peringatan pra-cetak: cek kelengkapan sebelum dokumen dicetak */}
+      {!loading && peringatan.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+            <span aria-hidden>⚠️</span> Periksa sebelum cetak
+          </p>
+          <ul className="mt-1.5 space-y-1 text-xs text-amber-100/90">
+            {peringatan.map((p) => (
+              <li key={p} className="flex items-start gap-1.5">
+                <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-amber-300" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Checklist pilih penerima manfaat (PM) + pencarian */}
       {!loading && baris.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
@@ -660,6 +723,17 @@ export default function DistribusiPage() {
             <span className="font-semibold">Pilih Semua PM</span>
             <span className="text-slate-400">({jmlIkut}/{baris.length} penerima dipilih)</span>
           </label>
+          <div className="flex flex-wrap items-center gap-1">
+            {([["semua", "Semua"], ["ikut", "Terpilih"], ["belum", "Belum"], ["tanpa-jam", "Tanpa jam"]] as const).map(([val, lbl]) => (
+              <button
+                key={val}
+                onClick={() => setFilterStatus(val)}
+                className={"rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition " + (filterStatus === val ? "bg-gold-500/20 text-gold-200 ring-gold-500/40" : "bg-white/5 text-slate-400 ring-white/10 hover:text-white")}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
           <div className="relative ml-auto">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔎</span>
             <input
@@ -704,7 +778,7 @@ export default function DistribusiPage() {
                 {grup.map(([jenjang, allRows]) => {
                   // Filter tampilan per nama (pencarian) — pilih-grup & hitung tetap
                   // memakai grup penuh agar toggle & rasio konsisten.
-                  const rows = qq ? allRows.filter((r) => r.nama.toLowerCase().includes(qq)) : allRows;
+                  const rows = filterAktif ? allRows.filter(lolos) : allRows;
                   if (rows.length === 0) return null;
                   return (
                   <Fragment key={jenjang}>
@@ -753,10 +827,10 @@ export default function DistribusiPage() {
                   </Fragment>
                   );
                 })}
-                {qq && grup.every(([, r]) => !r.some((x) => x.nama.toLowerCase().includes(qq))) && (
+                {filterAktif && grup.every(([, r]) => !r.some(lolos)) && (
                   <tr>
                     <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-500">
-                      Tidak ada penerima cocok “{q}”.
+                      Tidak ada penerima yang cocok dengan filter{q ? ` “${q}”` : ""}.
                     </td>
                   </tr>
                 )}
