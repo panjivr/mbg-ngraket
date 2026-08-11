@@ -82,6 +82,7 @@ export default function DistribusiPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [q, setQ] = useState(""); // pencarian penerima di tabel
   const [setel, setSetel] = useState<Pengaturan | null>(null);
   const [dirty, setDirty] = useState(false); // ada perubahan belum disimpan?
   // Modal "Cetak Uji": SALINAN mandiri dari SELURUH form (pilihan lembaga +
@@ -142,6 +143,7 @@ export default function DistribusiPage() {
   const jmlIkut = baris.filter((b) => b.ikut).length;
   const semuaIkut = baris.length > 0 && jmlIkut === baris.length;
   const sebagianIkut = jmlIkut > 0 && jmlIkut < baris.length;
+  const qq = q.trim().toLowerCase(); // query pencarian ternormalisasi
 
   const harga = data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" };
   const total = useMemo(() => {
@@ -183,6 +185,29 @@ export default function DistribusiPage() {
     a.download = `distribusi-${tanggal || "hari-ini"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Salin ringkasan distribusi hari ini ke clipboard (format siap WhatsApp).
+  async function salinRingkasan() {
+    const komp = papan.komposisi.map((s) => `${s.label} ${s.val}`).join(", ");
+    const jadwalLines = papan.jadwal
+      .map((s) => `• ${s.jam} — ${s.lembaga} lembaga, ${s.porsi} porsi`)
+      .join("\n");
+    const teks =
+      `*DISTRIBUSI MBG*\n${fmtTgl(tanggal)}\n` +
+      (menu ? `Menu: ${menu}\n` : "") +
+      (driver ? `Driver: ${driver}\n` : "") +
+      `\nLembaga terpilih: ${papan.lembagaIkut}/${papan.lembagaTotal}\n` +
+      `Total porsi: ${total.porsi}${komp ? ` (${komp})` : ""}\n` +
+      `Estimasi pagu: ${rupiah(total.pagu)}\n` +
+      (jadwalLines ? `\n*Jadwal kirim:*\n${jadwalLines}\n` : "") +
+      (catatan ? `\nCatatan: ${catatan}` : "");
+    try {
+      await navigator.clipboard.writeText(teks.trim());
+      setMsg("✓ Ringkasan distribusi disalin — siap tempel ke WhatsApp.");
+    } catch {
+      setMsg("Tidak bisa menyalin otomatis (izin clipboard diblokir). Coba lewat HTTPS.");
+    }
   }
 
   async function simpan() {
@@ -621,19 +646,41 @@ export default function DistribusiPage() {
         <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{msg}</p>
       )}
 
-      {/* Checklist pilih penerima manfaat (PM) */}
+      {/* Checklist pilih penerima manfaat (PM) + pencarian */}
       {!loading && baris.length > 0 && (
-        <label className="flex w-fit cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-gold-500"
-            ref={(el) => { if (el) el.indeterminate = sebagianIkut; }}
-            checked={semuaIkut}
-            onChange={(e) => pilihSemua(e.target.checked)}
-          />
-          <span className="font-semibold">Pilih Semua PM</span>
-          <span className="text-slate-400">({jmlIkut}/{baris.length} penerima dipilih)</span>
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-gold-500"
+              ref={(el) => { if (el) el.indeterminate = sebagianIkut; }}
+              checked={semuaIkut}
+              onChange={(e) => pilihSemua(e.target.checked)}
+            />
+            <span className="font-semibold">Pilih Semua PM</span>
+            <span className="text-slate-400">({jmlIkut}/{baris.length} penerima dipilih)</span>
+          </label>
+          <div className="relative ml-auto">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔎</span>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari lembaga…"
+              className="input w-56 py-2 pl-9"
+              aria-label="Cari penerima"
+            />
+            {q && (
+              <button
+                onClick={() => setQ("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-1 text-slate-500 hover:text-white"
+                aria-label="Bersihkan pencarian"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Tabel penerima */}
@@ -654,20 +701,25 @@ export default function DistribusiPage() {
                 </tr>
               </thead>
               <tbody>
-                {grup.map(([jenjang, rows]) => (
+                {grup.map(([jenjang, allRows]) => {
+                  // Filter tampilan per nama (pencarian) — pilih-grup & hitung tetap
+                  // memakai grup penuh agar toggle & rasio konsisten.
+                  const rows = qq ? allRows.filter((r) => r.nama.toLowerCase().includes(qq)) : allRows;
+                  if (rows.length === 0) return null;
+                  return (
                   <Fragment key={jenjang}>
                     <tr className="bg-white/5">
                       <td className="px-3 py-1.5">
                         <input
                           type="checkbox"
                           className="h-4 w-4 accent-gold-500"
-                          ref={(el) => { if (el) el.indeterminate = rows.some((r) => r.ikut) && !rows.every((r) => r.ikut); }}
-                          checked={rows.every((r) => r.ikut)}
+                          ref={(el) => { if (el) el.indeterminate = allRows.some((r) => r.ikut) && !allRows.every((r) => r.ikut); }}
+                          checked={allRows.every((r) => r.ikut)}
                           onChange={(e) => pilihGrup(jenjang, e.target.checked)}
                         />
                       </td>
                       <td colSpan={5} className="px-3 py-1.5 text-xs font-semibold text-gold-400">
-                        {jenjang} <span className="font-normal text-slate-500">({rows.filter((r) => r.ikut).length}/{rows.length})</span>
+                        {jenjang} <span className="font-normal text-slate-500">({allRows.filter((r) => r.ikut).length}/{allRows.length})</span>
                       </td>
                     </tr>
                     {rows.map((b) => (
@@ -699,7 +751,15 @@ export default function DistribusiPage() {
                       </tr>
                     ))}
                   </Fragment>
-                ))}
+                  );
+                })}
+                {qq && grup.every(([, r]) => !r.some((x) => x.nama.toLowerCase().includes(qq))) && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-500">
+                      Tidak ada penerima cocok “{q}”.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -712,6 +772,14 @@ export default function DistribusiPage() {
           {saving ? "Menyimpan…" : "Simpan Distribusi"}
         </button>
         {dirty && <span className="text-xs font-semibold text-amber-300">● Ada perubahan belum disimpan</span>}
+        <button
+          onClick={salinRingkasan}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-1.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/20 disabled:opacity-40"
+          disabled={jmlIkut === 0}
+          title="Salin ringkasan distribusi ke clipboard, siap tempel ke WhatsApp"
+        >
+          📋 Salin Ringkasan
+        </button>
         <span className="mx-1 text-xs text-slate-500">Cetak dokumen:</span>
         <button onClick={unduhCSV} className="btn-ghost text-sm" disabled={baris.length === 0}>Unduh CSV</button>
         <button onClick={() => cetak("bast")} className="btn-ghost text-sm">BAST</button>
