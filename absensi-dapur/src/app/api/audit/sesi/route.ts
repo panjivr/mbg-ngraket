@@ -3,7 +3,7 @@ import { ok, fail, route } from "@/lib/api";
 import { requireAkses } from "@/lib/session";
 import { query } from "@/lib/db";
 import { localDate } from "@/lib/time";
-import type { AuditSesi } from "@/lib/audit-types";
+import type { AuditSesi, AuditObservasi } from "@/lib/audit-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,17 @@ export const GET = route(async (req: NextRequest) => {
       WHERE sppg_id IS NOT DISTINCT FROM $1 AND auditor_id = $2 AND tanggal = $3`,
     [me.sppg_id ?? null, me.uid, tanggal],
   );
-  return ok({ sesi: rows[0] ?? null });
+  const sesi = rows[0] ?? null;
+  // Sertakan observasi sekaligus (bootstrap 1 round-trip) → tampilan awal Audit
+  // Dapur (tab Observasi) langsung terisi tanpa request kedua.
+  const observasi = sesi
+    ? await query<AuditObservasi>(
+        `SELECT id, sesi_id, area, checklist, catatan, foto, updated_at
+           FROM audit_observasi WHERE sesi_id = $1 ORDER BY area`,
+        [sesi.id],
+      )
+    : [];
+  return ok({ sesi, observasi });
 });
 
 /**
