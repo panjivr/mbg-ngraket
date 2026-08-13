@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { query } from "./db";
+import { getUserAccess } from "./user-access";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -65,21 +66,14 @@ export async function requireAkses(area: AksesArea | AksesArea[]): Promise<Sessi
   const s = await requireSession();
   if (s.role === "admin") return s;
   const areas = Array.isArray(area) ? area : [area];
-  const r = await query<{
-    akses_distribusi: boolean;
-    akses_laporan: boolean;
-    akses_keuangan: boolean;
-    akses_gizi: boolean;
-    akses_audit: boolean;
-  }>(
-    `SELECT akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_audit FROM users WHERE id = $1`,
-    [s.uid],
-  );
-  s.akses_distribusi = !!r[0]?.akses_distribusi;
-  s.akses_laporan = !!r[0]?.akses_laporan;
-  s.akses_keuangan = !!r[0]?.akses_keuangan;
-  s.akses_gizi = !!r[0]?.akses_gizi;
-  s.akses_audit = !!r[0]?.akses_audit;
+  // Flag akses dibaca via cache in-memory pendek (getUserAccess) — hemat 1
+  // round-trip DB tiap request; di-invalidasi saat hak akses pegawai diubah.
+  const acc = await getUserAccess(s.uid);
+  s.akses_distribusi = !!acc?.akses_distribusi;
+  s.akses_laporan = !!acc?.akses_laporan;
+  s.akses_keuangan = !!acc?.akses_keuangan;
+  s.akses_gizi = !!acc?.akses_gizi;
+  s.akses_audit = !!acc?.akses_audit;
   const flags: Record<AksesArea, boolean> = {
     distribusi: s.akses_distribusi,
     laporan: s.akses_laporan,
@@ -100,11 +94,8 @@ export async function requireAkses(area: AksesArea | AksesArea[]): Promise<Sessi
  */
 export async function requireHr(): Promise<SessionData> {
   const s = await requireSession();
-  const r = await query<{ is_hr: boolean }>(
-    `SELECT is_hr FROM users WHERE id = $1`,
-    [s.uid],
-  );
-  s.is_hr = !!r[0]?.is_hr;
+  const acc = await getUserAccess(s.uid);
+  s.is_hr = !!acc?.is_hr;
   if (!s.is_hr) throw new HttpError(403, "Khusus HR.");
   return s;
 }
@@ -117,14 +108,9 @@ export async function requireHr(): Promise<SessionData> {
 export async function requireGudang(mode: "full" | "keluar" | "read"): Promise<SessionData> {
   const s = await requireSession();
   if (s.role === "admin") return s;
-  if (s.akses_laporan === undefined || s.akses_gudang_keluar === undefined) {
-    const r = await query<{ akses_laporan: boolean; akses_gudang_keluar: boolean }>(
-      `SELECT akses_laporan, akses_gudang_keluar FROM users WHERE id = $1`,
-      [s.uid],
-    );
-    s.akses_laporan = !!r[0]?.akses_laporan;
-    s.akses_gudang_keluar = !!r[0]?.akses_gudang_keluar;
-  }
+  const acc = await getUserAccess(s.uid);
+  s.akses_laporan = !!acc?.akses_laporan;
+  s.akses_gudang_keluar = !!acc?.akses_gudang_keluar;
   const full = !!s.akses_laporan;
   const keluar = full || !!s.akses_gudang_keluar;
   const ok = mode === "full" ? full : keluar;
