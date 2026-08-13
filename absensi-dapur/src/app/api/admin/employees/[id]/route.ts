@@ -101,6 +101,8 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     body.akses_laporan !== undefined ? Boolean(body.akses_laporan) : (existing.akses_laporan ?? false);
   const akses_gudang_keluar =
     body.akses_gudang_keluar !== undefined ? Boolean(body.akses_gudang_keluar) : (existing.akses_gudang_keluar ?? false);
+  const akses_audit =
+    body.akses_audit !== undefined ? Boolean(body.akses_audit) : (existing.akses_audit ?? false);
   // Peran HR dapat diberikan/dicabut oleh admin penuh dapur ini (route sudah
   // requireAdmin + dibatasi sppg_id). Batas "admin biasa pun tidak cukup" tetap
   // ditegakkan saat AKSES (halaman & API HR mengecek is_hr terbaru), bukan saat
@@ -111,7 +113,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   let passwordClause = "";
   const paramsArr: unknown[] = [
     nama, username, role, jabatan, nip, aktif, divisi_id, tempat_lahir, tanggal_lahir,
-    jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr,
+    jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, akses_audit, is_hr,
   ];
   // Ganti password HANYA bila diminta eksplisit (change_password) — mencegah
   // autofill browser diam-diam menimpa password saat mengedit data lain.
@@ -130,10 +132,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     rows = await query<User>(
       `UPDATE users SET nama=$1, username=$2, role=$3, jabatan=$4, nip=$5, aktif=$6,
               divisi_id=$7, tempat_lahir=$8, tanggal_lahir=$9, jenis_kelamin=$10, is_driver=$11,
-              akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14, is_hr=$15${passwordClause}
+              akses_distribusi=$12, akses_laporan=$13, akses_gudang_keluar=$14, akses_audit=$15, is_hr=$16${passwordClause}
          WHERE id = $${paramsArr.length}
        RETURNING id, nama, username, role, jabatan, nip, aktif, created_at, divisi_id,
-                 tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, is_hr`,
+                 tempat_lahir, tanggal_lahir, jenis_kelamin, is_driver, akses_distribusi, akses_laporan, akses_gudang_keluar, akses_audit, is_hr`,
       paramsArr,
     );
   } catch (e) {

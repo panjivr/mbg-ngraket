@@ -66,6 +66,7 @@ export interface User {
   akses_distribusi?: boolean;
   akses_laporan?: boolean;
   akses_gudang_keluar?: boolean;
+  akses_audit?: boolean;
   is_hr?: boolean;
 }
 

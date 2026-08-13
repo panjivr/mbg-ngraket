@@ -53,7 +53,7 @@ export async function requireAdmin(): Promise<SessionData> {
   return s;
 }
 
-export type AksesArea = "distribusi" | "laporan" | "keuangan" | "gizi";
+export type AksesArea = "distribusi" | "laporan" | "keuangan" | "gizi" | "audit";
 
 /**
  * Izinkan admin penuh ATAU sub-admin dengan akses area tertentu. Menerima satu
@@ -70,19 +70,22 @@ export async function requireAkses(area: AksesArea | AksesArea[]): Promise<Sessi
     akses_laporan: boolean;
     akses_keuangan: boolean;
     akses_gizi: boolean;
+    akses_audit: boolean;
   }>(
-    `SELECT akses_distribusi, akses_laporan, akses_keuangan, akses_gizi FROM users WHERE id = $1`,
+    `SELECT akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_audit FROM users WHERE id = $1`,
     [s.uid],
   );
   s.akses_distribusi = !!r[0]?.akses_distribusi;
   s.akses_laporan = !!r[0]?.akses_laporan;
   s.akses_keuangan = !!r[0]?.akses_keuangan;
   s.akses_gizi = !!r[0]?.akses_gizi;
+  s.akses_audit = !!r[0]?.akses_audit;
   const flags: Record<AksesArea, boolean> = {
     distribusi: s.akses_distribusi,
     laporan: s.akses_laporan,
     keuangan: s.akses_keuangan,
     gizi: s.akses_gizi,
+    audit: s.akses_audit,
   };
   const ok = areas.some((a) => flags[a]);
   if (!ok) throw new HttpError(403, "Tidak punya akses ke fitur ini.");

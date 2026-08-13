@@ -24,8 +24,8 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
 
   const me = (
-    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; akses_keuangan: boolean; akses_gizi: boolean; is_hr: boolean; paket: string | null; paket_until: string | null }>(
-      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.akses_keuangan, u.akses_gizi, u.is_hr, s.nama AS sppg_nama, s.paket, s.paket_until
+    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; akses_keuangan: boolean; akses_gizi: boolean; akses_audit: boolean; is_hr: boolean; paket: string | null; paket_until: string | null }>(
+      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.akses_keuangan, u.akses_gizi, u.akses_audit, u.is_hr, s.nama AS sppg_nama, s.paket, s.paket_until
          FROM users u LEFT JOIN sppg s ON s.id = u.sppg_id
         WHERE u.id = $1`,
       [session.uid],
@@ -36,9 +36,10 @@ export default async function AdminLayout({
   const aksesLaporan = fullAdmin || !!me?.akses_laporan;
   const aksesKeuangan = fullAdmin || !!me?.akses_keuangan;
   const aksesGizi = fullAdmin || !!me?.akses_gizi;
+  const aksesAudit = fullAdmin || !!me?.akses_audit;
   const isHr = !!me?.is_hr;
   // Sub-admin/HR scoped harus punya minimal satu akses; selain itu tolak.
-  if (!fullAdmin && !aksesDistribusi && !aksesLaporan && !aksesKeuangan && !aksesGizi && !isHr) redirect("/dapur");
+  if (!fullAdmin && !aksesDistribusi && !aksesLaporan && !aksesKeuangan && !aksesGizi && !aksesAudit && !isHr) redirect("/dapur");
   const isSuper = fullAdmin && !!me?.is_super;
   const dapurNama = me?.sppg_nama || "Dapur";
   // Paket langganan → fitur aktif. Super admin (pemilik) selalu penuh.
@@ -71,7 +72,9 @@ export default async function AdminLayout({
                           ? "Admin Keuangan"
                           : me?.akses_gizi
                             ? "Admin Gizi"
-                            : "HR"}
+                            : me?.akses_audit
+                              ? "Auditor QC"
+                              : "HR"}
                   </span>
                 )}
                 <span
@@ -105,6 +108,7 @@ export default async function AdminLayout({
           aksesLaporan={aksesLaporan}
           aksesKeuangan={aksesKeuangan}
           aksesGizi={aksesGizi}
+          aksesAudit={aksesAudit}
           isHr={isHr}
           isSuper={isSuper}
           fitur={fitur}
@@ -116,6 +120,7 @@ export default async function AdminLayout({
         aksesLaporan={aksesLaporan}
         aksesKeuangan={aksesKeuangan}
         aksesGizi={aksesGizi}
+        aksesAudit={aksesAudit}
         isHr={isHr}
         isSuper={isSuper}
         fitur={fitur}

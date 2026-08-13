@@ -45,11 +45,17 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/admin/menu") ||
       pathname.startsWith("/admin/jadwal-menu") ||
       pathname.startsWith("/cetak/ahli-gizi");
+    // Sub-admin Audit Dapur (mutu). Penjagaan presisi (flag akses_audit terbaru
+    // dari DB) ada di server component halaman & route (requireAkses("audit")).
+    const isAudit =
+      pathname.startsWith("/admin/audit-dapur") ||
+      pathname.startsWith("/cetak/audit");
     const allowed =
       (session.akses_distribusi === true && isDistribusi) ||
       (session.akses_laporan === true && isLaporan) ||
       (session.akses_keuangan === true && isKeuangan) ||
       (session.akses_gizi === true && isGizi) ||
+      (session.akses_audit === true && isAudit) ||
       isHrArea;
     if (!allowed) {
       const url = req.nextUrl.clone();

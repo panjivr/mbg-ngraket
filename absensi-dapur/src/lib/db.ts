@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-10a.emosi-ai-wajah";
+const SCHEMA_VERSION = "2026-08-12a.audit-dapur";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -590,6 +590,9 @@ async function doEnsureSchema(): Promise<void> {
     // Sub-admin scoped: akses Keuangan (Akuntan/Berita Acara) & Gizi (Ahli Gizi + Menu/Jadwal Menu).
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_keuangan BOOLEAN NOT NULL DEFAULT FALSE`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_gizi BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Sub-admin scoped: akses modul Audit Dapur (auditor mutu). Hanya user yang
+    // diberi akses ini (atau admin penuh) yang boleh membuka fitur audit.
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_audit BOOLEAN NOT NULL DEFAULT FALSE`);
     // Petugas gudang keluar (persiapan/pengolahan/pemorsian): hanya boleh barang keluar.
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS akses_gudang_keluar BOOLEAN NOT NULL DEFAULT FALSE`);
     // Peringkat: sembunyikan pegawai berjadwal khusus (keamanan/admin) dari papan.
@@ -1197,6 +1200,128 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_audit_sppg ON audit_log (sppg_id, created_at DESC)`,
     );
+
+    // === Modul Audit Dapur (FITUR-AUDIT-DAPUR.md) ===
+    // Kolom peran auditor (users.akses_audit) sudah di-ALTER di atas.
+    // Sesi audit harian (1 auditor × 1 tanggal × 1 sppg).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_sesi (
+        id           SERIAL PRIMARY KEY,
+        sppg_id      INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        auditor_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        tanggal      DATE NOT NULL,
+        mode         TEXT NOT NULL DEFAULT 'lapangan',
+        ringkasan    TEXT NOT NULL DEFAULT '',
+        dikirim_at   TIMESTAMPTZ,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, auditor_id, tanggal)
+      );
+    `);
+    // Observasi per area (10 area, JSONB checklist supaya fleksibel).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_observasi (
+        id            SERIAL PRIMARY KEY,
+        sesi_id       INTEGER NOT NULL REFERENCES audit_sesi(id) ON DELETE CASCADE,
+        area          TEXT NOT NULL,
+        checklist     JSONB NOT NULL DEFAULT '[]'::jsonb,
+        catatan       TEXT NOT NULL DEFAULT '',
+        foto          JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sesi_id, area)
+      );
+    `);
+    // Timeline motion study (durasi_menit di-generate dari selisih waktu).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_timeline (
+        id           SERIAL PRIMARY KEY,
+        sesi_id      INTEGER NOT NULL REFERENCES audit_sesi(id) ON DELETE CASCADE,
+        proses       TEXT NOT NULL,
+        mulai        TIME,
+        selesai      TIME,
+        durasi_menit INTEGER GENERATED ALWAYS AS (
+          CASE WHEN mulai IS NULL OR selesai IS NULL THEN NULL
+               ELSE EXTRACT(EPOCH FROM (selesai::interval - mulai::interval))/60
+          END
+        ) STORED,
+        status       TEXT NOT NULL DEFAULT 'normal',
+        catatan      TEXT NOT NULL DEFAULT '',
+        urutan       INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    // Temuan (audit finding log) — inti fitur. risk_score = kemungkinan × dampak.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_temuan (
+        id            SERIAL PRIMARY KEY,
+        sppg_id       INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        sesi_id       INTEGER REFERENCES audit_sesi(id) ON DELETE SET NULL,
+        auditor_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        waktu         TIMESTAMPTZ NOT NULL DEFAULT now(),
+        area          TEXT NOT NULL,
+        kategori      TEXT NOT NULL DEFAULT 'sop',
+        observasi     TEXT NOT NULL DEFAULT '',
+        statement_    TEXT NOT NULL DEFAULT '',
+        bukti         TEXT NOT NULL DEFAULT '',
+        foto          JSONB NOT NULL DEFAULT '[]'::jsonb,
+        standar_sop   TEXT NOT NULL DEFAULT '',
+        gap           TEXT NOT NULL DEFAULT '',
+        kemungkinan   SMALLINT NOT NULL DEFAULT 1 CHECK (kemungkinan BETWEEN 1 AND 5),
+        dampak        SMALLINT NOT NULL DEFAULT 1 CHECK (dampak BETWEEN 1 AND 5),
+        risk_score    INTEGER GENERATED ALWAYS AS (kemungkinan * dampak) STORED,
+        tingkat       TEXT NOT NULL DEFAULT 'minor',
+        status        TEXT NOT NULL DEFAULT 'open',
+        rekomendasi   TEXT NOT NULL DEFAULT '',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_temuan_sppg_status ON audit_temuan (sppg_id, status)`,
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_temuan_risk ON audit_temuan (risk_score DESC)`,
+    );
+    // Follow-up mingguan per temuan.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_temuan_followup (
+        id          SERIAL PRIMARY KEY,
+        temuan_id   INTEGER NOT NULL REFERENCES audit_temuan(id) ON DELETE CASCADE,
+        minggu_ke   INTEGER NOT NULL,
+        tanggal_cek DATE NOT NULL,
+        status      TEXT NOT NULL,
+        catatan     TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    // Food waste log harian.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_food_waste (
+        id          SERIAL PRIMARY KEY,
+        sesi_id     INTEGER NOT NULL REFERENCES audit_sesi(id) ON DELETE CASCADE,
+        jenis       TEXT NOT NULL,
+        penyebab    TEXT NOT NULL,
+        jumlah      NUMERIC(10,2) NOT NULL DEFAULT 0,
+        satuan      TEXT NOT NULL DEFAULT 'kg',
+        catatan     TEXT NOT NULL DEFAULT '',
+        foto        JSONB NOT NULL DEFAULT '[]'::jsonb
+      );
+    `);
+    // Cross-check dokumen (PO → Receiving → Storage → Production → Waste → Output).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_cross_check (
+        id            SERIAL PRIMARY KEY,
+        sesi_id       INTEGER NOT NULL REFERENCES audit_sesi(id) ON DELETE CASCADE,
+        bahan         TEXT NOT NULL,
+        satuan        TEXT NOT NULL DEFAULT 'kg',
+        po            NUMERIC(10,2) DEFAULT 0,
+        receiving     NUMERIC(10,2) DEFAULT 0,
+        storage       NUMERIC(10,2) DEFAULT 0,
+        production    NUMERIC(10,2) DEFAULT 0,
+        waste         NUMERIC(10,2) DEFAULT 0,
+        output_porsi  INTEGER DEFAULT 0,
+        gap_catatan   TEXT NOT NULL DEFAULT ''
+      );
+    `);
 
     // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
     await client.query(

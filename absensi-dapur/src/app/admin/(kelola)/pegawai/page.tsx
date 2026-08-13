@@ -22,6 +22,7 @@ interface Employee {
   akses_distribusi: boolean;
   akses_laporan: boolean;
   akses_gudang_keluar: boolean;
+  akses_audit: boolean;
   is_hr: boolean;
 }
 
@@ -49,6 +50,7 @@ interface FormState {
   akses_distribusi: boolean;
   akses_laporan: boolean;
   akses_gudang_keluar: boolean;
+  akses_audit: boolean;
   is_hr: boolean;
 }
 
@@ -69,6 +71,7 @@ const emptyForm: FormState = {
   akses_distribusi: false,
   akses_laporan: false,
   akses_gudang_keluar: false,
+  akses_audit: false,
   is_hr: false,
 };
 
@@ -135,7 +138,7 @@ export default function PegawaiPage() {
     const head = [
       "Nama", "Username", "Peran", "Jabatan", "NIP", "Divisi",
       "Jenis Kelamin", "Tempat Lahir", "Tanggal Lahir", "Status",
-      "Sopir", "HR", "Akses Distribusi", "Akses Laporan", "Akses Gudang Keluar",
+      "Sopir", "HR", "Akses Distribusi", "Akses Laporan", "Akses Gudang Keluar", "Akses Audit",
     ];
     const body = list.map((e) =>
       [
@@ -145,7 +148,7 @@ export default function PegawaiPage() {
         e.aktif ? "Aktif" : "Nonaktif",
         e.is_driver ? "Ya" : "", e.is_hr ? "Ya" : "",
         e.akses_distribusi ? "Ya" : "", e.akses_laporan ? "Ya" : "",
-        e.akses_gudang_keluar ? "Ya" : "",
+        e.akses_gudang_keluar ? "Ya" : "", e.akses_audit ? "Ya" : "",
       ].map(esc).join(","),
     );
     const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
@@ -265,6 +268,7 @@ export default function PegawaiPage() {
       akses_distribusi: !!e.akses_distribusi,
       akses_laporan: !!e.akses_laporan,
       akses_gudang_keluar: !!e.akses_gudang_keluar,
+      akses_audit: !!e.akses_audit,
       is_hr: !!e.is_hr,
     });
   }
@@ -293,6 +297,7 @@ export default function PegawaiPage() {
         akses_distribusi: form.akses_distribusi,
         akses_laporan: form.akses_laporan,
         akses_gudang_keluar: form.akses_gudang_keluar,
+        akses_audit: form.akses_audit,
         is_hr: form.is_hr,
       };
       // Kirim password HANYA bila admin sengaja mengganti (atau akun baru).
@@ -683,6 +688,11 @@ export default function PegawaiPage() {
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_gudang_keluar}
                     onChange={(e) => setForm({ ...form, akses_gudang_keluar: e.target.checked })} />
                   Petugas Gudang Keluar (persiapan/pengolahan/pemorsian) — hanya catat barang keluar
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.akses_audit}
+                    onChange={(e) => setForm({ ...form, akses_audit: e.target.checked })} />
+                  Auditor Mutu — akses modul Audit Dapur (observasi, temuan, food waste)
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={form.is_hr}

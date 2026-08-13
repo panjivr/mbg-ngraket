@@ -22,6 +22,8 @@ export interface SessionData {
   akses_keuangan?: boolean;
   /** Sub-admin scoped: akses Gizi (Ahli Gizi + Menu/Jadwal Menu). */
   akses_gizi?: boolean;
+  /** Sub-admin scoped: akses modul Audit Dapur (auditor mutu). */
+  akses_audit?: boolean;
   /** Petugas gudang keluar (hanya boleh barang keluar). */
   akses_gudang_keluar?: boolean;
   /** Peran HR: satu-satunya yang boleh kelola data gaji & slip. */
@@ -83,6 +85,7 @@ export async function verifySession(
         akses_laporan: payload.akses_laporan === true,
         akses_keuangan: payload.akses_keuangan === true,
         akses_gizi: payload.akses_gizi === true,
+    akses_audit: payload.akses_audit === true,
         is_hr: payload.is_hr === true,
       };
     }

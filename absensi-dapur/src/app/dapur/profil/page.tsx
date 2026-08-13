@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import KartuShare from "@/components/KartuShare";
 import type { KartuPegawai as Kartu } from "@/lib/types";
-import RamalanLengkap from "@/components/RamalanLengkap";
-import ShioFengshuiLengkap from "@/components/ShioFengshuiLengkap";
-import ChaldeanLengkap from "@/components/ChaldeanLengkap";
 
 const MAX_BIO = 200;
 
@@ -117,31 +114,6 @@ export default function ProfilPage() {
       </div>
 
       {preview && <KartuShare data={preview} />}
-
-      {/* Ramalan kepribadian lengkap (dari tanggal lahir yang diisi admin) */}
-      {kartu &&
-        (kartu.tanggal_lahir ? (
-          <RamalanLengkap tgl={kartu.tanggal_lahir} nama={kartu.nama} />
-        ) : (
-          <div className="card p-4 text-sm text-slate-400">
-            🔮 Ramalan belum tersedia. Minta admin mengisi tanggal lahirmu untuk melihat
-            ramalan kepribadian lengkapmu.
-          </div>
-        ))}
-
-      {/* Shio & Fengshui (ilmu Tionghoa) — tampil setelah weton */}
-      {kartu?.tanggal_lahir && (
-        <ShioFengshuiLengkap
-          nama={kartu.nama}
-          tgl={kartu.tanggal_lahir}
-          jenisKelamin={kartu.jenis_kelamin}
-        />
-      )}
-
-      {/* Numerologi Chaldean — setelah Shio & Fengshui */}
-      {kartu?.tanggal_lahir && (
-        <ChaldeanLengkap nama={kartu.nama} tgl={kartu.tanggal_lahir} />
-      )}
 
       <div className="card space-y-4 p-4">
         <p className="text-sm font-semibold">Ubah Profil</p>

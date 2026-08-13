@@ -16,6 +16,7 @@ interface Flags {
   aksesLaporan: boolean;
   aksesKeuangan: boolean;
   aksesGizi: boolean;
+  aksesAudit: boolean;
   isHr: boolean;
   isSuper: boolean;
   /** Fitur yang dibuka paket langganan dapur ini. */
@@ -53,6 +54,7 @@ function buildGroups(f: Flags): Group[] {
         { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", show: f.aksesLaporan && has("distribusi") },
         { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
+        { label: "Audit Dapur", href: "/admin/audit-dapur", icon: "shield", show: f.fullAdmin || f.aksesAudit },
         { label: "Gudang", href: "/admin/gudang", icon: "box", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
       ],
     },

@@ -15,6 +15,7 @@ interface Flags {
   aksesLaporan: boolean;
   aksesKeuangan: boolean;
   aksesGizi: boolean;
+  aksesAudit: boolean;
   isHr: boolean;
   isSuper: boolean;
   fitur: string[];
@@ -36,6 +37,8 @@ function buildDests(f: Flags): Dest[] {
     { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", group: "Operasional", keywords: "belanja bahan periode rencana", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
     { label: "Laporan Harian", href: "/admin/laporan", group: "Operasional", keywords: "penerimaan harian catatan", show: f.aksesLaporan && has("distribusi") },
     { label: "Ahli Gizi", href: "/admin/ahli-gizi", group: "Operasional", keywords: "nutrisi kalori gizi", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
+    { label: "Audit Dapur", href: "/admin/audit-dapur", group: "Operasional", keywords: "audit qc mutu temuan observasi cross-check waste", show: f.fullAdmin || f.aksesAudit },
+    { label: "Register Temuan", href: "/admin/audit-dapur/register", group: "Operasional", keywords: "temuan finding risiko tindak lanjut follow up", show: f.fullAdmin || f.aksesAudit },
     { label: "Gudang", href: "/admin/gudang", group: "Operasional", keywords: "stok inventaris bahan", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
     { label: "Pegawai", href: "/admin/pegawai", group: "Kepegawaian", keywords: "staf karyawan tim absen", show: f.fullAdmin && has("pegawai") },
     { label: "Divisi", href: "/admin/divisi", group: "Kepegawaian", keywords: "bagian departemen grup", show: f.fullAdmin && has("pegawai") },
