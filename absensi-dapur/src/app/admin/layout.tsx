@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { query } from "@/lib/db";
+import { getUserAccess } from "@/lib/user-access";
 import AdminNav from "@/components/AdminNav";
 import CommandPalette from "@/components/CommandPalette";
 import CommandPaletteTrigger from "@/components/CommandPaletteTrigger";
@@ -23,14 +23,7 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const me = (
-    await query<{ is_super: boolean; sppg_nama: string | null; akses_distribusi: boolean; akses_laporan: boolean; akses_keuangan: boolean; akses_gizi: boolean; akses_audit: boolean; is_hr: boolean; paket: string | null; paket_until: string | null }>(
-      `SELECT u.is_super, u.akses_distribusi, u.akses_laporan, u.akses_keuangan, u.akses_gizi, u.akses_audit, u.is_hr, s.nama AS sppg_nama, s.paket, s.paket_until
-         FROM users u LEFT JOIN sppg s ON s.id = u.sppg_id
-        WHERE u.id = $1`,
-      [session.uid],
-    )
-  )[0];
+  const me = await getUserAccess(session.uid);
   const fullAdmin = session.role === "admin";
   const aksesDistribusi = fullAdmin || !!me?.akses_distribusi;
   const aksesLaporan = fullAdmin || !!me?.akses_laporan;

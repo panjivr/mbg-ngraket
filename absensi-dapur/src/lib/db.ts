@@ -55,6 +55,13 @@ export function getPool(): Pool {
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
       allowExitOnIdle: true,
+      // Jaga koneksi TCP tetap hidup → hindari handshake ulang (lebih cepat saat
+      // ada jeda antar-request pada instance yang sama).
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 5_000,
+      // Batas aman agar query yang macet tidak menahan koneksi & menumpuk.
+      statement_timeout: 20_000,
+      query_timeout: 20_000,
     });
     global.__absensiPool.on("error", (err) => {
       console.error("[absensi] pool error:", err.message);
