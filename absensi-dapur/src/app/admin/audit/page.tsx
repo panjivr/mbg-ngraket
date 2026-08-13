@@ -41,6 +41,7 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [filterAksi, setFilterAksi] = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,6 +86,46 @@ export default function AuditPage() {
     URL.revokeObjectURL(url);
   }, [filtered]);
 
+  const exportPdf = useCallback(async () => {
+    if (filtered.length === 0) return;
+    setPdfBusy(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      doc.setFontSize(14);
+      doc.setTextColor(14, 31, 85);
+      doc.text("Jejak Aktivitas — Badan Gizi Nasional", 14, 15);
+      doc.setFontSize(10);
+      doc.setTextColor(90);
+      doc.text(
+        `Dicetak: ${new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date())}`,
+        14,
+        21,
+      );
+      doc.text(
+        `${filtered.length} aktivitas${filterAksi ? ` · filter: ${filterAksi}` : ""}${q.trim() ? ` · cari: "${q.trim()}"` : ""}`,
+        14,
+        26,
+      );
+
+      autoTable(doc, {
+        startY: 31,
+        head: [["Waktu", "Nama", "Aksi", "Objek", "Keterangan"]],
+        body: filtered.map((r) => [fmt(r.created_at), r.user_nama || "-", r.aksi, r.entitas, r.ringkasan || "-"]),
+        styles: { fontSize: 8, cellPadding: 1.8, overflow: "linebreak" },
+        headStyles: { fillColor: [14, 31, 85], textColor: 255 },
+        alternateRowStyles: { fillColor: [243, 246, 252] },
+        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 32 }, 2: { cellWidth: 16 }, 3: { cellWidth: 28 }, 4: { cellWidth: "auto" } },
+      });
+
+      doc.save(`jejak-aktivitas-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [filtered, filterAksi, q]);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -97,6 +138,9 @@ export default function AuditPage() {
         <div className="flex items-center gap-2">
           <button onClick={exportCsv} disabled={loading || rows.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
             Ekspor CSV
+          </button>
+          <button onClick={exportPdf} disabled={loading || pdfBusy || filtered.length === 0} className="btn-ghost px-3 py-1.5 text-xs">
+            {pdfBusy ? "Menyiapkan…" : "Ekspor PDF"}
           </button>
           <button onClick={load} disabled={loading} className="btn-ghost px-3 py-1.5 text-xs">
             {loading ? "Memuat…" : "Segarkan"}
