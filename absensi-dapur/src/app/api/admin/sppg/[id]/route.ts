@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { requireSuper } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import { invalidateSppg, type Sppg } from "@/lib/sppg";
+import { invalidateUserAccess } from "@/lib/user-access";
 import { normalizePaket } from "@/lib/paket";
 
 export const runtime = "nodejs";
@@ -34,6 +35,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
     [nama, alamat, aktif, paket, paket_until, id],
   );
   invalidateSppg(id);
+  invalidateUserAccess(); // nama/paket dapur tampil di layout via cache akses
   return ok({ sppg: rows[0] });
 });
 

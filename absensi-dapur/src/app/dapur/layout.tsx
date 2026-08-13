@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { query } from "@/lib/db";
+import { getUserAccess } from "@/lib/user-access";
 import DapurNav from "@/components/DapurNav";
 import DapurBottomNav from "@/components/DapurBottomNav";
 import LogoutButton from "@/components/LogoutButton";
@@ -19,12 +19,7 @@ export default async function DapurLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const me = (
-    await query<{ is_driver: boolean; akses_distribusi: boolean; akses_laporan: boolean; akses_keuangan: boolean; akses_gizi: boolean; akses_gudang_keluar: boolean }>(
-      `SELECT is_driver, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, akses_gudang_keluar FROM users WHERE id = $1`,
-      [session.uid],
-    )
-  )[0];
+  const me = await getUserAccess(session.uid);
   const isDriver = !!me?.is_driver;
   const aksesDistribusi = !!me?.akses_distribusi;
   const aksesLaporan = !!me?.akses_laporan;

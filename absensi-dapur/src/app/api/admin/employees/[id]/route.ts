@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { catatAudit } from "@/lib/audit";
+import { invalidateUserAccess } from "@/lib/user-access";
 import { ok, fail, route } from "@/lib/api";
 import type { User } from "@/lib/types";
 
@@ -151,6 +152,7 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
   if (existing.aktif !== aktif) ubah.push(aktif ? "diaktifkan" : "dinonaktifkan");
   if ((existing.is_hr ?? false) !== is_hr) ubah.push(is_hr ? "HR aktif" : "HR nonaktif");
   if (passwordClause) ubah.push("password");
+  invalidateUserAccess(rows[0]?.id);
   await catatAudit(admin, "ubah", "Pegawai", `${nama}${ubah.length ? " · " + ubah.join(", ") : ""}`);
   return ok({ employee: rows[0] });
 });
