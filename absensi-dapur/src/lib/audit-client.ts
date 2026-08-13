@@ -34,7 +34,7 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 const j = (data: unknown): RequestInit => ({ body: JSON.stringify(data) });
 
 // ---- Sesi -------------------------------------------------------------------
-export function getSesi(tanggal: string): Promise<{ sesi: AuditSesi | null }> {
+export function getSesi(tanggal: string): Promise<{ sesi: AuditSesi | null; observasi?: AuditObservasi[] }> {
   return req(`/api/audit/sesi?tanggal=${encodeURIComponent(tanggal)}`);
 }
 export function buatSesi(payload: { tanggal?: string; mode?: SesiMode }): Promise<{ sesi: AuditSesi }> {

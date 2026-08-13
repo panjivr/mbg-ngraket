@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { AUDIT_AREA_SEED, AREA_KEYS, type AreaKey } from "@/lib/audit-seed";
 import { getObservasi, simpanObservasi } from "@/lib/audit-client";
-import type { ChecklistItem, JawabanChecklist } from "@/lib/audit-types";
+import type { ChecklistItem, JawabanChecklist, AuditObservasi } from "@/lib/audit-types";
 
 const JAWAB: { key: JawabanChecklist; label: string; on: string }[] = [
   { key: "ya", label: "Ya", on: "bg-emerald-500/20 text-emerald-300 ring-emerald-500/40" },
@@ -24,26 +24,35 @@ function seedChecklist(area: AreaKey): ChecklistItem[] {
   }));
 }
 
-export default function ObservasiPanel({ sesiId }: { sesiId: number }) {
+function seedFrom(observasi: AuditObservasi[]): { map: Record<string, ChecklistItem[]>; cat: Record<string, string> } {
+  const map: Record<string, ChecklistItem[]> = {};
+  const cat: Record<string, string> = {};
+  for (const o of observasi) {
+    map[o.area] = o.checklist?.length ? o.checklist : seedChecklist(o.area as AreaKey);
+    cat[o.area] = o.catatan ?? "";
+  }
+  return { map, cat };
+}
+
+export default function ObservasiPanel({ sesiId, initial }: { sesiId: number; initial?: AuditObservasi[] }) {
   const [active, setActive] = useState<AreaKey>(AREA_KEYS[0]);
-  const [data, setData] = useState<Record<string, ChecklistItem[]>>({});
-  const [catatan, setCatatan] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const seeded = initial ? seedFrom(initial) : null;
+  const [data, setData] = useState<Record<string, ChecklistItem[]>>(seeded?.map ?? {});
+  const [catatan, setCatatan] = useState<Record<string, string>>(seeded?.cat ?? {});
+  // Bila data awal sudah dibawa dari bootstrap sesi, jangan tampilkan loading /
+  // fetch ulang — tampilan langsung terisi (hemat 1 round-trip).
+  const [loading, setLoading] = useState(!initial);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initial) return; // sudah punya data awal
     let alive = true;
     setLoading(true);
     getObservasi(sesiId)
       .then((r) => {
         if (!alive) return;
-        const map: Record<string, ChecklistItem[]> = {};
-        const cat: Record<string, string> = {};
-        for (const o of r.observasi) {
-          map[o.area] = o.checklist?.length ? o.checklist : seedChecklist(o.area as AreaKey);
-          cat[o.area] = o.catatan ?? "";
-        }
+        const { map, cat } = seedFrom(r.observasi);
         setData(map);
         setCatatan(cat);
       })
@@ -52,6 +61,7 @@ export default function ObservasiPanel({ sesiId }: { sesiId: number }) {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sesiId]);
 
   const list = data[active] ?? seedChecklist(active);
@@ -93,11 +103,13 @@ export default function ObservasiPanel({ sesiId }: { sesiId: number }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
-      {/* Daftar area */}
+      {/* Daftar area — kartu dengan bar progres */}
       <nav className="flex flex-row flex-wrap gap-1.5 lg:flex-col">
         {AREA_KEYS.map((area) => {
           const filled = (data[area] ?? []).filter((i) => i.jawaban !== "na").length;
           const total = AUDIT_AREA_SEED[area].pertanyaan.length;
+          const done = total > 0 && filled >= total;
+          const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
           const on = area === active;
           return (
             <button
@@ -105,14 +117,25 @@ export default function ObservasiPanel({ sesiId }: { sesiId: number }) {
               type="button"
               onClick={() => setActive(area)}
               className={
-                "flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition " +
-                (on ? "bg-gold-500/15 text-gold-300 ring-1 ring-gold-500/30" : "text-slate-300 hover:bg-white/5")
+                "group w-full min-w-[9rem] rounded-xl border px-3 py-2 text-left transition " +
+                (on
+                  ? "border-gold-500/40 bg-gold-500/10 ring-1 ring-inset ring-gold-500/20"
+                  : "border-ink-700 bg-ink-900/40 hover:border-white/15 hover:bg-white/5")
               }
             >
-              <span className="truncate">{AUDIT_AREA_SEED[area].label}</span>
-              <span className="shrink-0 text-[10px] tabular-nums text-slate-500">
-                {filled}/{total}
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className={"truncate text-sm font-medium " + (on ? "text-gold-300" : "text-slate-200")}>
+                  {AUDIT_AREA_SEED[area].label}
+                </span>
+                {done ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                ) : (
+                  <span className="shrink-0 text-[10px] tabular-nums text-slate-500">{filled}/{total}</span>
+                )}
+              </div>
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+                <div className={"h-full rounded-full transition-all " + (done ? "bg-emerald-400" : "bg-gold-400")} style={{ width: `${pct}%` }} />
+              </div>
             </button>
           );
         })}
@@ -121,17 +144,23 @@ export default function ObservasiPanel({ sesiId }: { sesiId: number }) {
       {/* Checklist area aktif */}
       <div className="rounded-2xl border border-ink-700 bg-ink-850 p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold">{AUDIT_AREA_SEED[active].label}</h3>
             <p className="text-xs text-slate-500">
               {answered} dari {list.length} pertanyaan terjawab
             </p>
+            <div className="mt-2 h-1.5 max-w-xs overflow-hidden rounded-full bg-white/10">
+              <div
+                className={"h-full rounded-full transition-all " + (answered >= list.length && list.length > 0 ? "bg-emerald-400" : "bg-gold-400")}
+                style={{ width: `${list.length > 0 ? Math.round((answered / list.length) * 100) : 0}%` }}
+              />
+            </div>
           </div>
           <button
             type="button"
             onClick={simpan}
             disabled={saving}
-            className="rounded-lg bg-gold-500/15 px-3 py-1.5 text-sm font-semibold text-gold-300 ring-1 ring-gold-500/30 transition hover:bg-gold-500/25 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-gold-500/15 px-3 py-1.5 text-sm font-semibold text-gold-300 ring-1 ring-gold-500/30 transition hover:bg-gold-500/25 disabled:opacity-50"
           >
             {saving ? "Menyimpan…" : "Simpan area ini"}
           </button>
