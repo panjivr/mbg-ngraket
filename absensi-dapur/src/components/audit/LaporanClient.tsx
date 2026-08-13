@@ -28,6 +28,12 @@ const STATUS_META: Record<string, { label: string; badge: string }> = {
   closed: { label: "Selesai", badge: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30" },
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  open: "Terbuka",
+  improvement: "Perbaikan",
+  closed: "Selesai",
+};
+
 function fmtTgl(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
@@ -41,6 +47,7 @@ export default function LaporanClient() {
   const [data, setData] = useState<AuditLaporanResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const muat = useCallback(() => {
     setLoading(true);
@@ -63,6 +70,87 @@ export default function LaporanClient() {
   }, [dari, sampai]);
 
   const stats = data?.stats;
+
+  async function unduhPdf() {
+    if (!data || !stats) return;
+    setPdfBusy(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const namaSppg = (data.sppg?.nama || "").replace(/^SPPG\s+/i, "");
+      const periode =
+        data.dari && data.sampai
+          ? `${fmtTgl(data.dari)} — ${fmtTgl(data.sampai)}`
+          : data.dari
+            ? `sejak ${fmtTgl(data.dari)}`
+            : data.sampai
+              ? `s/d ${fmtTgl(data.sampai)}`
+              : "seluruh periode";
+
+      doc.setFontSize(14);
+      doc.setTextColor(14, 31, 85);
+      doc.text("Laporan Audit Mutu Dapur — Badan Gizi Nasional", 14, 15);
+      doc.setFontSize(10);
+      doc.setTextColor(90);
+      if (namaSppg) doc.text(`SPPG ${namaSppg}`, 14, 21);
+      doc.text(`Periode: ${periode}`, 14, namaSppg ? 26 : 21);
+      const infoY = namaSppg ? 31 : 26;
+      doc.text(
+        `Total temuan: ${stats.total} · Kritis ${stats.tingkat.kritis} · Mayor ${stats.tingkat.mayor} · Minor ${stats.tingkat.minor} · Sesi terkirim ${stats.sesi_terkirim}`,
+        14,
+        infoY,
+      );
+      doc.text(
+        `Dicetak: ${new Intl.DateTimeFormat("id-ID", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date())}`,
+        14,
+        infoY + 5,
+      );
+
+      const body = data.temuan.map((t, i) => [
+        String(i + 1),
+        fmtTgl(t.waktu),
+        areaLabel(t.area),
+        KATEGORI_LABEL[t.kategori as keyof typeof KATEGORI_LABEL] ?? t.kategori,
+        t.observasi,
+        `${t.kemungkinan}×${t.dampak}=${t.risk_score}`,
+        tingkatMeta(t.tingkat as Tingkat).label,
+        t.rekomendasi || "-",
+        STATUS_LABEL[t.status] ?? t.status,
+      ]);
+
+      autoTable(doc, {
+        startY: infoY + 10,
+        head: [
+          ["No", "Tanggal", "Area", "Kategori", "Observasi", "Risk", "Tingkat", "Rekomendasi", "Status"],
+        ],
+        body: body.length
+          ? body
+          : [["", "", "", "", "Tidak ada temuan pada rentang ini.", "", "", "", ""]],
+        styles: { fontSize: 8, cellPadding: 1.8, valign: "top" },
+        headStyles: { fillColor: [14, 31, 85], textColor: 255 },
+        alternateRowStyles: { fillColor: [243, 246, 252] },
+        columnStyles: {
+          0: { cellWidth: 8 },
+          1: { cellWidth: 20 },
+          5: { cellWidth: 16 },
+          6: { cellWidth: 16 },
+          8: { cellWidth: 18 },
+        },
+      });
+
+      const tgl = (data.sampai || data.dari || hariIni()).replace(/-/g, "");
+      doc.save(`laporan-audit-${tgl}.pdf`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -93,9 +181,17 @@ export default function LaporanClient() {
                 className="rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-slate-100 focus:border-gold-500/40 focus:outline-none"
               />
             </label>
+            <button
+              type="button"
+              onClick={unduhPdf}
+              disabled={pdfBusy || loading || !stats}
+              className="rounded-lg bg-gold-500/15 px-4 py-2 text-sm font-semibold text-gold-300 ring-1 ring-gold-500/30 transition hover:bg-gold-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pdfBusy ? "Menyiapkan…" : "Unduh PDF"}
+            </button>
             <Link
               href={cetakHref}
-              className="rounded-lg bg-gold-500/15 px-4 py-2 text-sm font-semibold text-gold-300 ring-1 ring-gold-500/30 transition hover:bg-gold-500/25"
+              className="rounded-lg border border-ink-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5"
             >
               Cetak
             </Link>

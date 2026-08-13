@@ -3,24 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
-import MoodAI, { type MoodAIResult } from "@/components/MoodAI";
-import { MOODS } from "@/lib/mood";
-import { getFaceApiLite, detectLandmarks, type FaceApi, type Pt } from "@/lib/faceapiLite";
-import { STICKERS, computeRefs } from "@/lib/faceStickers";
-
-// Filter kamera "lucu-lucu" (murni CSS filter, ringan & jalan di semua HP).
-// Diterapkan ke preview video sekaligus ikut tercetak di foto saat diambil.
-const FOTO_FILTERS: { label: string; css: string }[] = [
-  { label: "🙂 Normal", css: "none" },
-  { label: "✨ Cerah", css: "brightness(1.15) contrast(1.05) saturate(1.15)" },
-  { label: "☀️ Hangat", css: "sepia(0.35) saturate(1.4) brightness(1.05)" },
-  { label: "❄️ Sejuk", css: "hue-rotate(-20deg) saturate(1.2) brightness(1.05)" },
-  { label: "🎞️ Vintage", css: "sepia(0.55) contrast(1.1) brightness(1.05)" },
-  { label: "🌈 Pop", css: "saturate(1.9) contrast(1.1)" },
-  { label: "🎭 Dramatis", css: "contrast(1.4) brightness(0.95) saturate(1.2)" },
-  { label: "🖤 Hitam Putih", css: "grayscale(1) contrast(1.1)" },
-  { label: "🔆 Silau", css: "brightness(1.35) contrast(0.9) saturate(1.3)" },
-];
 
 interface SettingsLite {
   nama_dapur: string;
@@ -73,33 +55,11 @@ interface AbsRow {
   shift_pulang: string | null;
 }
 
-/** Satu titik data grafik emosi (dari deteksi wajah AI saat absen masuk). */
-interface EmosiPoint {
-  tanggal: string; // YYYY-MM-DD
-  emosi: string | null;
-  bahagia: number | null; // 0..1
-}
-
 type Phase = "masuk" | "pulang";
 type Geo = { lat: number; lng: number; accuracy: number };
 
 /** Jendela waktu pembatalan absen terakhir (selaras dengan server). */
 const CANCEL_WINDOW_MS = 180 * 60_000;
-
-/** Label + emoji per ekspresi wajah (dari deteksi AI face-api). */
-const EMOSI_LABEL: Record<string, { emoji: string; label: string }> = {
-  happy: { emoji: "😄", label: "Bahagia" },
-  sad: { emoji: "😢", label: "Sedih" },
-  angry: { emoji: "😠", label: "Marah" },
-  fearful: { emoji: "😨", label: "Takut" },
-  disgusted: { emoji: "🤢", label: "Jijik" },
-  surprised: { emoji: "😲", label: "Terkejut" },
-  neutral: { emoji: "😐", label: "Netral" },
-};
-
-function emosiInfo(key: string | null): { emoji: string; label: string } {
-  return (key && EMOSI_LABEL[key]) || { emoji: "🙂", label: "—" };
-}
 
 export default function AbsenPanel() {
   const [loading, setLoading] = useState(true);
@@ -119,12 +79,6 @@ export default function AbsenPanel() {
 
   const [cameraOn, setCameraOn] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
-  const [filterIdx, setFilterIdx] = useState(0);
-  const [stikerIdx, setStikerIdx] = useState(-1); // -1 = tanpa filter wajah
-  const [moodOpen, setMoodOpen] = useState(false);
-  const [mood, setMood] = useState<string | null>(null); // suasana hati saat masuk
-  const [emosiAI, setEmosiAI] = useState<MoodAIResult | null>(null); // hasil deteksi wajah AI
-  const [emosiHistory, setEmosiHistory] = useState<EmosiPoint[]>([]); // riwayat emosi untuk grafik
   const [submitting, setSubmitting] = useState(false);
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
@@ -136,57 +90,6 @@ export default function AbsenPanel() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const overlayRef = useRef<HTMLCanvasElement | null>(null);
-  const faceApiRef = useRef<FaceApi | null>(null);
-  const landmarksRef = useRef<Pt[] | null>(null);
-  const stikerIdxRef = useRef(-1);
-  stikerIdxRef.current = stikerIdx;
-
-  // Deteksi wajah + gambar sticker ke overlay (hanya saat filter wajah dipilih).
-  useEffect(() => {
-    const canvas = overlayRef.current;
-    const clear = () => {
-      const c = overlayRef.current;
-      const g = c?.getContext("2d");
-      if (c && g) g.clearRect(0, 0, c.width, c.height);
-    };
-    if (!cameraOn || stikerIdx < 0) {
-      clear();
-      return;
-    }
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    (async () => {
-      if (!faceApiRef.current) faceApiRef.current = await getFaceApiLite();
-      const api = faceApiRef.current;
-      const tick = async () => {
-        if (!alive) return;
-        const video = videoRef.current;
-        const c = overlayRef.current || canvas;
-        if (api && video && c && video.videoWidth) {
-          if (c.width !== video.videoWidth) c.width = video.videoWidth;
-          if (c.height !== video.videoHeight) c.height = video.videoHeight;
-          const pts = await detectLandmarks(api, video);
-          if (pts) landmarksRef.current = pts;
-          const g = c.getContext("2d");
-          if (g) {
-            g.clearRect(0, 0, c.width, c.height);
-            const r = computeRefs(landmarksRef.current);
-            const s = STICKERS[stikerIdxRef.current];
-            if (r && s) s.draw(g, r);
-          }
-        }
-        if (alive) timer = setTimeout(tick, 110);
-      };
-      tick();
-    })();
-    return () => {
-      alive = false;
-      if (timer) clearTimeout(timer);
-      clear();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraOn, stikerIdx]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -207,7 +110,6 @@ export default function AbsenPanel() {
     setCurrent(data.current);
     setLast(data.last);
     setTanggal(data.tanggal);
-    setEmosiHistory(Array.isArray(data.emosiHistory) ? data.emosiHistory : []);
     // Default pilihan shift ke opsi pertama bila belum dipilih.
     setSelectedShiftId((prev) =>
       prev ?? (data.shifts && data.shifts.length ? data.shifts[0].id : null),
@@ -293,31 +195,14 @@ export default function AbsenPanel() {
     // konsisten dengan preview yang juga dibalik via CSS (-scale-x-100).
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    // Terapkan filter terpilih agar ikut tercetak di foto (bila didukung).
-    const css = FOTO_FILTERS[filterIdx]?.css;
-    if (css && css !== "none") ctx.filter = css;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.filter = "none";
-    // Sticker wajah (bila dipilih) ikut tercetak, dipetakan mirror ke kanvas.
-    const si = stikerIdxRef.current;
-    const pts = landmarksRef.current;
-    if (si >= 0 && pts) {
-      const r = computeRefs(pts);
-      if (r) {
-        ctx.setTransform(-scale, 0, 0, scale, canvas.width, 0);
-        STICKERS[si].draw(ctx, r);
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-      }
-    }
     const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
     setSelfie(dataUrl);
     stopCamera();
-    setMoodOpen(true); // buka pop-up analisis AI begitu foto diambil
   }
 
   function retake() {
     setSelfie(null);
-    setMoodOpen(false);
     startCamera();
   }
 
@@ -362,11 +247,6 @@ export default function AbsenPanel() {
           // shift dipilih hanya saat check-in & tidak ada event yang menimpa.
           shift_id: eventInfo ? null : selectedShiftId,
           titik: pakaiEvent ? "event" : "dapur",
-          // suasana hati hanya relevan saat absen masuk.
-          mood: phase === "masuk" ? mood : null,
-          // hasil deteksi emosi wajah AI (disimpan untuk grafik emosi).
-          emosi: emosiAI?.emosi ?? null,
-          bahagia: emosiAI?.bahagia ?? null,
         }),
       });
       const data = await res.json();
@@ -378,8 +258,6 @@ export default function AbsenPanel() {
       setMessage({ kind: "ok", text: `${label} berhasil dicatat. Terima kasih!` });
       setQuote(quoteAcak());
       setSelfie(null);
-      setMood(null);
-      setEmosiAI(null);
       await loadToday();
     } catch {
       setMessage({ kind: "err", text: "Tidak dapat terhubung ke server." });
@@ -685,15 +563,7 @@ export default function AbsenPanel() {
                   ref={videoRef}
                   playsInline
                   muted
-                  style={{ filter: FOTO_FILTERS[filterIdx]?.css }}
                   className="mx-auto max-h-72 w-full -scale-x-100 object-cover"
-                />
-                <canvas
-                  ref={overlayRef}
-                  className={
-                    "pointer-events-none absolute inset-0 h-full w-full -scale-x-100 object-cover " +
-                    (stikerIdx >= 0 ? "" : "hidden")
-                  }
                 />
               </div>
             )}
@@ -704,59 +574,6 @@ export default function AbsenPanel() {
             )}
           </div>
           <canvas ref={canvasRef} className="hidden" />
-          {/* Filter kamera lucu-lucu — biar tidak bosan saat absen */}
-          {cameraOn && !selfie && (
-            <>
-              {/* Filter wajah ala TikTok (kumis, tanduk, telinga, dll) */}
-              <div className="scroll-x mt-2 flex gap-1.5 overflow-x-auto pb-1">
-                <button
-                  type="button"
-                  onClick={() => setStikerIdx(-1)}
-                  className={
-                    "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
-                    (stikerIdx === -1
-                      ? "border-gold-500/60 bg-gold-500/20 text-gold-300"
-                      : "border-white/10 text-slate-400 hover:bg-white/5")
-                  }
-                >
-                  🚫 Tanpa Filter
-                </button>
-                {STICKERS.map((s, i) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => setStikerIdx(i)}
-                    className={
-                      "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
-                      (stikerIdx === i
-                        ? "border-gold-500/60 bg-gold-500/20 text-gold-300"
-                        : "border-white/10 text-slate-400 hover:bg-white/5")
-                    }
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              {/* Efek warna */}
-              <div className="scroll-x mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
-                {FOTO_FILTERS.map((f, i) => (
-                  <button
-                    key={f.label}
-                    type="button"
-                    onClick={() => setFilterIdx(i)}
-                    className={
-                      "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs transition " +
-                      (filterIdx === i
-                        ? "border-sky-500/60 bg-sky-500/20 text-sky-300"
-                        : "border-white/10 text-slate-400 hover:bg-white/5")
-                    }
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
           <div className="mt-3 flex gap-2">
             {!cameraOn && !selfie && (
               <button onClick={startCamera} className="btn-ghost flex-1">
@@ -771,11 +588,6 @@ export default function AbsenPanel() {
             {selfie && (
               <button onClick={retake} className="btn-ghost flex-1">
                 Ambil Ulang
-              </button>
-            )}
-            {selfie && (
-              <button onClick={() => setMoodOpen(true)} className="btn-ghost flex-1">
-                🤖 Analisis AI
               </button>
             )}
           </div>
@@ -802,45 +614,6 @@ export default function AbsenPanel() {
           <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">✨ Kutipan Hari Ini</p>
           <p className="mt-2 text-sm italic leading-relaxed text-slate-100">“{quote.teks}”</p>
           <p className="mt-1 text-xs text-slate-400">— {quote.sumber}</p>
-        </div>
-      )}
-
-      {/* Suasana hati hari ini (opsional) — hanya saat absen masuk */}
-      {phase === "masuk" && (
-        <div className="card p-4">
-          <p className="text-sm font-semibold">Bagaimana perasaanmu hari ini?</p>
-          <p className="mb-3 text-xs text-slate-400">
-            Opsional — bantu dapur memahami suasana tim (jadi grafik emosi).
-          </p>
-          <div className="grid grid-cols-5 gap-2">
-            {MOODS.map((m) => {
-              const aktif = mood === m.key;
-              return (
-                <button
-                  key={m.key}
-                  type="button"
-                  onClick={() => setMood(aktif ? null : m.key)}
-                  aria-pressed={aktif}
-                  className={
-                    "flex flex-col items-center gap-1 rounded-xl border px-1 py-2 transition active:scale-95 " +
-                    (aktif
-                      ? "border-gold-400/60 bg-gold-400/10"
-                      : "border-white/10 hover:bg-white/5")
-                  }
-                >
-                  <span className="text-2xl leading-none">{m.emoji}</span>
-                  <span
-                    className={
-                      "text-[11px] font-medium " +
-                      (aktif ? "text-gold-300" : "text-slate-400")
-                    }
-                  >
-                    {m.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       )}
 
@@ -896,100 +669,6 @@ export default function AbsenPanel() {
           </div>
         </div>
       </div>
-
-      {/* Grafik emosi — dari deteksi wajah AI saat absen masuk */}
-      {(() => {
-        const pts = emosiHistory.filter((p) => p.bahagia !== null);
-        if (pts.length === 0) return null;
-        const avg =
-          pts.reduce((s, p) => s + (p.bahagia ?? 0), 0) / pts.length;
-        const avgInfo = emosiInfo(
-          avg >= 0.5 ? "happy" : avg >= 0.25 ? "neutral" : "sad",
-        );
-        return (
-          <div className="card p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">🙂 Grafik Emosi Absen</p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Tingkat kebahagiaan dari deteksi wajah saat absen masuk
-                  ({pts.length} hari terakhir).
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-emas-300">
-                  {Math.round(avg * 100)}%
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  {avgInfo.emoji} rata-rata
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex items-end justify-between gap-1.5">
-              {pts.map((p, i) => {
-                const pct = Math.max(0, Math.min(100, (p.bahagia ?? 0) * 100));
-                const info = emosiInfo(p.emosi);
-                const hari = new Intl.DateTimeFormat("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                  timeZone: settings?.tz,
-                }).format(new Date(p.tanggal + "T00:00:00"));
-                return (
-                  <div
-                    key={p.tanggal + i}
-                    className="flex flex-1 flex-col items-center gap-1"
-                    title={`${hari} · ${info.label} ${Math.round(pct)}%`}
-                  >
-                    <span className="text-[11px] leading-none">{info.emoji}</span>
-                    <div className="flex h-24 w-full items-end overflow-hidden rounded-md bg-white/5">
-                      <div
-                        className="w-full rounded-md bg-gradient-to-t from-emas-500 to-emas-300 transition-all"
-                        style={{ height: `${Math.max(6, pct)}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] leading-none text-slate-500">
-                      {hari}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Pop-up analisis AI wajah saat absen masuk/pulang */}
-      {needSelfie && moodOpen && selfie && (
-        <div
-          className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm"
-          onClick={() => setMoodOpen(false)}
-        >
-          <div className="w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-white">
-                🤖 Analisis AI — Absen {phase === "masuk" ? "Masuk" : "Pulang"}
-              </p>
-              <button
-                onClick={() => setMoodOpen(false)}
-                className="rounded-lg bg-white/10 px-2.5 py-1 text-sm text-slate-200 hover:bg-white/20"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-white/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={selfie} alt="Foto wajah" className="mx-auto max-h-56 w-full object-cover" />
-            </div>
-            <MoodAI selfie={selfie} phase={phase} onResult={setEmosiAI} />
-            <button
-              onClick={() => setMoodOpen(false)}
-              className="btn-gold w-full"
-            >
-              Tutup &amp; Lanjut Absen
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
