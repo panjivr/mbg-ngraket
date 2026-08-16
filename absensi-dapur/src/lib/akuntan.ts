@@ -97,6 +97,24 @@ export const TEMPLATE_AKUNTAN: TemplateAkuntan[] = [
     ikon: "📉",
     nominal: 1000000,
   },
+  {
+    slug: "buku-kas-harian",
+    judul: "Buku Kas Umum Harian",
+    heading: "BUKU KAS UMUM HARIAN (PETTY CASH)",
+    nomor: "",
+    deskripsi:
+      "Catatan penerimaan & pengeluaran kas kecil harian dengan saldo berjalan.",
+    ikon: "📒",
+  },
+  {
+    slug: "rekap-pengeluaran",
+    judul: "Rekap Pengeluaran Bulanan",
+    heading: "REKAPITULASI PENGELUARAN OPERASIONAL BULANAN",
+    nomor: "",
+    deskripsi:
+      "Rangkuman pengeluaran per kategori dalam satu bulan untuk pelaporan.",
+    ikon: "📊",
+  },
 ];
 
 export function getTemplate(slug: string): TemplateAkuntan | undefined {

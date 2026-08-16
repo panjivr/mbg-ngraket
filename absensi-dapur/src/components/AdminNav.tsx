@@ -50,10 +50,13 @@ function buildGroups(f: Flags): Group[] {
       icon: "truck",
       items: [
         { label: "Distribusi", href: "/admin/distribusi", icon: "truck", show: f.aksesDistribusi && has("distribusi") },
+        { label: "Aslap Lapangan", href: "/admin/aslap", icon: "truck", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
         { label: "Menu", href: "/admin/menu", icon: "utensils", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", show: f.aksesLaporan && has("distribusi") },
         { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
+        { label: "Chef Produksi", href: "/admin/chef", icon: "utensils", show: (f.fullAdmin || f.aksesGizi || f.aksesLaporan) && (has("ahli_gizi") || has("distribusi")) },
+        { label: "Kepala Dapur", href: "/admin/kepala-dapur", icon: "clipboard", show: f.fullAdmin || f.aksesAudit },
         { label: "Audit Dapur", href: "/admin/audit-dapur", icon: "shield", show: f.fullAdmin || f.aksesAudit },
         { label: "Gudang", href: "/admin/gudang", icon: "box", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
       ],

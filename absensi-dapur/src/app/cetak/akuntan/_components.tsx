@@ -297,6 +297,7 @@ export function PrintFrame({
   saveUrl = "/api/admin/akuntan/ba",
   landscape = false,
   hideKop = false,
+  noSave = false,
 }: {
   heading: string;
   /** Nomor surat/BA. Fitur ahli gizi tidak memakai nomor → kosongkan. */
@@ -310,6 +311,11 @@ export function PrintFrame({
   landscape?: boolean;
   /** Sembunyikan kop bawaan (dokumen menyediakan sampul/kop sendiri). */
   hideKop?: boolean;
+  /**
+   * Formulir cetak-saja: sembunyikan tombol "Simpan" (tidak diarsipkan ke DB).
+   * Dipakai peran kepala dapur / aslap / chef yang belum punya tabel arsip.
+   */
+  noSave?: boolean;
 }) {
   const [paper, setPaper] = useState("A4");
   const [tanggal, setTanggal] = useState("");
@@ -362,8 +368,16 @@ export function PrintFrame({
         className={`no-print mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 px-4 ${sheetW}`}
       >
         <p className="text-sm text-gray-700">
-          Isi bidang kuning. Klik <b>Simpan</b> untuk arsip, atau <b>Cetak</b>{" "}
-          untuk PDF.
+          {noSave ? (
+            <>
+              Isi bidang kuning, lalu klik <b>Cetak</b> untuk PDF.
+            </>
+          ) : (
+            <>
+              Isi bidang kuning. Klik <b>Simpan</b> untuk arsip, atau{" "}
+              <b>Cetak</b> untuk PDF.
+            </>
+          )}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm text-gray-600">Tanggal</label>
@@ -384,14 +398,16 @@ export function PrintFrame({
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={simpan}
-            disabled={saving || !tanggal}
-            className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {saving ? "Menyimpan…" : "💾 Simpan"}
-          </button>
+          {!noSave && (
+            <button
+              type="button"
+              onClick={simpan}
+              disabled={saving || !tanggal}
+              className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {saving ? "Menyimpan…" : "💾 Simpan"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => window.print()}
