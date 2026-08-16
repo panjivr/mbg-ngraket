@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
 // Lokasi default = pengaturan dapur; bisa dioverride via ?kabkota=. SISKAPERBAPO
 // memakai zona Jatim (WIB), jadi tanggal dihitung Asia/Jakarta.
 export const GET = route(async (req: NextRequest) => {
-  const admin = await requireAkses("distribusi");
+  // Distribusi (belanja) & Keuangan (akuntan) sama-sama butuh acuan harga pasar.
+  const admin = await requireAkses(["distribusi", "keuangan"]);
   const sppg = await getSppg(admin.sppg_id as number);
   const url = new URL(req.url);
   const qKab = url.searchParams.get("kabkota");

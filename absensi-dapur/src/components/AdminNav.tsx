@@ -75,6 +75,7 @@ function buildGroups(f: Flags): Group[] {
       items: [
         { label: "Rekap", href: "/admin/rekap", icon: "wallet", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
         { label: "Akuntan", href: "/admin/akuntan", icon: "coins", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+        { label: "Supplier PO/Invoice", href: "/admin/supplier", icon: "receipt", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
       ],
     },
     {

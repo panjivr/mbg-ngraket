@@ -18,6 +18,16 @@ export interface TemplateGizi {
 }
 
 export const TEMPLATE_GIZI: TemplateGizi[] = [
+  // — Analisis Gizi —
+  {
+    slug: "generator-gizi",
+    judul: "Generator Kandungan Gizi",
+    heading: "ANALISIS KANDUNGAN GIZI MENU",
+    nomor: "",
+    deskripsi:
+      "Kalkulator interaktif komposisi menu: pilih bahan + berat per porsi, otomatis hitung energi, protein, lemak, KH, serat, serta % pemenuhan AKG per kelompok sasaran (pengganti mandiri Nutri Survey).",
+    ikon: "🧮",
+  },
   // — Laporan —
   {
     slug: "laporan-harian",
@@ -261,6 +271,11 @@ export function sppgKopLine(nama: string | null | undefined): string {
 
 /** Pengelompokan template supaya hub lebih terstruktur/profesional. */
 export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = [
+  {
+    label: "Analisis Gizi",
+    ket: "Generator kandungan gizi menu & pemenuhan AKG.",
+    slugs: ["generator-gizi"],
+  },
   {
     label: "Laporan Gizi",
     ket: "Laporan harian & mingguan ahli gizi.",

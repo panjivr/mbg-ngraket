@@ -78,6 +78,7 @@ export function fiturAktif(paket: Paket): Fitur[] {
 /** Peta prefix rute admin → fitur yang dibutuhkan (untuk penjagaan halaman). */
 export const RUTE_FITUR: { prefix: string; fitur: Fitur }[] = [
   { prefix: "/admin/akuntan", fitur: "akuntan" },
+  { prefix: "/admin/supplier", fitur: "akuntan" },
   { prefix: "/admin/distribusi", fitur: "distribusi" },
   { prefix: "/admin/menu", fitur: "distribusi" },
   { prefix: "/admin/jadwal-menu", fitur: "distribusi" },
