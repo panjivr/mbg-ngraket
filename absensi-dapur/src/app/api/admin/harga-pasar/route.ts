@@ -30,7 +30,8 @@ export const GET = route(async (req: NextRequest) => {
 
   return ok({
     tersedia: !!data,
-    tanggal,
+    // Tanggal data yang benar-benar ditemukan (bisa mundur bila hari ini belum tayang).
+    tanggal: data?.tanggal || tanggal,
     kabkota,
     label: labelKabkota(kabkota),
     daftarKabkota: KABKOTA_JATIM,

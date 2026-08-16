@@ -1,5 +1,7 @@
 // Tipe & logika Bank Menu (resep + kalkulasi bahan yang diskalakan).
 
+import { cariGiziByNama, jumlahKeGram, type KategoriBahan } from "@/lib/gizi-nutrisi";
+
 export type KategoriMenu = "sarapan" | "makan_siang" | "snack" | "lainnya";
 export const KATEGORI_MENU_LABEL: Record<KategoriMenu, string> = {
   sarapan: "Sarapan",
@@ -147,4 +149,72 @@ export function fmtJumlah(n: number): string {
 /** Format angka kecil (per porsi) dengan presisi lebih tinggi. */
 export function fmtKecil(n: number): string {
   return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(n);
+}
+
+// ————————————————————————————————————————————————————————————————
+// Hitung gizi per porsi — memetakan tiap bahan ke tabel TKPI (gizi-nutrisi.ts),
+// mengubah jumlah ke gram, lalu menjumlahkan energi/protein/lemak/karbo/serat.
+// Estimasi perencanaan (bergantung ketepatan nama & satuan bahan).
+// ————————————————————————————————————————————————————————————————
+
+/** Peta komponen "Isi Piringku" → kategori bahan TKPI, mempersempit pencocokan. */
+const KOMPONEN_KE_KATEGORI_GIZI: Partial<Record<KomponenGizi, KategoriBahan>> = {
+  karbohidrat: "pokok",
+  protein_hewani: "hewani",
+  protein_nabati: "nabati",
+  sayur: "sayur",
+  buah: "buah",
+  susu: "hewani",
+  bumbu: "lainnya",
+};
+
+export interface GiziPerPorsi {
+  energi: number; // kkal
+  protein: number; // gram
+  lemak: number; // gram
+  karbo: number; // gram
+  serat: number; // gram
+  cocok: number; // jumlah bahan yang berhasil dihitung
+  total: number; // jumlah bahan bernama (yang dicoba dihitung)
+  takTerhitung: string[]; // nama bahan yang tak bisa diperkirakan
+}
+
+/**
+ * Estimasi kandungan gizi untuk 1 porsi menu.
+ * gram per porsi = jumlahKeGram(jumlah_dasar) / porsi_dasar ; kontribusi tiap
+ * bahan = (gram/100) × nilai per-100g TKPI.
+ */
+export function hitungGiziPerPorsi(
+  bahan: { nama: string; satuan: string; jumlah_dasar: number; komponen: KomponenGizi }[],
+  porsiDasar: number,
+): GiziPerPorsi {
+  const acc: GiziPerPorsi = {
+    energi: 0,
+    protein: 0,
+    lemak: 0,
+    karbo: 0,
+    serat: 0,
+    cocok: 0,
+    total: 0,
+    takTerhitung: [],
+  };
+  if (!(porsiDasar > 0)) return acc;
+  for (const b of bahan) {
+    if (!b.nama.trim()) continue;
+    acc.total += 1;
+    const gizi = cariGiziByNama(b.nama, KOMPONEN_KE_KATEGORI_GIZI[b.komponen]);
+    const gramDasar = jumlahKeGram(b.jumlah_dasar, b.satuan);
+    if (!gizi || gramDasar === null) {
+      acc.takTerhitung.push(b.nama);
+      continue;
+    }
+    const f = gramDasar / porsiDasar / 100;
+    acc.energi += gizi.energi * f;
+    acc.protein += gizi.protein * f;
+    acc.lemak += gizi.lemak * f;
+    acc.karbo += gizi.karbo * f;
+    acc.serat += gizi.serat * f;
+    acc.cocok += 1;
+  }
+  return acc;
 }

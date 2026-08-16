@@ -6,9 +6,11 @@
 // Situs bisa mengubah markup/endpoint sewaktu-waktu. Coba beberapa varian
 // endpoint berurutan agar integrasi tetap hidup "apapun caranya".
 const BASES = [
+  // Varian tanpa trailing-slash didahulukan supaya lolos 301 redirect (lebih cepat).
+  "https://siskaperbapo.jatimprov.go.id/harga/tabel.nodesign",
   "https://siskaperbapo.jatimprov.go.id/harga/tabel.nodesign/",
-  "https://siskaperbapo.jatimprov.go.id/harga/tabel/",
   "https://siskaperbapo.jatimprov.go.id/harga/tabel",
+  "https://siskaperbapo.jatimprov.go.id/harga/tabel/",
   "https://siskaperbapo.jatimprov.go.id/harga/",
 ];
 
@@ -140,25 +142,27 @@ export function parseTabel(html: string): KomoditasPasar[] {
   return parseGenerik(html);
 }
 
-const cache = new Map<string, { at: number; val: KomoditasPasar[] }>();
+const cache = new Map<string, { at: number; val: KomoditasPasar[]; tanggal: string }>();
 const TTL_MS = 60 * 60 * 1000; // 1 jam
+const MAX_MUNDUR = 4; // coba tanggal diminta + hingga 3 hari sebelumnya (libur/data belum tayang)
 
-/**
- * Ambil harga pasar untuk kab/kota + tanggal tertentu. Mengembalikan null bila
- * situs tak bisa diakses / tak ada data (pemanggil menangani fallback manual).
- */
-export async function ambilHargaPasar(
-  kabkota: string,
-  tanggal: string,
-): Promise<HargaPasar | null> {
-  const kab = isKabkotaValid(kabkota) ? kabkota : "";
-  const key = `${kab}|${tanggal}`;
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < TTL_MS) {
-    return { tanggal, kabkota: kab, label: labelKabkota(kab), komoditas: hit.val, sumber: "cache" };
-  }
+/** Mundur `hari` dari tanggal "YYYY-MM-DD"; kembalikan format sama. */
+function mundurHari(tanggal: string, hari: number): string {
+  const d = new Date(`${tanggal}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return tanggal;
+  d.setUTCDate(d.getUTCDate() - hari);
+  return d.toISOString().slice(0, 10);
+}
 
+interface HasilAmbil {
+  reachable: boolean; // true bila minimal satu endpoint merespons (res.ok)
+  komoditas: KomoditasPasar[];
+}
+
+/** Ambil data untuk satu tanggal, mencoba semua varian endpoint berurutan. */
+async function ambilUntukTanggal(kab: string, tanggal: string): Promise<HasilAmbil> {
   const params = `?tanggal=${encodeURIComponent(tanggal)}&kabkota=${encodeURIComponent(kab)}&pasar=`;
+  let reachable = false;
   for (const base of BASES) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 9000);
@@ -174,16 +178,53 @@ export async function ambilHargaPasar(
         cache: "no-store",
       });
       if (!res.ok) continue;
+      reachable = true;
       const html = await res.text();
       const komoditas = parseTabel(html);
       if (komoditas.length === 0) continue;
-      cache.set(key, { at: Date.now(), val: komoditas });
-      return { tanggal, kabkota: kab, label: labelKabkota(kab), komoditas, sumber: "live" };
+      return { reachable: true, komoditas };
     } catch {
       // coba endpoint berikutnya
     } finally {
       clearTimeout(timer);
     }
+  }
+  return { reachable, komoditas: [] };
+}
+
+/**
+ * Ambil harga pasar untuk kab/kota + tanggal tertentu. Bila tanggal diminta
+ * kosong (mis. data hari ini belum tayang / akhir pekan) tapi situs bisa diakses,
+ * mundur beberapa hari otomatis. Mengembalikan null hanya bila situs tak bisa
+ * diakses sama sekali / tak ada data (pemanggil menangani fallback manual).
+ * Field `tanggal` pada hasil = tanggal data yang benar-benar ditemukan.
+ */
+export async function ambilHargaPasar(
+  kabkota: string,
+  tanggal: string,
+): Promise<HargaPasar | null> {
+  const kab = isKabkotaValid(kabkota) ? kabkota : "";
+  const key = `${kab}|${tanggal}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL_MS) {
+    return {
+      tanggal: hit.tanggal,
+      kabkota: kab,
+      label: labelKabkota(kab),
+      komoditas: hit.val,
+      sumber: "cache",
+    };
+  }
+
+  for (let i = 0; i < MAX_MUNDUR; i++) {
+    const tgl = i === 0 ? tanggal : mundurHari(tanggal, i);
+    const { reachable, komoditas } = await ambilUntukTanggal(kab, tgl);
+    if (komoditas.length > 0) {
+      cache.set(key, { at: Date.now(), val: komoditas, tanggal: tgl });
+      return { tanggal: tgl, kabkota: kab, label: labelKabkota(kab), komoditas, sumber: "live" };
+    }
+    // Situs tak bisa diakses sama sekali → mundur tanggal tak akan menolong, hentikan.
+    if (!reachable) break;
   }
   return null;
 }

@@ -127,6 +127,45 @@ export const TEMPLATE_GIZI: TemplateGizi[] = [
       "Pemantauan titik kendali kritis (CCP) mutu & keamanan pangan: penerimaan, penyimpanan, pengolahan, pemorsian, dan distribusi.",
     ikon: "🧪",
   },
+  {
+    slug: "organoleptik",
+    judul: "Uji Organoleptik Makanan",
+    heading: "FORM UJI ORGANOLEPTIK MAKANAN (KELAYAKAN EDAR)",
+    nomor: "",
+    deskripsi:
+      "Uji sensori setiap menu sebelum didistribusikan: warna, aroma, rasa, tekstur & tingkat kematangan — untuk menyatakan makanan LAYAK / TIDAK LAYAK edar.",
+    ikon: "👃",
+  },
+  {
+    slug: "retensi-sampel",
+    judul: "Kartu Retensi Sampel Makanan",
+    heading: "KARTU RETENSI (PENYIMPANAN) SAMPEL MAKANAN",
+    nomor: "",
+    deskripsi:
+      "Pencatatan penyimpanan sampel makanan wajib 2×24 jam per menu: waktu produksi, jumlah sampel, suhu simpan, dan jadwal pemusnahan — untuk penelusuran bila terjadi keluhan/keracunan.",
+    ikon: "🧫",
+  },
+  {
+    slug: "penerimaan-bahan",
+    judul: "Ceklist Penerimaan Bahan Baku",
+    heading: "CEKLIST PENERIMAAN & PEMERIKSAAN MUTU BAHAN BAKU",
+    nomor: "",
+    deskripsi:
+      "Inspeksi bahan baku saat diterima dari supplier: jumlah, suhu, kondisi/mutu, tanggal kadaluarsa, dan keputusan DITERIMA / DITOLAK — sebagai kendali mutu di titik penerimaan.",
+    ikon: "📥",
+    landscape: true,
+  },
+  // — Higiene Penjamah —
+  {
+    slug: "higiene-penjamah",
+    judul: "Higiene Penjamah Makanan",
+    heading: "FORM PEMERIKSAAN HIGIENE PENJAMAH MAKANAN",
+    nomor: "",
+    deskripsi:
+      "Pemeriksaan harian kondisi penjamah makanan: kesehatan, kuku, celemek/pakaian, penutup kepala, masker, luka terbuka, dan cuci tangan — untuk mencegah kontaminasi.",
+    ikon: "🧑‍🍳",
+    landscape: true,
+  },
 ];
 
 export function getTemplateGizi(slug: string): TemplateGizi | undefined {
@@ -288,8 +327,8 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
   },
   {
     label: "Kebersihan & Sanitasi",
-    ket: "Checklist kebersihan area dapur & fasilitas.",
-    slugs: ["kebersihan-area", "kebersihan-ruang"],
+    ket: "Checklist kebersihan area dapur, fasilitas & higiene penjamah.",
+    slugs: ["kebersihan-area", "kebersihan-ruang", "higiene-penjamah"],
   },
   {
     label: "Limbah & Kebutuhan Bahan",
@@ -298,7 +337,7 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
   },
   {
     label: "Keamanan Pangan",
-    ket: "Pemantauan HACCP / titik kendali kritis.",
-    slugs: ["haccp"],
+    ket: "Penerimaan bahan, HACCP, uji organoleptik & retensi sampel.",
+    slugs: ["penerimaan-bahan", "haccp", "organoleptik", "retensi-sampel"],
   },
 ];

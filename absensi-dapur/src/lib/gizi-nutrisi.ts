@@ -199,3 +199,65 @@ export function getSasaran(key: string): Sasaran | undefined {
  * 30% dari AKG harian (satu waktu makan utama).
  */
 export const MEAL_FRACTION = 0.3;
+
+// ————————————————————————————————————————————————————————————————
+// Estimasi gizi dari daftar bahan menu (dipakai kalkulator "hitung gizi").
+// Bebas server; hasilnya estimasi perencanaan, bukan uji lab.
+// ————————————————————————————————————————————————————————————————
+
+/**
+ * Konversi jumlah bahan (pada satuan tertentu) menjadi gram.
+ * Mengembalikan null bila satuan tak bisa diperkirakan (mis. "buah", "ikat")
+ * — bahan itu dilewati agar total gizi tak salah.
+ */
+const GRAM_PER_SATUAN: Record<string, number> = {
+  kg: 1000,
+  kilogram: 1000,
+  kilo: 1000,
+  g: 1,
+  gr: 1,
+  gram: 1,
+  ons: 100,
+  hg: 100,
+  liter: 1000, // asumsi kerapatan ~1 g/ml
+  ltr: 1000,
+  l: 1000,
+  ml: 1,
+  cc: 1,
+  butir: 55, // rata-rata telur ayam
+};
+export function jumlahKeGram(jumlah: number, satuan: string): number | null {
+  const s = satuan.trim().toLowerCase();
+  const f = GRAM_PER_SATUAN[s];
+  if (f === undefined || !(jumlah >= 0)) return null;
+  return jumlah * f;
+}
+
+/**
+ * Cari data gizi TKPI yang paling cocok dari nama bahan (heuristik token).
+ * `kategori` opsional mempersempit kandidat agar pencocokan lebih tepat.
+ * Mengembalikan null bila tak ada yang cukup mirip.
+ */
+export function cariGiziByNama(nama: string, kategori?: KategoriBahan): BahanGizi | null {
+  const n = nama.trim().toLowerCase();
+  if (!n) return null;
+  const pool = kategori ? BAHAN_GIZI.filter((b) => b.kategori === kategori) : BAHAN_GIZI;
+  const cand = pool.length > 0 ? pool : BAHAN_GIZI;
+  const exact = cand.find((b) => b.nama.toLowerCase() === n);
+  if (exact) return exact;
+  const kata = n.split(/\s+/).filter((w) => w.length >= 3);
+  let best: BahanGizi | null = null;
+  let bestScore = 0;
+  for (const b of cand) {
+    const bn = b.nama.toLowerCase();
+    let score = 0;
+    for (const w of kata) if (bn.includes(w)) score += w.length;
+    const first = bn.split(/[\s(]/)[0];
+    if (first.length >= 3 && n.includes(first)) score += first.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = b;
+    }
+  }
+  return bestScore >= 3 ? best : null;
+}

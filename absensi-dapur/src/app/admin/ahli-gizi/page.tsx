@@ -68,6 +68,30 @@ const AKSEN: Record<
     ring: "hover:ring-violet-500/40 hover:shadow-violet-500/10",
     teks: "group-hover:text-violet-200",
   },
+  organoleptik: {
+    ikon: "bg-fuchsia-500/15 text-fuchsia-300 ring-fuchsia-500/30",
+    garis: "from-fuchsia-500/70",
+    ring: "hover:ring-fuchsia-500/40 hover:shadow-fuchsia-500/10",
+    teks: "group-hover:text-fuchsia-200",
+  },
+  "retensi-sampel": {
+    ikon: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+    garis: "from-rose-500/70",
+    ring: "hover:ring-rose-500/40 hover:shadow-rose-500/10",
+    teks: "group-hover:text-rose-200",
+  },
+  "penerimaan-bahan": {
+    ikon: "bg-cyan-500/15 text-cyan-300 ring-cyan-500/30",
+    garis: "from-cyan-500/70",
+    ring: "hover:ring-cyan-500/40 hover:shadow-cyan-500/10",
+    teks: "group-hover:text-cyan-200",
+  },
+  "higiene-penjamah": {
+    ikon: "bg-pink-500/15 text-pink-300 ring-pink-500/30",
+    garis: "from-pink-500/70",
+    ring: "hover:ring-pink-500/40 hover:shadow-pink-500/10",
+    teks: "group-hover:text-pink-200",
+  },
 };
 
 const AKSEN_DEFAULT = {

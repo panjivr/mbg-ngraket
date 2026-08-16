@@ -14,6 +14,7 @@ import {
   perPorsi,
   biayaPerPorsi,
   hppPerPorsi,
+  hitungGiziPerPorsi,
   fmtJumlah,
   fmtKecil,
   type KategoriMenu,
@@ -22,10 +23,20 @@ import {
   type MenuBahan,
   type Pembulatan,
 } from "@/lib/menu";
+import { SASARAN, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
 import type { KomoditasPasar } from "@/lib/siskaperbapo";
 import QuoteBanner from "@/components/QuoteBanner";
 
 const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(n));
+
+// Baris tampilan kalkulator gizi (kunci cocok dengan GiziPerPorsi & target AKG).
+const GIZI_ROWS: { key: "energi" | "protein" | "lemak" | "karbo" | "serat"; label: string; unit: string }[] = [
+  { key: "energi", label: "Energi", unit: "kkal" },
+  { key: "protein", label: "Protein", unit: "g" },
+  { key: "lemak", label: "Lemak", unit: "g" },
+  { key: "karbo", label: "Karbohidrat", unit: "g" },
+  { key: "serat", label: "Serat", unit: "g" },
+];
 
 interface Pagu {
   besar: number;
@@ -338,6 +349,8 @@ function MenuEditor({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [porsiTarget, setPorsiTarget] = useState<number>(menu.porsi_dasar);
+  // Sasaran AKG untuk kalkulator gizi (default SD 4–6, penerima MBG umum).
+  const [sasaranKey, setSasaranKey] = useState<string>("sd46");
   // Tempel manual harga pasar (fallback bila auto-fetch SISKAPERBAPO gagal).
   const [manualKom, setManualKom] = useState<KomoditasPasar[]>([]);
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -468,6 +481,20 @@ function MenuEditor({
       marginBesarPct: pagu.besar > 0 ? ((pagu.besar - perPorsi) / pagu.besar) * 100 : 0,
     };
   }, [bahan, porsiDasar, porsiTarget, pagu.besar]);
+
+  // Estimasi kandungan gizi per porsi vs target AKG satu kali makan (≈30% harian).
+  const gizi = useMemo(() => hitungGiziPerPorsi(bahan, porsiDasar), [bahan, porsiDasar]);
+  const sasaran = useMemo(() => SASARAN.find((s) => s.key === sasaranKey) ?? SASARAN[2], [sasaranKey]);
+  const targetGizi = useMemo(
+    () => ({
+      energi: sasaran.energi * MEAL_FRACTION,
+      protein: sasaran.protein * MEAL_FRACTION,
+      lemak: sasaran.lemak * MEAL_FRACTION,
+      karbo: sasaran.karbo * MEAL_FRACTION,
+      serat: sasaran.serat * MEAL_FRACTION,
+    }),
+    [sasaran],
+  );
 
   return (
     <div className="space-y-4">
@@ -801,6 +828,63 @@ function MenuEditor({
             </span>
           )}
         </div>
+      </div>
+
+      {/* Kandungan Gizi per porsi — estimasi vs AKG satu kali makan */}
+      <div className="card space-y-3 p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">Kandungan Gizi / porsi (estimasi)</h3>
+            <p className="text-[11px] text-slate-500">
+              Dibanding target 1× makan (≈{Math.round(MEAL_FRACTION * 100)}% AKG harian). Angka dari
+              tabel TKPI, perkiraan perencanaan — bukan uji lab.
+            </p>
+          </div>
+          <div>
+            <label className="label">Sasaran (AKG)</label>
+            <select className="input" value={sasaranKey} onChange={(e) => setSasaranKey(e.target.value)}>
+              {SASARAN.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {GIZI_ROWS.map((row) => {
+            const val = gizi[row.key];
+            const tgt = targetGizi[row.key];
+            const pct = tgt > 0 ? Math.round((val / tgt) * 100) : 0;
+            const warna =
+              pct < 70 ? "text-amber-300" : pct > 130 ? "text-red-300" : "text-emerald-400";
+            return (
+              <div key={row.key} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <p className="text-[11px] text-slate-400">{row.label}</p>
+                <p className="mt-1 text-lg font-bold text-gold-400">
+                  {fmtKecil(val)}
+                  <span className="text-[11px] font-normal text-slate-500"> {row.unit}</span>
+                </p>
+                <p className={"text-[11px] font-medium " + warna}>
+                  {pct}% dari {fmtKecil(tgt)} {row.unit}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        {gizi.total === 0 ? (
+          <p className="text-[11px] text-slate-500">Belum ada bahan bernama untuk dihitung.</p>
+        ) : gizi.takTerhitung.length > 0 ? (
+          <p className="text-[11px] text-amber-300/90">
+            ⚠️ {gizi.takTerhitung.length} dari {gizi.total} bahan belum terhitung (nama tak dikenal
+            atau satuan non-gram seperti buah/ikat/pcs): {gizi.takTerhitung.slice(0, 6).join(", ")}
+            {gizi.takTerhitung.length > 6 ? "…" : ""}. Estimasi masih parsial.
+          </p>
+        ) : (
+          <p className="text-[11px] text-emerald-300/80">
+            Semua {gizi.cocok} bahan terhitung. Energi/porsi ≈ {fmtKecil(gizi.energi)} kkal.
+          </p>
+        )}
       </div>
 
       {/* Kalkulator scaling */}
