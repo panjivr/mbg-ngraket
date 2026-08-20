@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-12a.audit-dapur";
+const SCHEMA_VERSION = "2026-08-21a.kartu-foto-adjust";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -217,6 +217,11 @@ async function doEnsureSchema(): Promise<void> {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS foto_profil TEXT`,
     );
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`);
+
+    // users -> penyesuaian foto kartu (zoom & posisi) agar wajah tidak ke-crop
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS foto_zoom REAL NOT NULL DEFAULT 1`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS foto_pos_x REAL NOT NULL DEFAULT 50`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS foto_pos_y REAL NOT NULL DEFAULT 50`);
 
     // users -> tempat & tanggal lahir (untuk weton / laporan)
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tempat_lahir TEXT`);

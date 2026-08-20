@@ -58,6 +58,9 @@ export interface User {
   divisi_id: number | null;
   divisi_nama?: string | null;
   foto_profil?: string | null;
+  foto_zoom?: number;
+  foto_pos_x?: number;
+  foto_pos_y?: number;
   bio?: string | null;
   tempat_lahir?: string | null;
   tanggal_lahir?: string | null;
@@ -81,6 +84,10 @@ export interface KartuPegawai {
   jam_masuk: string | null;
   jam_pulang: string | null;
   foto_profil: string | null;
+  /** Penyesuaian foto kartu (agar wajah tidak ke-crop). */
+  foto_zoom: number;
+  foto_pos_x: number;
+  foto_pos_y: number;
   bio: string | null;
   tempat_lahir: string | null;
   tanggal_lahir: string | null;

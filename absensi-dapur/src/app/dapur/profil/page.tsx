@@ -33,6 +33,9 @@ export default function ProfilPage() {
   const [kartu, setKartu] = useState<Kartu | null>(null);
   const [foto, setFoto] = useState<string | null>(null);
   const [bio, setBio] = useState("");
+  const [zoom, setZoom] = useState(1);
+  const [posX, setPosX] = useState(50);
+  const [posY, setPosY] = useState(50);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -48,6 +51,9 @@ export default function ProfilPage() {
         setKartu(data.kartu);
         setFoto(data.kartu.foto_profil ?? null);
         setBio(data.kartu.bio ?? "");
+        setZoom(data.kartu.foto_zoom ?? 1);
+        setPosX(data.kartu.foto_pos_x ?? 50);
+        setPosY(data.kartu.foto_pos_y ?? 50);
       }
     } finally {
       setLoading(false);
@@ -65,6 +71,10 @@ export default function ProfilPage() {
     try {
       const url = await fileToDataUrl(file);
       setFoto(url);
+      // Reset penyesuaian saat ganti foto baru.
+      setZoom(1);
+      setPosX(50);
+      setPosY(50);
     } catch {
       setMsg({ kind: "err", text: "Gagal membaca gambar." });
     } finally {
@@ -79,7 +89,13 @@ export default function ProfilPage() {
       const res = await fetch("/api/me/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ foto_profil: foto, bio }),
+        body: JSON.stringify({
+          foto_profil: foto,
+          bio,
+          foto_zoom: zoom,
+          foto_pos_x: posX,
+          foto_pos_y: posY,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -97,7 +113,14 @@ export default function ProfilPage() {
 
   // Kartu pratinjau memakai foto/bio yang sedang diedit.
   const preview: Kartu | null = kartu
-    ? { ...kartu, foto_profil: foto, bio: bio.trim() || null }
+    ? {
+        ...kartu,
+        foto_profil: foto,
+        bio: bio.trim() || null,
+        foto_zoom: zoom,
+        foto_pos_x: posX,
+        foto_pos_y: posY,
+      }
     : null;
 
   if (loading) {
@@ -174,6 +197,68 @@ export default function ProfilPage() {
             memotret langsung. Gambar otomatis diperkecil.
           </p>
         </div>
+
+        {foto && (
+          <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-200">
+                Sesuaikan Foto Kartu
+              </p>
+              <button
+                onClick={() => {
+                  setZoom(1);
+                  setPosX(50);
+                  setPosY(50);
+                }}
+                className="text-[11px] text-gold-300 hover:underline"
+              >
+                Reset
+              </button>
+            </div>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Geser agar wajah pas di bingkai (tidak ke-crop).
+            </p>
+
+            <label className="mt-2 block text-[11px] text-slate-400">
+              Perbesar (zoom) · {zoom.toFixed(2)}×
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full accent-gold-400"
+            />
+
+            <label className="mt-2 block text-[11px] text-slate-400">
+              Geser Horizontal · {Math.round(posX)}%
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={posX}
+              onChange={(e) => setPosX(Number(e.target.value))}
+              className="w-full accent-gold-400"
+            />
+
+            <label className="mt-2 block text-[11px] text-slate-400">
+              Geser Vertikal · {Math.round(posY)}%
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={posY}
+              onChange={(e) => setPosY(Number(e.target.value))}
+              className="w-full accent-gold-400"
+            />
+          </div>
+        )}
 
         <div>
           <label className="label">Bio / Status</label>

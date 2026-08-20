@@ -15,14 +15,27 @@ interface ProfilRow {
   username: string;
   jabatan: string | null;
   foto_profil: string | null;
+  foto_zoom: number;
+  foto_pos_x: number;
+  foto_pos_y: number;
   bio: string | null;
+}
+
+const RETURNING_COLS =
+  "id, nama, username, jabatan, foto_profil, foto_zoom, foto_pos_x, foto_pos_y, bio";
+
+/** Batasi angka ke rentang [min, max]; kembalikan null bila bukan angka valid. */
+function clampNum(v: unknown, min: number, max: number): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(max, Math.max(min, n));
 }
 
 export const GET = route(async () => {
   const session = await requireSession();
   const row = (
     await query<ProfilRow>(
-      `SELECT id, nama, username, jabatan, foto_profil, bio FROM users WHERE id = $1`,
+      `SELECT ${RETURNING_COLS} FROM users WHERE id = $1`,
       [session.uid],
     )
   )[0];
@@ -36,7 +49,12 @@ export const PUT = route(async (req: NextRequest) => {
 
   const hasFoto = body.foto_profil !== undefined;
   const hasBio = body.bio !== undefined;
-  if (!hasFoto && !hasBio) return fail(400, "Tidak ada perubahan.");
+  const hasZoom = body.foto_zoom !== undefined;
+  const hasPosX = body.foto_pos_x !== undefined;
+  const hasPosY = body.foto_pos_y !== undefined;
+  if (!hasFoto && !hasBio && !hasZoom && !hasPosX && !hasPosY) {
+    return fail(400, "Tidak ada perubahan.");
+  }
 
   let foto: string | null | undefined;
   if (hasFoto) {
@@ -71,12 +89,30 @@ export const PUT = route(async (req: NextRequest) => {
     params.push(bio);
     sets.push(`bio = $${params.length}`);
   }
+  if (hasZoom) {
+    const zoom = clampNum(body.foto_zoom, 1, 3);
+    if (zoom === null) return fail(400, "Nilai zoom foto tidak valid.");
+    params.push(zoom);
+    sets.push(`foto_zoom = $${params.length}`);
+  }
+  if (hasPosX) {
+    const px = clampNum(body.foto_pos_x, 0, 100);
+    if (px === null) return fail(400, "Posisi foto tidak valid.");
+    params.push(px);
+    sets.push(`foto_pos_x = $${params.length}`);
+  }
+  if (hasPosY) {
+    const py = clampNum(body.foto_pos_y, 0, 100);
+    if (py === null) return fail(400, "Posisi foto tidak valid.");
+    params.push(py);
+    sets.push(`foto_pos_y = $${params.length}`);
+  }
   params.push(session.uid);
 
   const row = (
     await query<ProfilRow>(
       `UPDATE users SET ${sets.join(", ")} WHERE id = $${params.length}
-       RETURNING id, nama, username, jabatan, foto_profil, bio`,
+       RETURNING ${RETURNING_COLS}`,
       params,
     )
   )[0];

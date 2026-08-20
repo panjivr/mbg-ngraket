@@ -12,6 +12,9 @@ interface UserRow {
   jam_masuk: string | null;
   jam_pulang: string | null;
   foto_profil: string | null;
+  foto_zoom: number | null;
+  foto_pos_x: number | null;
+  foto_pos_y: number | null;
   bio: string | null;
   tempat_lahir: string | null;
   tanggal_lahir: string | null;
@@ -42,7 +45,8 @@ function bintangDari(ketepatan: number, jumlahShift: number): number {
 export async function getKartuPegawai(userId: number): Promise<KartuPegawai | null> {
   const u = (
     await query<UserRow>(
-      `SELECT u.id, u.nama, u.jabatan, u.nip, u.foto_profil, u.bio,
+      `SELECT u.id, u.nama, u.jabatan, u.nip, u.foto_profil,
+              u.foto_zoom, u.foto_pos_x, u.foto_pos_y, u.bio,
               u.tempat_lahir, u.tanggal_lahir, u.jenis_kelamin, u.created_at,
               d.nama AS divisi_nama, d.jobdesk, d.jam_masuk, d.jam_pulang
          FROM users u
@@ -81,6 +85,9 @@ export async function getKartuPegawai(userId: number): Promise<KartuPegawai | nu
     jam_masuk: u.jam_masuk,
     jam_pulang: u.jam_pulang,
     foto_profil: u.foto_profil,
+    foto_zoom: u.foto_zoom ?? 1,
+    foto_pos_x: u.foto_pos_x ?? 50,
+    foto_pos_y: u.foto_pos_y ?? 50,
     bio: u.bio,
     tempat_lahir: u.tempat_lahir,
     tanggal_lahir: u.tanggal_lahir,
