@@ -76,9 +76,10 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
 
   if (b.action === "edit") {
     const row = (
-      await query<Attendance & { sppg_id: number | null }>(
-        `SELECT a.*, u.sppg_id
+      await query<Attendance & { sppg_id: number | null; d_tol: number | null }>(
+        `SELECT a.*, u.sppg_id, d.toleransi_menit AS d_tol
            FROM attendance a JOIN users u ON u.id = a.user_id
+           LEFT JOIN divisi d ON d.id = a.divisi_id
           WHERE a.id = $1 AND u.sppg_id = $2`,
         [id, admin.sppg_id],
       )
@@ -124,12 +125,14 @@ export const PUT = route(async (req: NextRequest, ctx: Ctx) => {
       return fail(409, "Jam pulang harus setelah jam masuk.");
     }
 
+    // Toleransi divisi ikut diperhitungkan (sama seperti jalur tambah manual),
+    // supaya jam masuk yang tidak telat tidak keliru ditandai "Terlambat".
     const status = statusMasukShift(
       newCheckIn,
       row.shift_masuk || sppg?.jam_masuk || "07:00",
       row.shift_pulang || sppg?.jam_pulang || "15:00",
       tz,
-      0,
+      row.d_tol ?? 0,
     );
 
     const rows = await query<Attendance>(
