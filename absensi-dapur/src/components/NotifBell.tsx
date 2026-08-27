@@ -42,9 +42,31 @@ export default function NotifBell() {
   }, []);
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    // Interval polling notifikasi. Sengaja panjang (5 menit) + berhenti saat
+    // tab tidak terlihat: tiap poll menjalankan beberapa query DB, dan tab
+    // admin yang dibiarkan terbuka 24/7 dulu membakar kuota compute DB/Vercel.
+    const POLL_MS = 300_000; // 5 menit
+    const visible = () => document.visibilityState === "visible";
+
+    if (visible()) load();
+    const t = setInterval(() => {
+      if (visible()) load();
+    }, POLL_MS);
+
+    // Saat tab kembali terlihat, segarkan sekali — di-throttle agar berpindah
+    // tab bolak-balik tidak memicu banyak request beruntun.
+    let lastLoad = Date.now();
+    const onVis = () => {
+      if (visible() && Date.now() - lastLoad > 60_000) {
+        lastLoad = Date.now();
+        load();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [load]);
 
   // Tutup saat klik di luar.
