@@ -14,6 +14,7 @@ export type KategoriBahan =
   | "nabati"
   | "sayur"
   | "buah"
+  | "olahan"
   | "lainnya";
 
 export const KATEGORI_LABEL: Record<KategoriBahan, string> = {
@@ -22,6 +23,7 @@ export const KATEGORI_LABEL: Record<KategoriBahan, string> = {
   nabati: "Lauk Nabati",
   sayur: "Sayuran",
   buah: "Buah",
+  olahan: "Puding & Kudapan",
   lainnya: "Bumbu & Lainnya",
 };
 
@@ -557,6 +559,28 @@ export const BAHAN_GIZI: BahanGizi[] = [
   { id: "adas", nama: "Adas (biji)", kategori: "lainnya", energi: 345, protein: 16, lemak: 15, karbo: 52, serat: 40 },
   { id: "teh-seduh", nama: "Teh seduh (cair)", kategori: "lainnya", energi: 1, protein: 0, lemak: 0, karbo: 0.3, serat: 0 },
   { id: "sirup-gula", nama: "Sirup gula (manis)", kategori: "lainnya", energi: 260, protein: 0, lemak: 0, karbo: 65, serat: 0 },
+
+  // ————————————————————————————————————————————————————————————
+  // Puding & Kudapan — makanan olahan siap saji (per 100 g)
+  // Estimasi dari komposisi umum resep: agar-agar/hunkwe + susu + gula +
+  // bahan utama (buah/sayur/kacang). Nilai untuk perencanaan menu MBG,
+  // bukan hasil uji lab per batch. Sesuaikan bila resep dapur berbeda.
+  // ————————————————————————————————————————————————————————————
+  { id: "puding-susu", nama: "Puding susu", kategori: "olahan", energi: 105, protein: 3, lemak: 3, karbo: 16, serat: 0.1 },
+  { id: "puding-vanila", nama: "Puding vanila (vla)", kategori: "olahan", energi: 98, protein: 2.6, lemak: 2.8, karbo: 16, serat: 0 },
+  { id: "puding-cokelat", nama: "Puding cokelat", kategori: "olahan", energi: 125, protein: 3.2, lemak: 4, karbo: 20, serat: 1.2 },
+  { id: "puding-buah-naga", nama: "Puding buah naga merah", kategori: "olahan", energi: 88, protein: 1.6, lemak: 1.6, karbo: 17, serat: 1.2 },
+  { id: "puding-wortel", nama: "Puding wortel", kategori: "olahan", energi: 92, protein: 2, lemak: 2.2, karbo: 16, serat: 1.1 },
+  { id: "puding-kelor", nama: "Puding daun kelor", kategori: "olahan", energi: 96, protein: 3, lemak: 2.4, karbo: 15, serat: 1.4 },
+  { id: "puding-kacang-hijau", nama: "Puding kacang hijau", kategori: "olahan", energi: 112, protein: 3.6, lemak: 1.8, karbo: 21, serat: 1.6 },
+  { id: "puding-jeruk", nama: "Puding jeruk", kategori: "olahan", energi: 82, protein: 1.3, lemak: 1, karbo: 17, serat: 0.6 },
+  { id: "puding-mangga", nama: "Puding mangga", kategori: "olahan", energi: 90, protein: 1.6, lemak: 1.6, karbo: 18, serat: 0.8 },
+  { id: "puding-stroberi", nama: "Puding stroberi", kategori: "olahan", energi: 86, protein: 1.6, lemak: 1.6, karbo: 16, serat: 0.7 },
+  { id: "puding-labu-kuning", nama: "Puding labu kuning", kategori: "olahan", energi: 85, protein: 1.8, lemak: 1.8, karbo: 15, serat: 1 },
+  { id: "puding-ubi-ungu", nama: "Puding ubi ungu", kategori: "olahan", energi: 102, protein: 2, lemak: 1.8, karbo: 20, serat: 1.6 },
+  { id: "puding-pisang", nama: "Puding pisang", kategori: "olahan", energi: 100, protein: 2, lemak: 1.8, karbo: 19, serat: 1 },
+  { id: "puding-jagung", nama: "Puding jagung manis", kategori: "olahan", energi: 106, protein: 2.6, lemak: 2.2, karbo: 19, serat: 1.2 },
+  { id: "puding-roti", nama: "Puding roti (bread pudding)", kategori: "olahan", energi: 165, protein: 4.6, lemak: 5.2, karbo: 24, serat: 0.8 },
 ];
 
 export function getBahanGizi(id: string): BahanGizi | undefined {

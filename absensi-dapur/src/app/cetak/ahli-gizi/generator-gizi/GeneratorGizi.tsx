@@ -57,6 +57,7 @@ const URUT_KATEGORI: KategoriBahan[] = [
   "nabati",
   "sayur",
   "buah",
+  "olahan",
   "lainnya",
 ];
 
