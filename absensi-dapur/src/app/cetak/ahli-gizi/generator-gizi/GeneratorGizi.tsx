@@ -162,42 +162,75 @@ export default function GeneratorGizi() {
   return (
     <div className="text-[12px]">
       {/* ============ ZONA EDITOR (tidak dicetak) ============ */}
-      <div className="no-print mb-4 space-y-3 rounded-lg border border-dashed border-emerald-400 bg-emerald-50 p-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
-          <label className="flex items-center gap-2">
-            <span className="font-semibold text-emerald-800">
-              Kelompok sasaran:
+      <div className="no-print mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06),0_12px_28px_-18px_rgba(15,23,42,0.25)]">
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/15 text-emerald-700 ring-1 ring-inset ring-emerald-500/25">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M4 20c0-8 6-14 16-14 0 10-6 14-16 14z" /><path d="M4.5 19.5c4-6 8-8.5 12-9.5" /></svg>
             </span>
-            <select
-              value={sasaranKey}
-              onChange={(e) => setSasaranKey(e.target.value)}
-              className="rounded border border-emerald-300 px-2 py-1"
-            >
-              {SASARAN.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2">
-            <span className="font-semibold text-emerald-800">Jumlah porsi:</span>
-            <input
-              type="number"
-              min={1}
-              value={porsi}
-              onChange={(e) => setPorsi(e.target.value)}
-              className="w-20 rounded border border-emerald-300 px-2 py-1"
-            />
-          </label>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-slate-800">Kalkulator Kandungan Gizi</p>
+              <p className="text-[11px] text-slate-500">Basis TKPI Kemenkes · makro &amp; mikronutrien · %AKG Permenkes 28/2019</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end gap-2.5 text-[13px]">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-slate-500">Kelompok sasaran</span>
+              <select
+                value={sasaranKey}
+                onChange={(e) => setSasaranKey(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                {SASARAN.map((s) => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-slate-500">Jumlah porsi</span>
+              <input
+                type="number"
+                min={1}
+                value={porsi}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setPorsi(e.target.value)}
+                className="w-24 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </label>
+          </div>
         </div>
 
+        {/* Ringkasan gizi langsung (mini %AKG) */}
+        <div className="grid grid-cols-2 gap-2 px-4 pt-3 sm:grid-cols-3 lg:grid-cols-5">
+          {gizi.map((g) => {
+            const target = g.akg * MEAL_FRACTION;
+            const pct = target ? (g.nilai / target) * 100 : 0;
+            const tone = pct < 80 ? "amber" : pct > 130 ? "sky" : "emerald";
+            const barCol = tone === "amber" ? "bg-amber-400" : tone === "sky" ? "bg-sky-400" : "bg-emerald-400";
+            const txtCol = tone === "amber" ? "text-amber-600" : tone === "sky" ? "text-sky-600" : "text-emerald-600";
+            return (
+              <div key={g.nama} className="rounded-xl border border-slate-200 bg-slate-50/60 px-2.5 py-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{g.nama}</p>
+                <p className="mt-0.5 text-sm font-bold tabular-nums text-slate-800">
+                  {fmt(g.nilai)} <span className="text-[10px] font-normal text-slate-400">{g.sat}</span>
+                </p>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
+                  <div className={"h-full rounded-full " + barCol} style={{ width: `${Math.min(100, pct)}%` }} />
+                </div>
+                <p className={"mt-0.5 text-[10px] font-semibold tabular-nums " + txtCol}>{fmt(pct)}% target</p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3 p-4">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[12px]">
             <thead>
-              <tr className="text-left text-emerald-800">
-                <th className="px-1 py-1">Bahan pangan</th>
-                <th className="w-28 px-1 py-1">Berat/porsi (g)</th>
+              <tr className="text-left text-slate-500">
+                <th className="px-1 py-1 font-medium">Bahan pangan</th>
+                <th className="w-28 px-1 py-1 font-medium">Berat/porsi (g)</th>
                 <th className="w-10" />
               </tr>
             </thead>
@@ -249,15 +282,16 @@ export default function GeneratorGizi() {
         <button
           type="button"
           onClick={addRow}
-          className="rounded border border-emerald-400 bg-white px-3 py-1 text-[12px] font-medium text-emerald-700 hover:bg-emerald-100"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
         >
-          ＋ Tambah bahan
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M12 5v14M5 12h14" /></svg>
+          Tambah bahan
         </button>
-        <p className="text-[11px] italic text-emerald-700">
-          Isi bahan &amp; berat per porsi. Tabel hasil di bawah otomatis
-          terhitung dan itulah yang tercetak. Nilai gizi mengacu Tabel Komposisi
-          Pangan Indonesia (TKPI) &amp; AKG Permenkes 28/2019.
+        <p className="text-[11px] text-slate-500">
+          Isi bahan &amp; berat per porsi — ringkasan %AKG di atas &amp; tabel hasil di bawah
+          (yang tercetak) terhitung otomatis. Nilai mengacu TKPI &amp; AKG Permenkes 28/2019.
         </p>
+        </div>
       </div>
 
       {/* ============ ZONA HASIL (ikut dicetak) ============ */}
