@@ -18,6 +18,8 @@ import {
   KATEGORI_LABEL,
   MEAL_FRACTION,
   SASARAN,
+  MIKRO_KEYS,
+  MIKRO_META,
   getBahanGizi,
   getSasaran,
   type KategoriBahan,
@@ -46,9 +48,14 @@ interface Total {
   lemak: number;
   karbo: number;
   serat: number;
+  kalsium: number;
+  besi: number;
+  vit_a: number;
+  vit_c: number;
+  zinc: number;
 }
 
-const NOL: Total = { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
+const NOL: Total = { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0, kalsium: 0, besi: 0, vit_a: 0, vit_c: 0, zinc: 0 };
 
 /** Urutan kategori untuk pengelompokan <optgroup>. */
 const URUT_KATEGORI: KategoriBahan[] = [
@@ -76,7 +83,7 @@ export default function GeneratorGizi() {
   const jumlahPorsi = Math.max(1, parseInt(porsi, 10) || 1);
 
   // Kontribusi gizi tiap baris (per porsi) + total keseluruhan.
-  const { detail, total } = useMemo(() => {
+  const { detail, total, mikroParsial } = useMemo(() => {
     const detail = rows.map((r) => {
       const b = getBahanGizi(r.bahanId);
       const g = parseFloat(r.gram) || 0;
@@ -90,6 +97,13 @@ export default function GeneratorGizi() {
         lemak: b ? b.lemak * f : 0,
         karbo: b ? b.karbo * f : 0,
         serat: b ? b.serat * f : 0,
+        kalsium: b ? (b.kalsium ?? 0) * f : 0,
+        besi: b ? (b.besi ?? 0) * f : 0,
+        vit_a: b ? (b.vit_a ?? 0) * f : 0,
+        vit_c: b ? (b.vit_c ?? 0) * f : 0,
+        zinc: b ? (b.zinc ?? 0) * f : 0,
+        // true bila bahan dipilih tapi belum ada data mikronutrien.
+        mikroKosong: !!b && b.kalsium === undefined && g > 0,
       };
     });
     const total = detail.reduce<Total>(
@@ -99,10 +113,16 @@ export default function GeneratorGizi() {
         lemak: a.lemak + d.lemak,
         karbo: a.karbo + d.karbo,
         serat: a.serat + d.serat,
+        kalsium: a.kalsium + d.kalsium,
+        besi: a.besi + d.besi,
+        vit_a: a.vit_a + d.vit_a,
+        vit_c: a.vit_c + d.vit_c,
+        zinc: a.zinc + d.zinc,
       }),
       { ...NOL },
     );
-    return { detail, total };
+    const mikroParsial = detail.filter((d) => d.mikroKosong).length;
+    return { detail, total, mikroParsial };
   }, [rows]);
 
   const beratTotal = detail.reduce((a, d) => a + d.gram, 0);
@@ -130,6 +150,13 @@ export default function GeneratorGizi() {
     { nama: "Lemak", sat: "g", nilai: total.lemak, akg: sasaran.lemak },
     { nama: "Karbohidrat", sat: "g", nilai: total.karbo, akg: sasaran.karbo },
     { nama: "Serat", sat: "g", nilai: total.serat, akg: sasaran.serat },
+    // Mikronutrien (dari data bertahap; bahan tanpa data tidak menyumbang).
+    ...MIKRO_KEYS.map((k) => ({
+      nama: MIKRO_META[k].label,
+      sat: MIKRO_META[k].sat,
+      nilai: total[k],
+      akg: sasaran[k],
+    })),
   ];
 
   return (
@@ -354,12 +381,22 @@ export default function GeneratorGizi() {
         </tbody>
       </table>
 
+      {mikroParsial > 0 && (
+        <p className="no-print mt-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
+          Catatan: {mikroParsial} bahan belum memiliki data mikronutrien (Kalsium/Zat Besi/Vitamin/Zinc),
+          sehingga total mikronutrien di bawah bersifat parsial. Data mikronutrien dilengkapi bertahap
+          untuk bahan yang nilainya mapan di TKPI.
+        </p>
+      )}
+
       <p className="mt-2 text-[9px] italic leading-snug text-gray-600">
         Keterangan: nilai gizi dihitung dari Tabel Komposisi Pangan Indonesia
-        (TKPI) per 100 g bahan dapat dimakan; AKG harian mengacu Permenkes RI No.
-        28 Tahun 2019. Target sekali makan diasumsikan 30% AKG harian untuk satu
-        waktu makan utama. Status &quot;Sesuai&quot; bila pemenuhan 80–120% target.
-        Angka bersifat estimasi perencanaan menu, bukan hasil uji laboratorium.
+        (TKPI) per 100 g bahan dapat dimakan; AKG (makro &amp; mikronutrien) mengacu
+        Permenkes RI No. 28 Tahun 2019. Mikronutrien (Kalsium, Zat Besi, Vitamin A,
+        Vitamin C, Zinc) tersedia untuk bahan-bahan utama dan dilengkapi bertahap.
+        Target sekali makan diasumsikan 30% AKG harian untuk satu waktu makan utama.
+        Status &quot;Sesuai&quot; bila pemenuhan 80–120% target. Angka bersifat estimasi
+        perencanaan menu, bukan hasil uji laboratorium.
       </p>
     </div>
   );

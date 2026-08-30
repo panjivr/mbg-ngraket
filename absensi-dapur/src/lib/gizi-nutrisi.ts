@@ -42,7 +42,28 @@ export interface BahanGizi {
   karbo: number;
   /** Serat (g). */
   serat: number;
+  /** Kalsium (mg) — opsional, diisi bertahap dari TKPI. */
+  kalsium?: number;
+  /** Zat besi / Fe (mg). */
+  besi?: number;
+  /** Vitamin A (mcg RE). */
+  vit_a?: number;
+  /** Vitamin C (mg). */
+  vit_c?: number;
+  /** Seng / Zinc (mg). */
+  zinc?: number;
 }
+
+/** Daftar kunci mikronutrien yang didukung generator. */
+export const MIKRO_KEYS = ["kalsium", "besi", "vit_a", "vit_c", "zinc"] as const;
+export type MikroKey = (typeof MIKRO_KEYS)[number];
+export const MIKRO_META: Record<MikroKey, { label: string; sat: string }> = {
+  kalsium: { label: "Kalsium", sat: "mg" },
+  besi: { label: "Zat Besi", sat: "mg" },
+  vit_a: { label: "Vitamin A", sat: "mcg" },
+  vit_c: { label: "Vitamin C", sat: "mg" },
+  zinc: { label: "Zinc", sat: "mg" },
+};
 
 export const BAHAN_GIZI: BahanGizi[] = [
   // — Makanan Pokok —
@@ -583,6 +604,64 @@ export const BAHAN_GIZI: BahanGizi[] = [
   { id: "puding-roti", nama: "Puding roti (bread pudding)", kategori: "olahan", energi: 165, protein: 4.6, lemak: 5.2, karbo: 24, serat: 0.8 },
 ];
 
+/**
+ * Mikronutrien per 100 g bagian dapat dimakan (acuan TKPI Kemenkes) — diisi
+ * BERTAHAP hanya untuk bahan yang nilainya mapan (staple, protein & sayur/buah
+ * umum program MBG). Bahan tanpa entri di sini tidak menyumbang mikronutrien
+ * (ditandai parsial di generator) agar tidak menyesatkan.
+ * Tuple: [kalsium mg, besi mg, vit_a mcg RE, vit_c mg, zinc mg].
+ */
+const MIKRO: Record<string, [number, number, number, number, number]> = {
+  // Makanan pokok
+  "beras-putih": [6, 0.8, 0, 0, 1.1],
+  "nasi-putih": [5, 0.2, 0, 0, 0.5],
+  "jagung-rebus": [3, 0.5, 10, 5, 0.6],
+  "ubi-jalar": [30, 0.7, 700, 20, 0.3],
+  singkong: [33, 0.7, 0, 30, 0.3],
+  kentang: [11, 0.7, 0, 17, 0.3],
+  // Lauk hewani
+  "dada-ayam": [14, 1.0, 20, 0, 1.0],
+  "telur-ayam": [54, 2.7, 140, 0, 1.0],
+  "daging-sapi": [11, 2.8, 0, 0, 4.3],
+  "hati-ayam": [14, 15.8, 3300, 0, 3.0],
+  "ikan-lele": [20, 1.0, 30, 0, 0.9],
+  "ikan-kembung": [20, 1.5, 30, 0, 0.7],
+  "susu-sapi": [143, 0.1, 39, 1, 0.4],
+  // Lauk nabati
+  tahu: [223, 3.4, 0, 0, 0.8],
+  tempe: [129, 4.0, 0, 0, 1.8],
+  "kacang-tanah": [58, 1.3, 0, 0, 3.3],
+  "kacang-hijau": [125, 6.7, 9, 6, 2.8],
+  // Sayur
+  bayam: [166, 3.5, 409, 41, 0.6],
+  kangkung: [73, 2.5, 300, 32, 0.4],
+  wortel: [39, 0.8, 835, 6, 0.3],
+  brokoli: [47, 0.7, 60, 89, 0.4],
+  buncis: [65, 1.1, 35, 19, 0.3],
+  "kacang-panjang": [49, 0.7, 34, 21, 0.4],
+  tomat: [5, 0.5, 42, 34, 0.2],
+  // Buah
+  pisang: [8, 0.5, 3, 9, 0.2],
+  pepaya: [23, 0.3, 47, 62, 0.1],
+  jeruk: [40, 0.1, 11, 53, 0.1],
+  apel: [6, 0.1, 3, 4, 0.1],
+  mangga: [11, 0.2, 54, 36, 0.1],
+  semangka: [7, 0.2, 28, 8, 0.1],
+};
+for (const b of BAHAN_GIZI) {
+  const m = MIKRO[b.id];
+  if (m) {
+    b.kalsium = m[0];
+    b.besi = m[1];
+    b.vit_a = m[2];
+    b.vit_c = m[3];
+    b.zinc = m[4];
+  }
+}
+
+/** Jumlah bahan yang sudah punya data mikronutrien (untuk info cakupan). */
+export const MIKRO_COUNT = Object.keys(MIKRO).length;
+
 export function getBahanGizi(id: string): BahanGizi | undefined {
   return BAHAN_GIZI.find((b) => b.id === id);
 }
@@ -604,16 +683,28 @@ export interface Sasaran {
   karbo: number;
   /** Serat (g/hari). */
   serat: number;
+  /** Kalsium (mg/hari). */
+  kalsium: number;
+  /** Zat besi / Fe (mg/hari). */
+  besi: number;
+  /** Vitamin A (mcg RE/hari). */
+  vit_a: number;
+  /** Vitamin C (mg/hari). */
+  vit_c: number;
+  /** Zinc (mg/hari). */
+  zinc: number;
 }
 
+// AKG mikronutrien mengacu Permenkes 28/2019 (nilai representatif per kelompok;
+// pada rentang campur jenis kelamin dipakai nilai tengah yang aman).
 export const SASARAN: Sasaran[] = [
-  { key: "balita", label: "Balita (1–5 th)", energi: 1350, protein: 25, lemak: 45, karbo: 215, serat: 19 },
-  { key: "sd13", label: "SD Kelas 1–3 (7–9 th)", energi: 1650, protein: 40, lemak: 55, karbo: 250, serat: 23 },
-  { key: "sd46", label: "SD Kelas 4–6 (10–12 th)", energi: 2000, protein: 50, lemak: 65, karbo: 300, serat: 28 },
-  { key: "smp", label: "SMP (13–15 th)", energi: 2400, protein: 70, lemak: 80, karbo: 350, serat: 34 },
-  { key: "sma", label: "SMA (16–18 th)", energi: 2650, protein: 75, lemak: 85, karbo: 400, serat: 37 },
-  { key: "bumil", label: "Ibu Hamil & Menyusui", energi: 2400, protein: 70, lemak: 75, karbo: 385, serat: 35 },
-  { key: "dewasa", label: "Dewasa (19–29 th)", energi: 2650, protein: 65, lemak: 75, karbo: 430, serat: 37 },
+  { key: "balita", label: "Balita (1–5 th)", energi: 1350, protein: 25, lemak: 45, karbo: 215, serat: 19, kalsium: 700, besi: 8, vit_a: 425, vit_c: 40, zinc: 4 },
+  { key: "sd13", label: "SD Kelas 1–3 (7–9 th)", energi: 1650, protein: 40, lemak: 55, karbo: 250, serat: 23, kalsium: 1000, besi: 10, vit_a: 500, vit_c: 45, zinc: 5 },
+  { key: "sd46", label: "SD Kelas 4–6 (10–12 th)", energi: 2000, protein: 50, lemak: 65, karbo: 300, serat: 28, kalsium: 1200, besi: 8, vit_a: 600, vit_c: 50, zinc: 8 },
+  { key: "smp", label: "SMP (13–15 th)", energi: 2400, protein: 70, lemak: 80, karbo: 350, serat: 34, kalsium: 1200, besi: 13, vit_a: 600, vit_c: 70, zinc: 10 },
+  { key: "sma", label: "SMA (16–18 th)", energi: 2650, protein: 75, lemak: 85, karbo: 400, serat: 37, kalsium: 1200, besi: 13, vit_a: 700, vit_c: 85, zinc: 11 },
+  { key: "bumil", label: "Ibu Hamil & Menyusui", energi: 2400, protein: 70, lemak: 75, karbo: 385, serat: 35, kalsium: 1200, besi: 18, vit_a: 900, vit_c: 85, zinc: 12 },
+  { key: "dewasa", label: "Dewasa (19–29 th)", energi: 2650, protein: 65, lemak: 75, karbo: 430, serat: 37, kalsium: 1000, besi: 14, vit_a: 650, vit_c: 90, zinc: 11 },
 ];
 
 export function getSasaran(key: string): Sasaran | undefined {
