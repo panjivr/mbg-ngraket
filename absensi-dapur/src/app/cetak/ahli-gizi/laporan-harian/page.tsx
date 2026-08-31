@@ -5,11 +5,14 @@ import { KopGizi } from "../_kop";
 
 const t = getTemplateGizi("laporan-harian")!;
 
-const KELOMPOK = [
-  "Balita, Ibu Hamil & Menyusui (B3)",
-  "SD Kelas 1–3",
-  "SD Kelas 4–6",
-  "SMP & SMA",
+// Tiap kelompok sasaran dipetakan ke sumber menu (sasaran distribusi) + AKG.
+// B3 → menu sasaran "b3" (AKG balita); tiga kelompok lain → menu "reguler"
+// (per-porsi identik; hanya % pemenuhan berbeda mengikuti AKG).
+const KELOMPOK: { label: string; sasaran: "reguler" | "b3"; akgKey: string }[] = [
+  { label: "Balita, Ibu Hamil & Menyusui (B3)", sasaran: "b3", akgKey: "balita" },
+  { label: "SD Kelas 1–3", sasaran: "reguler", akgKey: "sd13" },
+  { label: "SD Kelas 4–6", sasaran: "reguler", akgKey: "sd46" },
+  { label: "SMP & SMA", sasaran: "reguler", akgKey: "smp" },
 ];
 
 export default function Page() {
@@ -32,11 +35,11 @@ export default function Page() {
       </p>
 
       {KELOMPOK.map((k) => (
-        <div key={k} className="mt-5 break-inside-avoid">
+        <div key={k.label} className="mt-5 break-inside-avoid">
           <p className="mb-1 text-sm font-bold uppercase">
-            Kelompok: <Ed>{k}</Ed>
+            Kelompok: <Ed>{k.label}</Ed>
           </p>
-          <TabelGizi />
+          <TabelGizi sasaran={k.sasaran} akgKey={k.akgKey} />
         </div>
       ))}
 

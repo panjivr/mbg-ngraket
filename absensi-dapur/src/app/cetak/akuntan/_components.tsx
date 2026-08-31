@@ -72,6 +72,15 @@ export function formatTanggalID(iso: string, mode: TglMode): string {
 /** Tanggal dokumen aktif (YYYY-MM-DD). Kosong saat SSR → tak ada mismatch. */
 const TanggalContext = createContext<string>("");
 
+/**
+ * Baca tanggal dokumen aktif (YYYY-MM-DD) dari PrintFrame. Kosong saat SSR /
+ * sebelum toolbar mengisi. Dipakai komponen yang perlu auto-load data per
+ * tanggal laporan (mis. TabelGizi ahli gizi).
+ */
+export function useTanggalISO(): string {
+  return useContext(TanggalContext);
+}
+
 /** Tanggal "hari ini" zona Asia/Jakarta sebagai "YYYY-MM-DD". */
 function todayJakarta(): string {
   return new Intl.DateTimeFormat("en-CA", {

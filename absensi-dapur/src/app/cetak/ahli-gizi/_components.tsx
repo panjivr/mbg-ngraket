@@ -10,8 +10,9 @@
  * tersimpan/tercetak (PrintFrame membuang elemen .no-print saat menyimpan).
  */
 import { useEffect, useRef, useState } from "react";
-import { Ed, Tgl } from "../akuntan/_components";
+import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
+import { getSasaran, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
 
 /** Angka tanggal 1..31 untuk header grid bulanan. */
 export const DAYS: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -149,17 +150,96 @@ export function GridBulanan({
   );
 }
 
+// ————————————————————————————————————————————————————————————————
+// Data gizi harian (dari GET /api/admin/ahli-gizi/gizi-harian).
+// Struktur mengikuti envelope FLAT endpoint: { tanggal, reguler, b3 }.
+
+/** Sasaran distribusi menu pada jadwal. */
+type SasaranMenu = "reguler" | "b3";
+
+interface BahanGiziRow {
+  nama: string;
+  beratG: number;
+  energi: number;
+  protein: number;
+  lemak: number;
+  karbo: number;
+  serat: number;
+  terhitung: boolean;
+}
+interface MenuGiziRow {
+  nama: string;
+  waktu: string;
+  bahan: BahanGiziRow[];
+}
+interface SasaranGiziData {
+  menus: MenuGiziRow[];
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+}
+
+/** Bulatkan 1 desimal, buang trailing nol → "12.5" / "40". */
+function f1(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isFinite(r) ? String(r) : "";
+}
+
 /**
  * Tabel zat gizi untuk Laporan Harian (Rencana Standar Porsi Menu).
  * Kolom: Waktu | Menu | Sumber Pangan | Berat (g) | URT | Energi | Protein |
- * Lemak | KH | Serat. Ada 3 baris rekap berlabel tetap (Total / Kebutuhan 30% /
- * %Pemenuhan) yang nilainya diisi manual (contentEditable).
+ * Lemak | KH | Serat. Ada 3 baris rekap (Total / Kebutuhan 30% / %Pemenuhan).
+ *
+ * Bila `sasaran` diisi, tabel OTOMATIS memuat rincian gizi seluruh menu yang
+ * dijadwalkan pada tanggal dokumen (dari TanggalContext) untuk sasaran tsb,
+ * per bahan (sumber pangan) beserta total & % pemenuhan terhadap AKG `akgKey`
+ * (target 30% per waktu makan). Semua sel tetap contentEditable agar ahli gizi
+ * bisa menyunting sebelum cetak. Tanpa props → mode manual (baris kosong).
  */
-export function TabelGizi({ barisAwal = 5 }: { barisAwal?: number }) {
+export function TabelGizi({
+  barisAwal,
+  sasaran,
+  akgKey,
+}: {
+  barisAwal?: number;
+  /** Kelompok distribusi menu; mengaktifkan auto-load bila diisi. */
+  sasaran?: SasaranMenu;
+  /** Kunci AKG (mis. "sd13", "balita") untuk baris kebutuhan & % pemenuhan. */
+  akgKey?: string;
+}) {
+  const iso = useTanggalISO();
+  // Mode auto (sasaran diisi) mulai tanpa baris manual; mode manual → 5 baris.
+  const barisManual = barisAwal ?? (sasaran ? 0 : 5);
   const [rows, setRows] = useState<number[]>(() =>
-    Array.from({ length: barisAwal }, (_, i) => i),
+    Array.from({ length: barisManual }, (_, i) => i),
   );
-  const nextId = useRef(barisAwal);
+  const nextId = useRef(barisManual);
+  const [data, setData] = useState<SasaranGiziData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Auto-load gizi menu terjadwal pada tanggal dokumen untuk sasaran ini.
+  useEffect(() => {
+    if (!sasaran || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setData(null);
+      return;
+    }
+    let batal = false;
+    setLoading(true);
+    fetch(`/api/admin/ahli-gizi/gizi-harian?tanggal=${iso}`)
+      .then(async (res) => {
+        const j = await res.json().catch(() => ({}));
+        if (batal) return;
+        if (res.ok && j && j[sasaran]) setData(j[sasaran] as SasaranGiziData);
+        else setData(null);
+      })
+      .catch(() => {
+        if (!batal) setData(null);
+      })
+      .finally(() => {
+        if (!batal) setLoading(false);
+      });
+    return () => {
+      batal = true;
+    };
+  }, [iso, sasaran]);
 
   const HEAD = [
     "Waktu",
@@ -173,6 +253,51 @@ export function TabelGizi({ barisAwal = 5 }: { barisAwal?: number }) {
     "KH (g)",
     "Serat (g)",
   ];
+
+  const akg = akgKey ? getSasaran(akgKey) : undefined;
+  const menus = data?.menus ?? [];
+  const adaData = menus.length > 0;
+  // Key stabil supaya sel Ed (contentEditable, tak terkontrol) ikut remount
+  // dengan isi baru saat tanggal/sasaran/data berubah.
+  const dataKey = `${iso}:${sasaran ?? ""}:${menus.length}`;
+
+  // Baris rekap: nilai gizi per kolom (Energi, Protein, Lemak, KH, Serat).
+  const total = data?.total ?? { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
+  const keb = akg
+    ? {
+        energi: akg.energi * MEAL_FRACTION,
+        protein: akg.protein * MEAL_FRACTION,
+        lemak: akg.lemak * MEAL_FRACTION,
+        karbo: akg.karbo * MEAL_FRACTION,
+        serat: akg.serat * MEAL_FRACTION,
+      }
+    : null;
+  const pct = (nilai: number, target: number): string =>
+    target > 0 ? `${f1((nilai / target) * 100)}%` : "";
+
+  const rekapCells = (label: string): (string | undefined)[] => {
+    if (label.startsWith("Total")) {
+      return adaData
+        ? [f1(total.energi), f1(total.protein), f1(total.lemak), f1(total.karbo), f1(total.serat)]
+        : [undefined, undefined, undefined, undefined, undefined];
+    }
+    if (label.startsWith("Kebutuhan")) {
+      return keb
+        ? [f1(keb.energi), f1(keb.protein), f1(keb.lemak), f1(keb.karbo), f1(keb.serat)]
+        : [undefined, undefined, undefined, undefined, undefined];
+    }
+    // % Pemenuhan
+    return adaData && keb
+      ? [
+          pct(total.energi, keb.energi),
+          pct(total.protein, keb.protein),
+          pct(total.lemak, keb.lemak),
+          pct(total.karbo, keb.karbo),
+          pct(total.serat, keb.serat),
+        ]
+      : [undefined, undefined, undefined, undefined, undefined];
+  };
+
   const REKAP = [
     "Total Zat Gizi",
     "Kebutuhan Zat Gizi (30%)",
@@ -193,6 +318,51 @@ export function TabelGizi({ barisAwal = 5 }: { barisAwal?: number }) {
           </tr>
         </thead>
         <tbody>
+          {/* Baris otomatis dari menu terjadwal (per bahan). */}
+          {adaData &&
+            menus.map((m, mi) =>
+              m.bahan.map((b, bi) => (
+                <tr key={`${dataKey}:${mi}:${bi}`}>
+                  {bi === 0 ? (
+                    <>
+                      <td className={cell} rowSpan={m.bahan.length}>
+                        <Ed block>{m.waktu}</Ed>
+                      </td>
+                      <td className={cell} rowSpan={m.bahan.length}>
+                        <Ed block>{m.nama}</Ed>
+                      </td>
+                    </>
+                  ) : null}
+                  <td className={cell}>
+                    <Ed block>{b.nama}</Ed>
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.beratG > 0 ? f1(b.beratG) : ""}</Ed>
+                  </td>
+                  <td className={cell}>
+                    <Ed block />
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.terhitung ? f1(b.energi) : ""}</Ed>
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.terhitung ? f1(b.protein) : ""}</Ed>
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.terhitung ? f1(b.lemak) : ""}</Ed>
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.terhitung ? f1(b.karbo) : ""}</Ed>
+                  </td>
+                  <td className={cell + " text-center"}>
+                    <Ed block>{b.terhitung ? f1(b.serat) : ""}</Ed>
+                  </td>
+                  <td className="no-print border border-black" />
+                </tr>
+              )),
+            )}
+
+          {/* Baris manual (mode tanpa data / tambahan). */}
           {rows.map((id) => (
             <tr key={id}>
               {HEAD.map((_, c) => (
@@ -212,32 +382,47 @@ export function TabelGizi({ barisAwal = 5 }: { barisAwal?: number }) {
               </td>
             </tr>
           ))}
-          {REKAP.map((label) => (
-            <tr key={label} style={{ backgroundColor: "#F2F2F2" }}>
-              <td className={th + " text-left"} colSpan={5}>
-                {label}
-              </td>
-              {/* Energi, Protein, Lemak, KH, Serat */}
-              {Array.from({ length: 5 }).map((_, c) => (
-                <td key={c} className={cell + " text-center font-semibold"}>
-                  <Ed block />
+
+          {REKAP.map((label) => {
+            const vals = rekapCells(label);
+            return (
+              <tr key={`${dataKey}:${label}`} style={{ backgroundColor: "#F2F2F2" }}>
+                <td className={th + " text-left"} colSpan={5}>
+                  {label}
                 </td>
-              ))}
-              <td className="no-print border border-black" />
-            </tr>
-          ))}
+                {/* Energi, Protein, Lemak, KH, Serat */}
+                {vals.map((v, c) => (
+                  <td key={c} className={cell + " text-center font-semibold"}>
+                    <Ed block>{v}</Ed>
+                  </td>
+                ))}
+                <td className="no-print border border-black" />
+              </tr>
+            );
+          })}
         </tbody>
       </table>
-      <button
-        type="button"
-        onClick={() => {
-          const id = nextId.current++;
-          setRows((s) => [...s, id]);
-        }}
-        className="no-print mt-1 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
-      >
-        ＋ Tambah baris menu
-      </button>
+      <div className="no-print mt-1 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            const id = nextId.current++;
+            setRows((s) => [...s, id]);
+          }}
+          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+        >
+          ＋ Tambah baris menu
+        </button>
+        {sasaran ? (
+          <span className="text-xs text-gray-400">
+            {loading
+              ? "Memuat gizi menu terjadwal…"
+              : adaData
+                ? `Terisi otomatis dari ${menus.length} menu terjadwal (${iso}).`
+                : `Belum ada menu terjadwal untuk sasaran ini pada ${iso || "tanggal dipilih"}.`}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

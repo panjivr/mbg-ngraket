@@ -218,3 +218,74 @@ export function hitungGiziPerPorsi(
   }
   return acc;
 }
+
+/** Satu bahan dengan kontribusi gizinya untuk 1 porsi (untuk tabel rinci). */
+export interface BahanGiziRinci {
+  nama: string;
+  beratG: number; // gram bahan per porsi
+  energi: number;
+  protein: number;
+  lemak: number;
+  karbo: number;
+  serat: number;
+  terhitung: boolean; // false = bahan tak ada di tabel TKPI / satuan tak terkonversi
+}
+
+/** Rincian gizi 1 porsi menu: kontribusi tiap bahan + total. */
+export interface RincianGizi {
+  bahan: BahanGiziRinci[];
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  cocok: number; // jumlah bahan yang berhasil dihitung
+  totalBahan: number; // jumlah bahan bernama
+  takTerhitung: string[];
+}
+
+/**
+ * Seperti hitungGiziPerPorsi, tetapi mengembalikan kontribusi PER BAHAN (untuk
+ * tabel zat gizi ahli gizi yang menampilkan tiap sumber pangan + beratnya),
+ * plus total. Estimasi perencanaan (bergantung ketepatan nama & satuan bahan).
+ */
+export function rincianGiziPerPorsi(
+  bahan: { nama: string; satuan: string; jumlah_dasar: number; komponen: KomponenGizi }[],
+  porsiDasar: number,
+): RincianGizi {
+  const out: RincianGizi = {
+    bahan: [],
+    total: { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 },
+    cocok: 0,
+    totalBahan: 0,
+    takTerhitung: [],
+  };
+  if (!(porsiDasar > 0)) return out;
+  for (const b of bahan) {
+    if (!b.nama.trim()) continue;
+    out.totalBahan += 1;
+    const gizi = cariGiziByNama(b.nama, KOMPONEN_KE_KATEGORI_GIZI[b.komponen]);
+    const gramDasar = jumlahKeGram(b.jumlah_dasar, b.satuan);
+    if (!gizi || gramDasar === null) {
+      out.takTerhitung.push(b.nama);
+      out.bahan.push({ nama: b.nama, beratG: 0, energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0, terhitung: false });
+      continue;
+    }
+    const beratG = gramDasar / porsiDasar; // gram bahan per porsi
+    const f = beratG / 100;
+    const row: BahanGiziRinci = {
+      nama: b.nama,
+      beratG,
+      energi: gizi.energi * f,
+      protein: gizi.protein * f,
+      lemak: gizi.lemak * f,
+      karbo: gizi.karbo * f,
+      serat: gizi.serat * f,
+      terhitung: true,
+    };
+    out.bahan.push(row);
+    out.total.energi += row.energi;
+    out.total.protein += row.protein;
+    out.total.lemak += row.lemak;
+    out.total.karbo += row.karbo;
+    out.total.serat += row.serat;
+    out.cocok += 1;
+  }
+  return out;
+}
