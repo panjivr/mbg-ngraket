@@ -11,7 +11,7 @@
  * Dipakai sebagai child <PrintFrame> (lihat ../_components: toolbar + print CSS +
  * simpan arsip). Kontrol editor ber-kelas .no-print → tidak ikut tercetak/tersimpan.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Ed, Tgl } from "../../akuntan/_components";
 import {
   BAHAN_GIZI,
@@ -67,6 +67,34 @@ const URUT_KATEGORI: KategoriBahan[] = [
   "olahan",
   "lainnya",
 ];
+
+/**
+ * Pemilih bahan dengan pencarian ketik-cari (native <datalist>).
+ * Jauh lebih mudah daripada scroll <select> ratusan item: klik → ketik nama →
+ * pilih. Menyimpan teks lokal; hanya memanggil onChange saat cocok persis
+ * dengan salah satu nama bahan.
+ */
+function BahanPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [q, setQ] = useState(getBahanGizi(value)?.nama ?? "");
+  useEffect(() => {
+    setQ(getBahanGizi(value)?.nama ?? "");
+  }, [value]);
+  return (
+    <input
+      list="bahan-list"
+      value={q}
+      onChange={(e) => {
+        const text = e.target.value;
+        setQ(text);
+        const t = text.trim().toLowerCase();
+        const match = BAHAN_GIZI.find((b) => b.nama.toLowerCase() === t);
+        if (match) onChange(match.id);
+      }}
+      placeholder="Ketik nama bahan…"
+      className="w-full rounded border border-gray-300 px-2 py-1"
+    />
+  );
+}
 
 export default function GeneratorGizi() {
   const [sasaranKey, setSasaranKey] = useState(SASARAN[1].key); // default SD 1–3
@@ -238,22 +266,7 @@ export default function GeneratorGizi() {
               {rows.map((r) => (
                 <tr key={r.id}>
                   <td className="px-1 py-0.5">
-                    <select
-                      value={r.bahanId}
-                      onChange={(e) => setBahan(r.id, e.target.value)}
-                      className="w-full rounded border border-gray-300 px-2 py-1"
-                    >
-                      <option value="">— pilih bahan —</option>
-                      {URUT_KATEGORI.map((k) => (
-                        <optgroup key={k} label={KATEGORI_LABEL[k]}>
-                          {BAHAN_GIZI.filter((b) => b.kategori === k).map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.nama}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
+                    <BahanPicker value={r.bahanId} onChange={(id) => setBahan(r.id, id)} />
                   </td>
                   <td className="px-1 py-0.5">
                     <input
@@ -278,6 +291,13 @@ export default function GeneratorGizi() {
               ))}
             </tbody>
           </table>
+          <datalist id="bahan-list">
+            {URUT_KATEGORI.flatMap((k) =>
+              BAHAN_GIZI.filter((b) => b.kategori === k).map((b) => (
+                <option key={b.id} value={b.nama} label={KATEGORI_LABEL[k]} />
+              )),
+            )}
+          </datalist>
         </div>
         <button
           type="button"
