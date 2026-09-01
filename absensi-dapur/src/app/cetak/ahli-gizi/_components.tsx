@@ -744,12 +744,13 @@ export function TabelMenuMingguan() {
  * (canvas 288×360, crop tengah ke rasio 4:5, JPEG 0.6) supaya ukuran base64
  * kecil dan aman disimpan di konten_html. Kontrol pilih berkelas .no-print.
  */
-export function KotakFoto() {
-  const [src, setSrc] = useState("");
-
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+/**
+ * Crop tengah sebuah file gambar ke rasio potret 4:5 (canvas 288×360) lalu
+ * kembalikan JPEG 0.6 sebagai data URL. Dipakai bersama oleh KotakFoto (upload
+ * satuan) dan bulk-upload DokumentasiMingguan supaya hasil kompresi konsisten.
+ */
+function cropTo45(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new window.Image();
     img.onload = () => {
@@ -761,22 +762,57 @@ export function KotakFoto() {
       canvas.width = W;
       canvas.height = H;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
-        // Crop tengah ke rasio 4:5 dari sumber.
-        let cw = img.width;
-        let ch = img.width / RATIO;
-        if (ch > img.height) {
-          ch = img.height;
-          cw = img.height * RATIO;
-        }
-        const sx = (img.width - cw) / 2;
-        const sy = (img.height - ch) / 2;
-        ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
-        setSrc(canvas.toDataURL("image/jpeg", 0.6));
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("no ctx"));
+        return;
       }
+      // Crop tengah ke rasio 4:5 dari sumber.
+      let cw = img.width;
+      let ch = img.width / RATIO;
+      if (ch > img.height) {
+        ch = img.height;
+        cw = img.height * RATIO;
+      }
+      const sx = (img.width - cw) / 2;
+      const sy = (img.height - ch) / 2;
+      ctx.drawImage(img, sx, sy, cw, ch, 0, 0, W, H);
+      const out = canvas.toDataURL("image/jpeg", 0.6);
       URL.revokeObjectURL(url);
+      resolve(out);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("img error"));
     };
     img.src = url;
+  });
+}
+
+export function KotakFoto({
+  src: srcProp,
+  onPick,
+}: {
+  /** Bila `onPick` diberikan → mode terkontrol: foto disimpan di induk supaya
+   *  tahan remount & bisa diisi bulk-upload. Tanpa itu → mode mandiri (state lokal). */
+  src?: string;
+  onPick?: (dataUrl: string) => void;
+} = {}) {
+  const [srcState, setSrcState] = useState("");
+  const controlled = onPick !== undefined;
+  const src = controlled ? srcProp ?? "" : srcState;
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const out = await cropTo45(file);
+      if (controlled) onPick(out);
+      else setSrcState(out);
+    } catch {
+      // Abaikan file yang gagal diproses.
+    }
   };
 
   return (
@@ -822,13 +858,20 @@ export function DokHari({
   hari,
   tanggal = "",
   menu = "………",
+  srcs,
+  onPick,
 }: {
   ke: string;
   hari: string;
   /** ISO YYYY-MM-DD; ditampilkan sebagai "31 Juli 2026". */
   tanggal?: string;
   menu?: string;
+  /** Dua slot foto terkontrol (mode induk). Bila `onPick` ada → foto disimpan
+   *  di induk sehingga bisa diisi bulk-upload & tahan remount. */
+  srcs?: [string, string];
+  onPick?: (localIdx: number, dataUrl: string) => void;
 }) {
+  const controlled = onPick !== undefined;
   return (
     <div className="mt-3 break-inside-avoid">
       <p className="font-semibold">
@@ -838,8 +881,17 @@ export function DokHari({
         Menu: <Ed block>{menu || "………"}</Ed>
       </p>
       <div className="mt-1 grid grid-cols-2 gap-2">
-        <KotakFoto />
-        <KotakFoto />
+        {controlled ? (
+          <>
+            <KotakFoto src={srcs?.[0] ?? ""} onPick={(d) => onPick(0, d)} />
+            <KotakFoto src={srcs?.[1] ?? ""} onPick={(d) => onPick(1, d)} />
+          </>
+        ) : (
+          <>
+            <KotakFoto />
+            <KotakFoto />
+          </>
+        )}
       </div>
     </div>
   );
@@ -862,12 +914,46 @@ export function DokumentasiMingguan() {
       pm: null,
     })),
   );
+  // 5 hari × 2 slot = 10 foto. Disimpan di induk (bukan di tiap KotakFoto) agar
+  // bulk-upload bisa mengisinya berurutan & foto tahan remount saat "Muat 5 hari".
+  const [fotos, setFotos] = useState<string[]>(() => Array(10).fill(""));
 
   const muat = async (start: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
     setLoading(true);
     setRows(await ambilMenu5Hari(start));
     setLoading(false);
+  };
+
+  const setFoto = (idx: number, dataUrl: string) => {
+    setFotos((prev) => {
+      const next = [...prev];
+      next[idx] = dataUrl;
+      return next;
+    });
+  };
+
+  // Bulk-upload: pilih banyak foto sekaligus → tiap foto otomatis mengisi slot
+  // KOSONG berikutnya (urut kiri→kanan, atas→bawah), tanpa upload satu-satu.
+  const muatBanyak = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const olahan: string[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        olahan.push(await cropTo45(f));
+      } catch {
+        // Lewati file yang gagal diproses.
+      }
+    }
+    if (olahan.length === 0) return;
+    setFotos((prev) => {
+      const next = [...prev];
+      let ci = 0;
+      for (let i = 0; i < next.length && ci < olahan.length; i++) {
+        if (!next[i]) next[i] = olahan[ci++];
+      }
+      return next;
+    });
   };
 
   return (
@@ -891,6 +977,23 @@ export function DokumentasiMingguan() {
         <span className="text-emerald-700">
           Tanggal &amp; menu terisi otomatis dari distribusi (Senin–Jumat).
         </span>
+        <span className="mx-1 h-4 w-px bg-emerald-300" />
+        <label className="cursor-pointer rounded bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700">
+          Upload banyak foto
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              muatBanyak(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        <span className="text-amber-700">
+          Pilih 1–10 foto sekaligus → otomatis mengisi slot kosong berurutan.
+        </span>
       </div>
       {rows.map((r, i) => (
         <DokHari
@@ -899,6 +1002,8 @@ export function DokumentasiMingguan() {
           hari={r.hari}
           tanggal={r.tanggal}
           menu={r.menu}
+          srcs={[fotos[i * 2] ?? "", fotos[i * 2 + 1] ?? ""]}
+          onPick={(localIdx, dataUrl) => setFoto(i * 2 + localIdx, dataUrl)}
         />
       ))}
     </div>

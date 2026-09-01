@@ -37,13 +37,24 @@ export default function LaporanPage() {
   }
   function setPersonel(next: Personel[]) { patchIsi({ personel: next }); }
 
-  async function addFoto(key: keyof LaporanFoto, file: File | undefined, max: number) {
-    if (!file || !foto) return;
-    if (foto[key].length >= max) { setMsg(`Maksimal ${max} foto untuk slot ini.`); return; }
-    try {
-      const dataUrl = await compressImage(file);
-      setFoto((prev) => (prev ? { ...prev, [key]: [...prev[key], dataUrl].slice(0, max) } : prev));
-    } catch { setMsg("Gagal memproses foto."); }
+  // Terima BANYAK foto untuk satu slot sekaligus: tiap file dikompres lalu diisi
+  // berurutan sampai batas `max` slot — tak perlu unggah satu per satu.
+  async function addFotos(key: keyof LaporanFoto, files: FileList | null, max: number) {
+    if (!files || files.length === 0 || !foto) return;
+    const sisa = max - foto[key].length;
+    if (sisa <= 0) { setMsg(`Maksimal ${max} foto untuk slot ini.`); return; }
+    const pilih = Array.from(files).slice(0, sisa);
+    const olahan: string[] = [];
+    for (const f of pilih) {
+      try {
+        olahan.push(await compressImage(f));
+      } catch {
+        // Lewati file yang gagal diproses.
+      }
+    }
+    if (olahan.length === 0) { setMsg("Gagal memproses foto."); return; }
+    setFoto((prev) => (prev ? { ...prev, [key]: [...prev[key], ...olahan].slice(0, max) } : prev));
+    if (files.length > sisa) setMsg(`Slot ini menerima ${sisa} foto pertama (batas ${max}).`);
   }
   function removeFoto(key: keyof LaporanFoto, idx: number) {
     setFoto((prev) => (prev ? { ...prev, [key]: prev[key].filter((_, i) => i !== idx) } : prev));
@@ -155,7 +166,7 @@ export default function LaporanPage() {
           <div className="card space-y-3 p-4">
             <h2 className="text-sm font-semibold text-gold-400">Foto (menu &amp; dokumentasi)</h2>
             <p className="text-xs text-slate-500">
-              Menu 2 foto (tampil di atas rincian menu). Dokumentasi 3 foto per kegiatan. Semua rasio disamakan (4:3) &amp; dikompres otomatis.
+              Menu 2 foto (tampil di atas rincian menu). Dokumentasi 3 foto per kegiatan. Bisa pilih beberapa foto sekaligus lewat kotak “+” — otomatis mengisi slot berurutan. Semua rasio disamakan (4:3) &amp; dikompres otomatis.
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {FOTO_SLOTS.map((s) => (
@@ -176,8 +187,8 @@ export default function LaporanPage() {
                     {foto[s.key].length < s.max && (
                       <label className="grid cursor-pointer place-items-center rounded border border-dashed border-white/20 bg-black/10 text-xl text-slate-500 hover:bg-black/20" style={{ aspectRatio: s.key === "menu" ? "4/5" : "4/3" }}>
                         +
-                        <input type="file" accept="image/*" className="hidden"
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => { addFoto(s.key, e.target.files?.[0], s.max); e.target.value = ""; }} />
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => { addFotos(s.key, e.target.files, s.max); e.target.value = ""; }} />
                       </label>
                     )}
                   </div>

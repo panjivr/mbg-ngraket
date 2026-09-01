@@ -35,14 +35,25 @@ export default function DokumentasiPage() {
   }, [tanggal, kegiatan]);
   useEffect(() => { load(); }, [load]);
 
-  async function addFoto(file: File | undefined) {
-    if (!file) return;
-    if (foto.length >= FOTO_MAX) { setMsg(`Maksimal ${FOTO_MAX} foto.`); return; }
-    try {
-      // Kompres lebih ketat karena bisa sampai 30 foto (jaga ukuran unggah).
-      const dataUrl = await compressImage(file, 900, 0.62);
-      setFoto((prev) => [...prev, dataUrl].slice(0, FOTO_MAX));
-    } catch { setMsg("Gagal memproses foto."); }
+  // Terima BANYAK foto sekaligus: tiap file dikompres lalu ditambahkan berurutan
+  // sampai batas FOTO_MAX — tak perlu unggah satu per satu.
+  async function addFotos(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const sisa = FOTO_MAX - foto.length;
+    if (sisa <= 0) { setMsg(`Maksimal ${FOTO_MAX} foto.`); return; }
+    const pilih = Array.from(files).slice(0, sisa);
+    const olahan: string[] = [];
+    for (const f of pilih) {
+      try {
+        // Kompres lebih ketat karena bisa sampai puluhan foto (jaga ukuran unggah).
+        olahan.push(await compressImage(f, 900, 0.62));
+      } catch {
+        // Lewati file yang gagal diproses.
+      }
+    }
+    if (olahan.length === 0) { setMsg("Gagal memproses foto."); return; }
+    setFoto((prev) => [...prev, ...olahan].slice(0, FOTO_MAX));
+    if (files.length > sisa) setMsg(`Hanya ${sisa} foto pertama ditambahkan (batas ${FOTO_MAX}).`);
   }
   function removeFoto(idx: number) { setFoto((prev) => prev.filter((_, i) => i !== idx)); }
 
@@ -95,7 +106,7 @@ export default function DokumentasiPage() {
         <div className="card space-y-3 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gold-400">Foto / Dokumentasi <span className="font-normal text-slate-500">({foto.length}/{FOTO_MAX})</span></h2>
-            <p className="text-xs text-slate-500">Hingga 60 foto · rasio seragam 3:4 · saat cetak otomatis 12 foto per halaman (A4/F4).</p>
+            <p className="text-xs text-slate-500">Hingga 60 foto · pilih banyak foto sekaligus lewat kotak “+” · rasio seragam 3:4 · saat cetak otomatis 12 foto per halaman (A4/F4).</p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {foto.map((src, i) => (
@@ -109,8 +120,8 @@ export default function DokumentasiPage() {
             {foto.length < FOTO_MAX && (
               <label className="grid aspect-[3/4] cursor-pointer place-items-center rounded border border-dashed border-white/20 bg-black/10 text-3xl text-slate-500 hover:bg-black/20">
                 +
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => { addFoto(e.target.files?.[0]); e.target.value = ""; }} />
+                <input type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => { addFotos(e.target.files); e.target.value = ""; }} />
               </label>
             )}
           </div>
