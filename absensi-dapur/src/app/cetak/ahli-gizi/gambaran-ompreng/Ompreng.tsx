@@ -212,23 +212,34 @@ function Sekat({
   nama,
   kategori,
   besar = false,
+  bulat = false,
+  area,
 }: {
   nama: string;
   kategori: Kategori;
+  /** teks menu lebih besar (sekat utama) */
   besar?: boolean;
+  /** render sebagai mangkuk bulat (sekat buah kanan-bawah) */
+  bulat?: boolean;
+  /** penempatan grid (grid-area) */
+  area?: string;
 }) {
   return (
     <div
-      className="relative flex flex-col overflow-hidden rounded-[14px]"
+      className={`relative flex flex-col overflow-hidden ${bulat ? "rounded-full" : "rounded-[14px]"}`}
       style={{
+        gridArea: area,
         background: "linear-gradient(160deg,#eef1f4,#dbe0e6 55%,#eef1f4)",
         boxShadow: "inset 0 2px 6px rgba(0,0,0,.16), inset 0 -1px 3px rgba(255,255,255,.7)",
         border: "1px solid rgba(120,130,140,.45)",
-        gridRow: besar ? "span 2" : undefined,
+        aspectRatio: bulat ? "1 / 1" : undefined,
+        alignSelf: bulat ? "center" : undefined,
+        justifySelf: bulat ? "center" : undefined,
+        maxWidth: bulat ? "100%" : undefined,
       }}
     >
       {/* Label menu (di atas) */}
-      <div className="px-2 pt-2 text-center">
+      <div className={`px-2 text-center ${bulat ? "pt-4" : "pt-2"}`}>
         <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
           {ROLE_LABEL[kategori]}
         </p>
@@ -241,7 +252,7 @@ function Sekat({
         </p>
       </div>
       {/* Ilustrasi makanan */}
-      <div className="min-h-0 flex-1 px-2 pb-1">
+      <div className={`min-h-0 flex-1 px-2 ${bulat ? "pb-3" : "pb-1"}`}>
         <FoodArt nama={nama} kategori={kategori} />
       </div>
     </div>
@@ -417,16 +428,23 @@ export default function Ompreng() {
           <div
             className="grid gap-3"
             style={{
-              gridTemplateColumns: "1.35fr 1fr 1fr",
+              // Mengikuti nampan asli: 3 sekat di atas (kiri sedang, tengah
+              // besar, kanan kecil) + 2 sekat di bawah (kiri memanjang lebar,
+              // kanan mangkuk bulat).
+              gridTemplateColumns: "1fr 1.25fr 0.9fr",
               gridTemplateRows: "1fr 1fr",
+              gridTemplateAreas: `
+                "s1 s2 s3"
+                "s4 s4 s5"
+              `,
               aspectRatio: "16 / 10",
             }}
           >
-            <Sekat nama={comps[0].nama} kategori={kategoriDari(comps[0])} besar />
-            <Sekat nama={comps[1].nama} kategori={kategoriDari(comps[1])} />
-            <Sekat nama={comps[2].nama} kategori={kategoriDari(comps[2])} />
-            <Sekat nama={comps[3].nama} kategori={kategoriDari(comps[3])} />
-            <Sekat nama={comps[4].nama} kategori={kategoriDari(comps[4])} />
+            <Sekat nama={comps[0].nama} kategori={kategoriDari(comps[0])} area="s1" />
+            <Sekat nama={comps[1].nama} kategori={kategoriDari(comps[1])} besar area="s2" />
+            <Sekat nama={comps[2].nama} kategori={kategoriDari(comps[2])} area="s3" />
+            <Sekat nama={comps[3].nama} kategori={kategoriDari(comps[3])} area="s4" />
+            <Sekat nama={comps[4].nama} kategori={kategoriDari(comps[4])} bulat area="s5" />
           </div>
         </div>
 
