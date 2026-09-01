@@ -28,6 +28,15 @@ export const TEMPLATE_GIZI: TemplateGizi[] = [
       "Kalkulator interaktif komposisi menu: pilih bahan + berat per porsi, otomatis hitung energi, protein, lemak, KH, serat, serta % pemenuhan AKG per kelompok sasaran (pengganti mandiri Nutri Survey).",
     ikon: "🧮",
   },
+  {
+    slug: "gambaran-ompreng",
+    judul: "Gambaran Ompreng (Visual Menu)",
+    heading: "GAMBARAN OMPRENG — RENCANA MENU HARIAN",
+    nomor: "",
+    deskripsi:
+      "Visualisasi nampan ompreng 5 sekat dengan label menu per sekat & ilustrasi makanan otomatis. Menu bisa diganti bebas dan hasilnya diunduh sebagai PNG/JPG — cocok untuk menyodorkan rencana menu ke kepala dapur.",
+    ikon: "🍱",
+  },
   // — Laporan —
   {
     slug: "laporan-harian",
@@ -314,6 +323,11 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
     label: "Analisis Gizi",
     ket: "Generator kandungan gizi menu & pemenuhan AKG.",
     slugs: ["generator-gizi"],
+  },
+  {
+    label: "Visualisasi Menu",
+    ket: "Gambaran ompreng 5 sekat untuk presentasi menu (ekspor PNG/JPG).",
+    slugs: ["gambaran-ompreng"],
   },
   {
     label: "Laporan Gizi",
