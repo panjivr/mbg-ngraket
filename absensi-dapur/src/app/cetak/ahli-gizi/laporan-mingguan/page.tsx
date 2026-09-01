@@ -2,6 +2,7 @@ import { PrintFrame, Tgl, Ed } from "../../akuntan/_components";
 import {
   DaftarPenerima,
   DokumentasiMingguan,
+  SumberGiziSwitch,
   TabelMenuMingguan,
   TTDGiziAuto,
 } from "../_components";
@@ -130,6 +131,17 @@ Sebagai bagian dari upaya kolektif untuk menciptakan masyarakat yang lebih sehat
             (pilih tanggal mulai lalu muat).
           </p>
           <TabelMenuMingguan />
+
+          <p className="mb-1 mt-4 font-bold">
+            Analisis Kandungan Gizi &amp; Pemenuhan AKG
+          </p>
+          <p className="mb-1 text-[11px] italic text-gray-600">
+            Dua sumber data: <b>Menu Terjadwal</b> (agregasi otomatis dari menu
+            yang dijadwalkan pada tanggal dokumen) atau <b>Generator Kandungan
+            Gizi</b> (hitung manual bahan + gram berbasis TKPI). Pemilih tidak
+            ikut tercetak.
+          </p>
+          <SumberGiziSwitch />
         </div>
       </Bab>
 

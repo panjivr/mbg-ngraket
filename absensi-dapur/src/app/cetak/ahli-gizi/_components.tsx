@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 import { getSasaran, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
+import GeneratorGizi from "./generator-gizi/GeneratorGizi";
 
 /** Angka tanggal 1..31 untuk header grid bulanan. */
 export const DAYS: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -1130,6 +1131,72 @@ export function TabelSuhuMakanan() {
       >
         ＋ Tambah baris
       </button>
+    </div>
+  );
+}
+
+/**
+ * Empat kelompok sasaran (B3/balita, SD 1–3, SD 4–6, SMP/SMA) masing-masing
+ * dengan TabelGizi yang OTOMATIS memuat menu terjadwal pada tanggal dokumen.
+ * Dipakai sebagai sumber data "Menu Terjadwal" di dalam SumberGiziSwitch.
+ */
+const KELOMPOK_GIZI: { label: string; sasaran: SasaranMenu; akgKey: string }[] = [
+  { label: "Balita, Ibu Hamil & Menyusui (B3)", sasaran: "b3", akgKey: "balita" },
+  { label: "SD Kelas 1–3", sasaran: "reguler", akgKey: "sd13" },
+  { label: "SD Kelas 4–6", sasaran: "reguler", akgKey: "sd46" },
+  { label: "SMP & SMA", sasaran: "reguler", akgKey: "smp" },
+];
+
+export function BlokGiziKelompok() {
+  return (
+    <>
+      {KELOMPOK_GIZI.map((k) => (
+        <div key={k.label} className="mt-5 break-inside-avoid">
+          <p className="mb-1 text-sm font-bold uppercase">
+            Kelompok: <Ed>{k.label}</Ed>
+          </p>
+          <TabelGizi sasaran={k.sasaran} akgKey={k.akgKey} />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Pemilih sumber data gizi (2 pilihan) untuk laporan ahli gizi:
+ *  - "jadwal"    → BlokGiziKelompok: agregasi otomatis dari menu terjadwal
+ *                  (jadwal_menu) via /api/admin/ahli-gizi/gizi-harian.
+ *  - "generator" → GeneratorGizi: kalkulator manual berbasis TKPI
+ *                  (bahan + gram → makro/mikro + %AKG), lepas dari jadwal.
+ * Tombol pemilih ber-kelas .no-print sehingga tidak ikut tercetak/tersimpan;
+ * hanya konten sumber terpilih yang muncul di hasil cetak.
+ */
+export function SumberGiziSwitch() {
+  const [mode, setMode] = useState<"jadwal" | "generator">("jadwal");
+  const tab = (aktif: boolean) =>
+    `rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+      aktif
+        ? "bg-amber-500 text-slate-900 shadow"
+        : "text-slate-300 hover:text-white"
+    }`;
+  return (
+    <div>
+      <div className="no-print mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 p-1.5">
+        <span className="px-1 text-xs font-medium text-slate-400">
+          Sumber data gizi:
+        </span>
+        <button type="button" onClick={() => setMode("jadwal")} className={tab(mode === "jadwal")}>
+          Menu Terjadwal
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("generator")}
+          className={tab(mode === "generator")}
+        >
+          Generator Kandungan Gizi
+        </button>
+      </div>
+      {mode === "jadwal" ? <BlokGiziKelompok /> : <GeneratorGizi />}
     </div>
   );
 }
