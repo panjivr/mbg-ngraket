@@ -136,12 +136,14 @@ Sebagai bagian dari upaya kolektif untuk menciptakan masyarakat yang lebih sehat
             Analisis Kandungan Gizi &amp; Pemenuhan AKG
           </p>
           <p className="mb-1 text-[11px] italic text-gray-600">
-            Dua sumber data: <b>Menu Terjadwal</b> (agregasi otomatis dari menu
-            yang dijadwalkan pada tanggal dokumen) atau <b>Generator Kandungan
-            Gizi</b> (hitung manual bahan + gram berbasis TKPI). Pemilih tidak
-            ikut tercetak.
+            Analisis AKG per kelompok sasaran ditampilkan untuk tiap hari kerja
+            (default 5 hari, Senin–Jumat; opsi 2 minggu / 10 hari) terhitung dari
+            Senin minggu yang memuat tanggal dokumen. Dua sumber data: <b>Menu
+            Terjadwal</b> (agregasi otomatis menu yang dijadwalkan tiap hari)
+            atau <b>Generator Kandungan Gizi</b> (hitung manual bahan + gram
+            berbasis TKPI). Pemilih rentang &amp; sumber tidak ikut tercetak.
           </p>
-          <SumberGiziSwitch />
+          <SumberGiziSwitch mingguan />
         </div>
       </Bab>
 

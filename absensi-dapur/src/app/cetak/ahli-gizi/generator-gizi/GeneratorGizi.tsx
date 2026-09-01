@@ -11,7 +11,7 @@
  * Dipakai sebagai child <PrintFrame> (lihat ../_components: toolbar + print CSS +
  * simpan arsip). Kontrol editor ber-kelas .no-print → tidak ikut tercetak/tersimpan.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Ed, Tgl } from "../../akuntan/_components";
 import {
   BAHAN_GIZI,
@@ -57,6 +57,34 @@ interface Total {
 
 const NOL: Total = { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0, kalsium: 0, besi: 0, vit_a: 0, vit_c: 0, zinc: 0 };
 
+/** Satu bahan hasil hitung generator (per porsi), untuk dipetakan ke TabelGizi. */
+export interface GeneratorHasilRow {
+  nama: string;
+  kelompok: string;
+  gram: number;
+  energi: number;
+  protein: number;
+  lemak: number;
+  karbo: number;
+  serat: number;
+  /** true bila bahan terpilih & gram > 0 (nilai gizinya valid). */
+  terhitung: boolean;
+}
+
+/**
+ * Ringkasan hasil generator yang diteruskan ke `renderHasil`. Memungkinkan
+ * pemanggil (SumberGiziSwitch) menampilkan DATA generator memakai TEMPLATE
+ * laporan yang sama (TabelGizi) alih-alih tabel bawaan generator.
+ */
+export interface GeneratorHasil {
+  sasaranKey: string;
+  sasaranLabel: string;
+  jumlahPorsi: number;
+  beratTotal: number;
+  rows: GeneratorHasilRow[];
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+}
+
 /** Urutan kategori untuk pengelompokan <optgroup>. */
 const URUT_KATEGORI: KategoriBahan[] = [
   "pokok",
@@ -96,7 +124,15 @@ function BahanPicker({ value, onChange }: { value: string; onChange: (id: string
   );
 }
 
-export default function GeneratorGizi() {
+export default function GeneratorGizi({
+  renderHasil,
+}: {
+  /**
+   * Bila diisi, ZONA HASIL bawaan diganti oleh hasil render ini (mis. TabelGizi
+   * dengan template laporan yang sama). ZONA EDITOR (.no-print) tetap tampil.
+   */
+  renderHasil?: (h: GeneratorHasil) => ReactNode;
+} = {}) {
   const [sasaranKey, setSasaranKey] = useState(SASARAN[1].key); // default SD 1–3
   const [porsi, setPorsi] = useState("1");
   const [rows, setRows] = useState<Baris[]>([
@@ -186,6 +222,32 @@ export default function GeneratorGizi() {
       akg: sasaran[k],
     })),
   ];
+
+  // Ringkasan hasil untuk pemanggil yang ingin memakai template laporan lain.
+  const hasil: GeneratorHasil = {
+    sasaranKey,
+    sasaranLabel: sasaran.label,
+    jumlahPorsi,
+    beratTotal,
+    rows: detail.map((d) => ({
+      nama: d.bahan?.nama ?? "",
+      kelompok: d.bahan ? KATEGORI_LABEL[d.bahan.kategori] : "",
+      gram: d.gram,
+      energi: d.energi,
+      protein: d.protein,
+      lemak: d.lemak,
+      karbo: d.karbo,
+      serat: d.serat,
+      terhitung: !!d.bahan && d.gram > 0,
+    })),
+    total: {
+      energi: total.energi,
+      protein: total.protein,
+      lemak: total.lemak,
+      karbo: total.karbo,
+      serat: total.serat,
+    },
+  };
 
   return (
     <div className="text-[12px]">
@@ -315,6 +377,10 @@ export default function GeneratorGizi() {
       </div>
 
       {/* ============ ZONA HASIL (ikut dicetak) ============ */}
+      {renderHasil ? (
+        renderHasil(hasil)
+      ) : (
+        <>
       <div className="mb-2 flex flex-wrap justify-between gap-x-6 gap-y-1 text-[12px]">
         <span>
           Nama Menu: <Ed>…………………………………</Ed>
@@ -452,6 +518,8 @@ export default function GeneratorGizi() {
         Status &quot;Sesuai&quot; bila pemenuhan 80–120% target. Angka bersifat estimasi
         perencanaan menu, bukan hasil uji laboratorium.
       </p>
+        </>
+      )}
     </div>
   );
 }

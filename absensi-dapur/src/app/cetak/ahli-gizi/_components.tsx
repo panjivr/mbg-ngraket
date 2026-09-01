@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 import { getSasaran, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
-import GeneratorGizi from "./generator-gizi/GeneratorGizi";
+import GeneratorGizi, { type GeneratorHasil } from "./generator-gizi/GeneratorGizi";
 
 /** Angka tanggal 1..31 untuk header grid bulanan. */
 export const DAYS: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -199,27 +199,43 @@ export function TabelGizi({
   barisAwal,
   sasaran,
   akgKey,
+  data: dataProp,
+  dataSig,
+  tanggalISO,
 }: {
   barisAwal?: number;
   /** Kelompok distribusi menu; mengaktifkan auto-load bila diisi. */
   sasaran?: SasaranMenu;
   /** Kunci AKG (mis. "sd13", "balita") untuk baris kebutuhan & % pemenuhan. */
   akgKey?: string;
+  /**
+   * Data gizi eksternal (mis. dari Generator Kandungan Gizi). Bila prop ini
+   * disertakan, tabel MEMAKAI template & rekap yang sama tetapi datanya dari
+   * sini — fetch menu terjadwal dilewati sepenuhnya.
+   */
+  data?: SasaranGiziData | null;
+  /** Signature isi data eksternal, untuk remount sel Ed saat data berubah. */
+  dataSig?: string;
+  /** Override tanggal ISO (mis. tiap hari kerja pada laporan mingguan). */
+  tanggalISO?: string;
 }) {
-  const iso = useTanggalISO();
-  // Mode auto (sasaran diisi) mulai tanpa baris manual; mode manual → 5 baris.
-  const barisManual = barisAwal ?? (sasaran ? 0 : 5);
+  const ctxIso = useTanggalISO();
+  const iso = tanggalISO ?? ctxIso;
+  // Mode eksternal: data disuplai lewat prop (Generator) → lewati fetch.
+  const external = dataProp !== undefined;
+  // Mode auto (sasaran/eksternal) mulai tanpa baris manual; manual → 5 baris.
+  const barisManual = barisAwal ?? (sasaran || external ? 0 : 5);
   const [rows, setRows] = useState<number[]>(() =>
     Array.from({ length: barisManual }, (_, i) => i),
   );
   const nextId = useRef(barisManual);
-  const [data, setData] = useState<SasaranGiziData | null>(null);
+  const [fetched, setFetched] = useState<SasaranGiziData | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Auto-load gizi menu terjadwal pada tanggal dokumen untuk sasaran ini.
   useEffect(() => {
-    if (!sasaran || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      setData(null);
+    if (external || !sasaran || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setFetched(null);
       return;
     }
     let batal = false;
@@ -228,11 +244,11 @@ export function TabelGizi({
       .then(async (res) => {
         const j = await res.json().catch(() => ({}));
         if (batal) return;
-        if (res.ok && j && j[sasaran]) setData(j[sasaran] as SasaranGiziData);
-        else setData(null);
+        if (res.ok && j && j[sasaran]) setFetched(j[sasaran] as SasaranGiziData);
+        else setFetched(null);
       })
       .catch(() => {
-        if (!batal) setData(null);
+        if (!batal) setFetched(null);
       })
       .finally(() => {
         if (!batal) setLoading(false);
@@ -240,7 +256,10 @@ export function TabelGizi({
     return () => {
       batal = true;
     };
-  }, [iso, sasaran]);
+  }, [iso, sasaran, external]);
+
+  // Sumber data aktif: eksternal (Generator) atau hasil fetch (jadwal).
+  const data = external ? dataProp : fetched;
 
   const HEAD = [
     "Waktu",
@@ -260,7 +279,9 @@ export function TabelGizi({
   const adaData = menus.length > 0;
   // Key stabil supaya sel Ed (contentEditable, tak terkontrol) ikut remount
   // dengan isi baru saat tanggal/sasaran/data berubah.
-  const dataKey = `${iso}:${sasaran ?? ""}:${menus.length}`;
+  const dataKey = external
+    ? `ext:${dataSig ?? ""}:${menus.length}`
+    : `${iso}:${sasaran ?? ""}:${menus.length}`;
 
   // Baris rekap: nilai gizi per kolom (Energi, Protein, Lemak, KH, Serat).
   const total = data?.total ?? { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
@@ -1147,7 +1168,7 @@ const KELOMPOK_GIZI: { label: string; sasaran: SasaranMenu; akgKey: string }[] =
   { label: "SMP & SMA", sasaran: "reguler", akgKey: "smp" },
 ];
 
-export function BlokGiziKelompok() {
+export function BlokGiziKelompok({ tanggalISO }: { tanggalISO?: string } = {}) {
   return (
     <>
       {KELOMPOK_GIZI.map((k) => (
@@ -1155,7 +1176,7 @@ export function BlokGiziKelompok() {
           <p className="mb-1 text-sm font-bold uppercase">
             Kelompok: <Ed>{k.label}</Ed>
           </p>
-          <TabelGizi sasaran={k.sasaran} akgKey={k.akgKey} />
+          <TabelGizi sasaran={k.sasaran} akgKey={k.akgKey} tanggalISO={tanggalISO} />
         </div>
       ))}
     </>
@@ -1163,15 +1184,142 @@ export function BlokGiziKelompok() {
 }
 
 /**
+ * Menyajikan hasil Generator Kandungan Gizi memakai TEMPLATE laporan yang sama
+ * (TabelGizi) — hanya DATA-nya yang diambil dari kalkulator generator, bukan
+ * dari menu terjadwal. Baris bahan generator dipetakan ke satu grup menu, dan
+ * total makro dipakai untuk rekap (Kebutuhan 30% AKG + % Pemenuhan) via akgKey
+ * yang berbagi ruang kunci dengan sasaran generator.
+ */
+function GeneratorGiziTabel(h: GeneratorHasil) {
+  const data: SasaranGiziData = {
+    menus: [
+      {
+        nama: "Menu Pilihan (Generator)",
+        waktu: `${h.jumlahPorsi} porsi`,
+        bahan: h.rows.map((r) => ({
+          nama: r.nama,
+          beratG: r.gram,
+          energi: r.energi,
+          protein: r.protein,
+          lemak: r.lemak,
+          karbo: r.karbo,
+          serat: r.serat,
+          terhitung: r.terhitung,
+        })),
+      },
+    ],
+    total: h.total,
+  };
+  const sig = `${h.sasaranKey}:${h.rows.length}:${Math.round(h.total.energi)}:${Math.round(
+    h.total.protein,
+  )}`;
+  return (
+    <div className="mt-5 break-inside-avoid">
+      <p className="mb-1 text-sm font-bold uppercase">
+        Kelompok: <Ed>{h.sasaranLabel}</Ed>
+      </p>
+      <TabelGizi data={data} dataSig={sig} akgKey={h.sasaranKey} />
+    </div>
+  );
+}
+
+const BULAN_ID = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+function labelTanggal(d: Date): string {
+  return `${HARI_ID[d.getDay()]}, ${d.getDate()} ${BULAN_ID[d.getMonth()]} ${d.getFullYear()}`;
+}
+/** Senin dari minggu yang memuat tanggal d (Sen–Jum sebagai hari kerja). */
+function seninDariMinggu(d: Date): Date {
+  const r = new Date(d);
+  const dow = r.getDay(); // 0=Minggu..6=Sabtu
+  const diff = dow === 0 ? -6 : 1 - dow;
+  r.setDate(r.getDate() + diff);
+  return r;
+}
+/** N hari kerja (Senin–Jumat) berturut mulai dari `mulai`. */
+function hariKerja(mulai: Date, jumlah: number): Date[] {
+  const out: Date[] = [];
+  const c = new Date(mulai);
+  while (out.length < jumlah) {
+    const dow = c.getDay();
+    if (dow !== 0 && dow !== 6) out.push(new Date(c));
+    c.setDate(c.getDate() + 1);
+  }
+  return out;
+}
+
+/**
+ * Laporan mingguan: analisis AKG yang SAMA dengan harian (BlokGiziKelompok),
+ * hanya diulang per hari kerja pada rentang terpilih (default 5 hari Senin–
+ * Jumat, opsi 2 minggu / 10 hari). Rentang dihitung dari Senin minggu yang
+ * memuat tanggal dokumen. Kontrol pemilih rentang ber-kelas .no-print.
+ */
+export function BlokGiziMingguan() {
+  const iso = useTanggalISO();
+  const [jumlahHari, setJumlahHari] = useState(5);
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(iso)
+    ? new Date(`${iso}T00:00:00`)
+    : new Date();
+  const hari = hariKerja(seninDariMinggu(base), jumlahHari);
+  const tab = (aktif: boolean) =>
+    `rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+      aktif
+        ? "bg-amber-500 text-slate-900 shadow"
+        : "text-slate-300 hover:text-white"
+    }`;
+  return (
+    <div>
+      <div className="no-print mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 p-1.5">
+        <span className="px-1 text-xs font-medium text-slate-400">
+          Rentang hari kerja:
+        </span>
+        <button type="button" onClick={() => setJumlahHari(5)} className={tab(jumlahHari === 5)}>
+          1 Minggu (5 hari)
+        </button>
+        <button type="button" onClick={() => setJumlahHari(10)} className={tab(jumlahHari === 10)}>
+          2 Minggu (10 hari)
+        </button>
+      </div>
+      {hari.map((d) => {
+        const diso = isoLokal(d);
+        return (
+          <div key={diso} className="mt-6 break-inside-avoid">
+            <p className="mb-2 border-b border-black pb-1 text-base font-bold uppercase">
+              Hari: <Ed>{labelTanggal(d)}</Ed>
+            </p>
+            <BlokGiziKelompok tanggalISO={diso} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * Pemilih sumber data gizi (2 pilihan) untuk laporan ahli gizi:
  *  - "jadwal"    → BlokGiziKelompok: agregasi otomatis dari menu terjadwal
  *                  (jadwal_menu) via /api/admin/ahli-gizi/gizi-harian.
- *  - "generator" → GeneratorGizi: kalkulator manual berbasis TKPI
- *                  (bahan + gram → makro/mikro + %AKG), lepas dari jadwal.
+ *  - "generator" → data diambil dari Generator Kandungan Gizi (kalkulator TKPI),
+ *                  TAPI ditampilkan dalam TEMPLATE laporan yang sama (TabelGizi)
+ *                  lewat GeneratorGiziTabel — bukan mengganti template.
  * Tombol pemilih ber-kelas .no-print sehingga tidak ikut tercetak/tersimpan;
  * hanya konten sumber terpilih yang muncul di hasil cetak.
+ * Bila `mingguan` true, sumber "jadwal" mengulang analisis AKG per hari kerja.
  */
-export function SumberGiziSwitch() {
+export function SumberGiziSwitch({ mingguan = false }: { mingguan?: boolean } = {}) {
   const [mode, setMode] = useState<"jadwal" | "generator">("jadwal");
   const tab = (aktif: boolean) =>
     `rounded-md px-3 py-1.5 text-sm font-semibold transition ${
@@ -1196,7 +1344,15 @@ export function SumberGiziSwitch() {
           Generator Kandungan Gizi
         </button>
       </div>
-      {mode === "jadwal" ? <BlokGiziKelompok /> : <GeneratorGizi />}
+      {mode === "jadwal" ? (
+        mingguan ? (
+          <BlokGiziMingguan />
+        ) : (
+          <BlokGiziKelompok />
+        )
+      ) : (
+        <GeneratorGizi renderHasil={(h) => <GeneratorGiziTabel {...h} />} />
+      )}
     </div>
   );
 }
