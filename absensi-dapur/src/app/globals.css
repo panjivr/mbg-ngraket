@@ -241,6 +241,22 @@ html[data-theme="light"] body::before {
   }
 }
 
+/*
+ * Opsi dropdown native (<select>): popup dirender OS dengan latar putih default,
+ * sementara .input mewariskan text-slate-100 (nyaris putih) -> putih-di-putih tak
+ * terbaca. Paksa latar + warna teks kontras pada option/optgroup di kedua tema.
+ */
+.input option,
+.input optgroup {
+  background-color: #0b1220;
+  color: #e2e8f0;
+}
+html[data-theme="light"] .input option,
+html[data-theme="light"] .input optgroup {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
 /* Scrollbar halus untuk tabel */
 .scroll-x {
   scrollbar-width: thin;
