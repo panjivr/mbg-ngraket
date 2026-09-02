@@ -51,12 +51,37 @@ export const POST = route(async (req: NextRequest) => {
   const kegiatan = String(b.kegiatan ?? "").trim().slice(0, 160);
   const foto = cleanFoto(b.foto);
 
-  await query(
-    `INSERT INTO dokumentasi (sppg_id, tanggal, kegiatan, foto, updated_at)
-     VALUES ($1,$2,$3,$4::jsonb, now())
-     ON CONFLICT (sppg_id, tanggal, kegiatan) DO UPDATE
-       SET foto = EXCLUDED.foto, updated_at = now()`,
-    [admin.sppg_id, tanggal, kegiatan, JSON.stringify(foto)],
-  );
+  // Simpan bertahap: banyak foto dikirim per-batch dari klien agar tiap
+  // request tetap di bawah batas ukuran body (~4,5 MB di Vercel). Batch
+  // pertama "replace" (menimpa seluruh baris), sisanya "append" (menyambung).
+  const mode = b.mode === "append" ? "append" : "replace";
+
+  if (mode === "append") {
+    // Gabungkan foto lama + baru, lalu batasi maks FOTO_MAX di sisi server.
+    await query(
+      `INSERT INTO dokumentasi (sppg_id, tanggal, kegiatan, foto, updated_at)
+       VALUES ($1,$2,$3,$4::jsonb, now())
+       ON CONFLICT (sppg_id, tanggal, kegiatan) DO UPDATE
+         SET foto = (
+               SELECT COALESCE(jsonb_agg(x.v), '[]'::jsonb)
+               FROM (
+                 SELECT v FROM jsonb_array_elements(
+                   COALESCE(dokumentasi.foto, '[]'::jsonb) || EXCLUDED.foto
+                 ) AS t(v)
+                 LIMIT ${FOTO_MAX}
+               ) AS x(v)
+             ),
+             updated_at = now()`,
+      [admin.sppg_id, tanggal, kegiatan, JSON.stringify(foto)],
+    );
+  } else {
+    await query(
+      `INSERT INTO dokumentasi (sppg_id, tanggal, kegiatan, foto, updated_at)
+       VALUES ($1,$2,$3,$4::jsonb, now())
+       ON CONFLICT (sppg_id, tanggal, kegiatan) DO UPDATE
+         SET foto = EXCLUDED.foto, updated_at = now()`,
+      [admin.sppg_id, tanggal, kegiatan, JSON.stringify(foto)],
+    );
+  }
   return ok({ ok: true });
 });

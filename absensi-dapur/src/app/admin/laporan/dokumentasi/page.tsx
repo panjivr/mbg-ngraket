@@ -60,12 +60,27 @@ export default function DokumentasiPage() {
   async function simpan() {
     setSaving(true); setMsg(null);
     try {
-      const res = await fetch("/api/admin/dokumentasi", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tanggal, kegiatan: kegiatan.trim(), foto }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) { setMsg(d.error || "Gagal menyimpan."); return; }
+      // Kirim bertahap: pecah foto jadi beberapa batch agar tiap request tetap
+      // di bawah batas ukuran body Vercel (~4,5 MB). Batch pertama "replace"
+      // (menimpa baris), sisanya "append" (menyambung di server).
+      const CHUNK_BYTES = 3_500_000;
+      const chunks: string[][] = [];
+      let cur: string[] = []; let curSize = 0;
+      for (const f of foto) {
+        if (cur.length && curSize + f.length > CHUNK_BYTES) { chunks.push(cur); cur = []; curSize = 0; }
+        cur.push(f); curSize += f.length;
+      }
+      if (cur.length) chunks.push(cur);
+      if (chunks.length === 0) chunks.push([]); // tetap kirim 1x agar bisa mengosongkan
+      for (let i = 0; i < chunks.length; i++) {
+        const res = await fetch("/api/admin/dokumentasi", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tanggal, kegiatan: kegiatan.trim(), foto: chunks[i], mode: i === 0 ? "replace" : "append" }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { setMsg(d.error || `Gagal menyimpan (bagian ${i + 1}/${chunks.length}).`); return; }
+        if (chunks.length > 1) setMsg(`Menyimpan… (${i + 1}/${chunks.length})`);
+      }
       setMsg("✓ Dokumentasi tersimpan. Siap dicetak.");
       await load();
     } catch { setMsg("Tidak dapat terhubung ke server."); }
