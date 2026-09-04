@@ -11,14 +11,28 @@ import KartuStok from "@/components/gudang/KartuStok";
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
-const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ""));
+// Bulatkan artefak float (mis. 0.30000000004) ke maksimal 3 desimal, lalu tampilkan
+// tanpa nol berlebih. Cocok untuk satuan pecahan seperti kg (0.5, 0.25).
+const fmtNum = (n: number) => String(Math.round((n || 0) * 1000) / 1000);
 const fmtRp = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
 
-type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: number; harga: number; kode_akun: string; catatan: string; aktif: boolean; tanggal_kadaluarsa: string };
-const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: 0, harga: 0, kode_akun: "", catatan: "", aktif: true, tanggal_kadaluarsa: "" };
+// Angka boleh diketik pakai titik ATAU koma (0.5 / 0,5). Field angka disimpan sebagai
+// STRING selama diketik agar desimal setengah-jadi ("0.", "1,") tidak "lompat" —
+// ini bug klasik input type=number yang di-parse ke number tiap ketikan. Baru
+// dikonversi ke number saat disimpan.
+const parseNum = (s: string): number => {
+  const n = parseFloat(String(s).replace(",", ".").trim());
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+};
+const NUM_RE = /^[0-9]*[.,]?[0-9]*$/; // izinkan kosong, "0", "0.", "0,5", "12.75"
+// Terapkan penambahan/pengurangan cepat (mis. ±0.5 kg) pada nilai string, hasil bersih.
+const bumpNum = (s: string, delta: number): string => fmtNum(Math.max(0, parseNum(s) + delta));
+
+type BForm = { id: number | null; nama: string; kategori: Kategori; satuan: string; stok_min: string; harga: string; kode_akun: string; catatan: string; aktif: boolean; tanggal_kadaluarsa: string };
+const emptyB: BForm = { id: null, nama: "", kategori: "bahan_kering", satuan: "pcs", stok_min: "0", harga: "0", kode_akun: "", catatan: "", aktif: true, tanggal_kadaluarsa: "" };
 const KAD_BADGE: Record<string, string> = { kadaluarsa: "bg-red-500/15 text-red-300", segera: "bg-amber-500/15 text-amber-300" };
 const KAD_LABEL: Record<string, string> = { kadaluarsa: "Kadaluarsa", segera: "Segera exp" };
-type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: number; keterangan: string; tanggal: string };
+type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: string; keterangan: string; tanggal: string };
 
 const STATUS_BADGE: Record<string, string> = {
   habis: "bg-red-500/15 text-red-300",
@@ -142,8 +156,11 @@ export default function GudangPage() {
     setBusy(true); setMsg(null);
     try {
       const isEdit = bForm.id !== null;
+      // Field angka disimpan sebagai string di form (agar desimal enak diketik) —
+      // konversi ke number saat kirim; koma otomatis jadi titik lewat parseNum.
+      const payload = { ...bForm, stok_min: parseNum(bForm.stok_min), harga: parseNum(bForm.harga) };
       const res = await fetch(isEdit ? `/api/admin/gudang/barang/${bForm.id}` : "/api/admin/gudang/barang", {
-        method: isEdit ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bForm),
+        method: isEdit ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg(d.error || "Gagal menyimpan."); return; }
@@ -158,11 +175,13 @@ export default function GudangPage() {
   }
   async function simpanMutasi() {
     if (!mForm) return;
+    const jumlah = parseNum(mForm.jumlah);
+    if (mForm.tipe !== "opname" && jumlah <= 0) { setMsg("Jumlah harus lebih dari 0."); return; }
     setBusy(true); setMsg(null);
     try {
       const res = await fetch("/api/admin/gudang/mutasi", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barang_id: mForm.barang.id, tipe: mForm.tipe, jumlah: mForm.jumlah, keterangan: mForm.keterangan, tanggal: mForm.tanggal }),
+        body: JSON.stringify({ barang_id: mForm.barang.id, tipe: mForm.tipe, jumlah, keterangan: mForm.keterangan, tanggal: mForm.tanggal }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg(d.error || "Gagal menyimpan mutasi."); return; }
@@ -306,11 +325,11 @@ export default function GudangPage() {
                           <td className="px-3 py-1.5"><span className={"badge " + STATUS_BADGE[st]}>{STATUS_LABEL[st]}</span></td>
                           <td className="px-3 py-1.5">
                             <div className="flex flex-wrap justify-end gap-1.5">
-                              <button onClick={() => setMForm({ barang: b, tipe: "masuk", jumlah: 0, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-emerald-300">+ Masuk</button>
-                              <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: 0, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-sky-300">− Keluar</button>
-                              <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: b.stok, keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-amber-300">✓ Opname</button>
+                              <button onClick={() => setMForm({ barang: b, tipe: "masuk", jumlah: "", keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-emerald-300">+ Masuk</button>
+                              <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: "", keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-sky-300">− Keluar</button>
+                              <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: fmtNum(b.stok), keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-amber-300">✓ Opname</button>
                               <button onClick={() => bukaRiwayat(b)} className="btn-ghost px-2 py-0.5 text-xs">Riwayat</button>
-                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: b.stok_min, harga: b.harga, kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif, tanggal_kadaluarsa: b.tanggal_kadaluarsa ?? "" })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
+                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: fmtNum(b.stok_min), harga: fmtNum(b.harga), kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif, tanggal_kadaluarsa: b.tanggal_kadaluarsa ?? "" })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={() => hapusBarang(b)} className="btn-danger px-2 py-0.5 text-xs">Hapus</button>
                             </div>
                           </td>
@@ -346,10 +365,10 @@ export default function GudangPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="label">Kode Akun (opsional)</label><input className="input" value={bForm.kode_akun} onChange={(e) => setBForm({ ...bForm, kode_akun: e.target.value })} placeholder="mis. 2115" /></div>
-                <div><label className="label">Harga Satuan (Rp)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.harga} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, harga: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+                <div><label className="label">Harga Satuan (Rp)</label><input type="text" inputMode="decimal" className="input" value={bForm.harga} onFocus={(e) => e.target.select()} onChange={(e) => { if (NUM_RE.test(e.target.value)) setBForm({ ...bForm, harga: e.target.value }); }} /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="number" min={0} step="0.01" inputMode="decimal" className="input" value={bForm.stok_min} onFocus={(e) => e.target.select()} onChange={(e) => setBForm({ ...bForm, stok_min: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
+                <div><label className="label">Stok Minimum (peringatan menipis)</label><input type="text" inputMode="decimal" className="input" value={bForm.stok_min} onFocus={(e) => e.target.select()} onChange={(e) => { if (NUM_RE.test(e.target.value)) setBForm({ ...bForm, stok_min: e.target.value }); }} /></div>
                 <div><label className="label">Kadaluarsa (opsional)</label><input type="date" className="input" value={bForm.tanggal_kadaluarsa} onChange={(e) => setBForm({ ...bForm, tanggal_kadaluarsa: e.target.value })} /></div>
               </div>
               <div><label className="label">Catatan (opsional)</label><input className="input" value={bForm.catatan} onChange={(e) => setBForm({ ...bForm, catatan: e.target.value })} /></div>
@@ -373,8 +392,19 @@ export default function GudangPage() {
               <div><label className="label">Tanggal</label><input type="date" className="input" value={mForm.tanggal} onChange={(e) => setMForm({ ...mForm, tanggal: e.target.value })} /></div>
               <div>
                 <label className="label">{mForm.tipe === "opname" ? "Jumlah fisik hasil hitung" : `Jumlah ${mForm.tipe === "masuk" ? "masuk" : "keluar"}`} ({mForm.barang.satuan})</label>
-                <input type="number" min={0} step="0.01" inputMode="decimal" autoFocus className="input" value={mForm.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setMForm({ ...mForm, jumlah: Math.max(0, parseFloat(e.target.value) || 0) })} />
-                {mForm.tipe === "opname" && <p className="mt-1 text-xs text-slate-500">Selisih vs sistem: {fmtNum(mForm.jumlah - mForm.barang.stok)}</p>}
+                <div className="flex items-stretch gap-1.5">
+                  <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, -1) })} className="btn-ghost shrink-0 px-2.5 text-sm" title="Kurangi 1" tabIndex={-1}>−1</button>
+                  <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, -0.5) })} className="btn-ghost shrink-0 px-2 text-xs" title="Kurangi 0,5" tabIndex={-1}>−½</button>
+                  <input type="text" inputMode="decimal" autoFocus className="input flex-1 text-center" value={mForm.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => { if (NUM_RE.test(e.target.value)) setMForm({ ...mForm, jumlah: e.target.value }); }} />
+                  <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, 0.5) })} className="btn-ghost shrink-0 px-2 text-xs" title="Tambah 0,5" tabIndex={-1}>+½</button>
+                  <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, 1) })} className="btn-ghost shrink-0 px-2.5 text-sm" title="Tambah 1" tabIndex={-1}>+1</button>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">Boleh desimal (mis. 0,5 kg). Titik atau koma sama saja.</p>
+                {mForm.tipe === "opname" && (() => {
+                  const selisih = parseNum(mForm.jumlah) - mForm.barang.stok;
+                  const warna = selisih === 0 ? "text-slate-500" : selisih > 0 ? "text-emerald-300" : "text-red-300";
+                  return <p className={"mt-1 text-xs " + warna}>Selisih vs sistem: {selisih > 0 ? "+" : ""}{fmtNum(selisih)} {mForm.barang.satuan}</p>;
+                })()}
               </div>
               <div><label className="label">Keterangan (opsional)</label><input className="input" value={mForm.keterangan} onChange={(e) => setMForm({ ...mForm, keterangan: e.target.value })} placeholder={mForm.tipe === "masuk" ? "mis. beli dari supplier X" : mForm.tipe === "keluar" ? "mis. dipakai produksi" : "mis. koreksi stok"} /></div>
               {msg && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{msg}</p>}

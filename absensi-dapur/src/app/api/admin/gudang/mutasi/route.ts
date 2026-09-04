@@ -10,6 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Bulatkan artefak float (mis. 1.1 − 0.6) ke maks 3 desimal untuk teks keterangan.
+const rnum = (n: number) => Math.round((n || 0) * 1000) / 1000;
 
 // Riwayat mutasi: ?barang_id= (satu barang) atau semua (terbaru).
 export const GET = route(async (req: NextRequest) => {
@@ -67,9 +69,9 @@ export const POST = route(async (req: NextRequest) => {
       else {
         // opname: jumlah = hasil hitung fisik; catat selisihnya.
         stokBaru = jumlah;
-        const selisih = jumlah - cur.stok;
+        const selisih = rnum(jumlah - cur.stok);
         const tanda = selisih > 0 ? "+" : "";
-        keterangan = `Opname: sistem ${cur.stok} → fisik ${jumlah} (selisih ${tanda}${selisih})${keteranganIn ? " · " + keteranganIn : ""}`;
+        keterangan = `Opname: sistem ${rnum(cur.stok)} → fisik ${rnum(jumlah)} (selisih ${tanda}${selisih})${keteranganIn ? " · " + keteranganIn : ""}`;
       }
 
       await client.query(`UPDATE barang SET stok = $1 WHERE id = $2`, [stokBaru, barang_id]);
