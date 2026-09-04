@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-21a.kartu-foto-adjust";
+const SCHEMA_VERSION = "2026-08-30a.hari-khusus";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -869,6 +869,23 @@ async function doEnsureSchema(): Promise<void> {
         UNIQUE (user_id, tanggal)
       );
     `);
+
+    // Hari khusus (kalender kerja) tingkat DAPUR — berlaku ke semua pegawai.
+    // Mis. libur nasional / hari kegiatan (lomba HUT RI): pegawai tetap absen
+    // tapi hari itu tidak dihitung upah bila `digaji` = FALSE. `slip_adjust`
+    // per-pegawai tetap menang bila HR ingin pengecualian.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS hari_khusus (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL,
+        keterangan TEXT NOT NULL DEFAULT '',
+        digaji     BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, tanggal)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_hari_khusus_sppg ON hari_khusus (sppg_id, tanggal)`);
 
     // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
     await client.query(`
