@@ -247,6 +247,14 @@ export default function SlipGaji({
           </div>
         )}
 
+        {/* Catatan (NB) tingkat dapur — sama untuk semua karyawan */}
+        {slip.nb?.trim() && (
+          <div className="mt-4 rounded-md border-l-4 border-gray-400 bg-gray-50 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">Catatan (NB)</p>
+            <p className="mt-0.5 whitespace-pre-line text-xs leading-relaxed text-gray-700">{slip.nb.trim()}</p>
+          </div>
+        )}
+
         {/* Konfirmasi diterima (bukan tanda tangan) */}
         <div className="mt-6 rounded-md border border-gray-300 bg-gray-50 p-3">
           {slip.confirmed_at ? (

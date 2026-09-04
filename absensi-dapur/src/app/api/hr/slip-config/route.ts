@@ -20,6 +20,7 @@ export const GET = route(async () => {
       show_from: sppg?.slip_show_from || null,
       show_until: sppg?.slip_show_until || null,
       aktif: !!sppg?.slip_aktif,
+      nb: sppg?.slip_nb || "",
     },
   });
 });
@@ -32,6 +33,7 @@ export const POST = route(async (req: NextRequest) => {
   const sf = b.show_from ? String(b.show_from) : "";
   const su = b.show_until ? String(b.show_until) : "";
   const aktif = Boolean(b.aktif);
+  const nb = String(b.nb ?? "").slice(0, 1000);
 
   if (aktif) {
     if (!DATE_RE.test(pf) || !DATE_RE.test(pt)) return fail(400, "Periode slip belum lengkap.");
@@ -43,8 +45,8 @@ export const POST = route(async (req: NextRequest) => {
 
   await query(
     `UPDATE sppg SET slip_period_from = $1, slip_period_to = $2,
-            slip_show_from = $3, slip_show_until = $4, slip_aktif = $5 WHERE id = $6`,
-    [pf || null, pt || null, sf || null, su || null, aktif, hr.sppg_id],
+            slip_show_from = $3, slip_show_until = $4, slip_aktif = $5, slip_nb = $6 WHERE id = $7`,
+    [pf || null, pt || null, sf || null, su || null, aktif, nb, hr.sppg_id],
   );
   invalidateSppg(hr.sppg_id as number);
   return ok({ saved: true });
