@@ -170,6 +170,28 @@ export default function SlipGaji({
           </div>
         </div>
 
+        {/* Catatan hari khusus / penyesuaian HR (tampil di cetak) */}
+        {slip.hari.some((h) => h.catatan) && (
+          <div className="mt-3 rounded border border-gray-200 bg-gray-50 px-3 py-2">
+            <p className="mb-1 text-xs font-semibold text-gray-700">Catatan Hari Khusus</p>
+            <ul className="space-y-0.5 text-[11px] text-gray-600">
+              {slip.hari
+                .filter((h) => h.catatan)
+                .map((h) => (
+                  <li key={h.tanggal} className="flex flex-wrap gap-x-1.5">
+                    <span className="font-semibold tabular-nums text-gray-700">
+                      {new Date(h.tanggal + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                    </span>
+                    <span>· {h.catatan}</span>
+                    {h.status === "libur" && h.upah === 0 && (
+                      <span className="font-medium text-amber-700">(tidak digaji)</span>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+
         {/* Rincian */}
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
