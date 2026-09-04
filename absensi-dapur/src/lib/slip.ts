@@ -144,6 +144,15 @@ export async function computeSlip(
   const adjMap = new Map<string, AdjustRow>();
   for (const a of adjRows) adjMap.set(a.tanggal, a);
 
+  // Hari khusus tingkat DAPUR (libur/kegiatan) — berlaku ke semua pegawai.
+  const hkRows = await query<{ tanggal: string; keterangan: string; digaji: boolean }>(
+    `SELECT tanggal::text AS tanggal, keterangan, digaji
+       FROM hari_khusus WHERE sppg_id = $1 AND tanggal BETWEEN $2 AND $3`,
+    [sppgId, from, to],
+  );
+  const hkMap = new Map<string, { keterangan: string; digaji: boolean }>();
+  for (const h of hkRows) hkMap.set(h.tanggal, { keterangan: h.keterangan, digaji: h.digaji });
+
   const hari: HariSlip[] = eachDate(from, to).map((tanggal) => {
     const abs = absHari.get(tanggal);
     const masuk = !!abs?.masuk;
@@ -153,6 +162,18 @@ export async function computeSlip(
     let lembur = !!abs?.lembur;
     let catatan = "";
     let override = false;
+    // Hari khusus dapur diterapkan lebih dulu (di bawah bisa ditimpa slip_adjust
+    // per-pegawai untuk pengecualian individual).
+    const hk = hkMap.get(tanggal);
+    if (hk) {
+      override = true;
+      catatan = hk.keterangan || (hk.digaji ? "Hari khusus" : "Hari kegiatan (tidak digaji)");
+      if (!hk.digaji) {
+        status = "libur";
+        upah = 0;
+        lembur = false;
+      }
+    }
     const adj = adjMap.get(tanggal);
     if (adj) {
       override = true;

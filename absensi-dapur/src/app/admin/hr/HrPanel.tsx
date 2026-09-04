@@ -39,7 +39,7 @@ interface Config {
 }
 
 export default function HrPanel() {
-  const [tab, setTab] = useState<"slip" | "gaji" | "cetak">("slip");
+  const [tab, setTab] = useState<"slip" | "gaji" | "cetak" | "kalender">("slip");
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">HR — Gaji & Slip</h1>
@@ -50,6 +50,7 @@ export default function HrPanel() {
         {[
           ["slip", "Pengaturan Slip"],
           ["gaji", "Data Gaji"],
+          ["kalender", "Hari Khusus"],
           ["cetak", "Pratinjau / Cetak"],
         ].map(([v, label]) => (
           <button
@@ -66,7 +67,145 @@ export default function HrPanel() {
       </div>
       {tab === "slip" && <PengaturanSlip />}
       {tab === "gaji" && <DataGaji />}
+      {tab === "kalender" && <HariKhususPanel />}
       {tab === "cetak" && <CetakSlip />}
+    </div>
+  );
+}
+
+interface HariKhususRow {
+  id: number;
+  tanggal: string;
+  keterangan: string;
+  digaji: boolean;
+}
+
+function jakartaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function HariKhususPanel() {
+  const [rows, setRows] = useState<HariKhususRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tanggal, setTanggal] = useState(jakartaToday());
+  const [keterangan, setKeterangan] = useState("");
+  const [digaji, setDigaji] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/hr/hari-khusus", { cache: "no-store" });
+      const d = await r.json();
+      setRows(d.hari || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function simpan() {
+    if (!tanggal) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await fetch("/api/hr/hari-khusus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tanggal, keterangan, digaji }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setMsg(d?.error || "Gagal menyimpan.");
+        return;
+      }
+      setKeterangan("");
+      setDigaji(false);
+      await load();
+      setMsg("Tersimpan.");
+      setTimeout(() => setMsg(""), 2000);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function hapus(tgl: string) {
+    if (!confirm(`Hapus hari khusus ${tgl}?`)) return;
+    await fetch(`/api/hr/hari-khusus?tanggal=${encodeURIComponent(tgl)}`, { method: "DELETE" });
+    await load();
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="card p-4">
+        <p className="text-sm font-semibold text-slate-200">Kalender Kerja · Hari Khusus</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Tandai tanggal libur / hari kegiatan (mis. lomba HUT RI). Pegawai tetap absen, tetapi hari
+          itu <b>tidak dihitung gaji</b> bila &quot;Digaji&quot; tidak dicentang. Berlaku untuk semua pegawai
+          dapur ini; pengecualian per orang bisa diatur di Pratinjau/Cetak (penyesuaian per hari).
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-end">
+          <div>
+            <label className="label">Tanggal</label>
+            <input type="date" className="input w-auto" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Keterangan</label>
+            <input
+              className="input"
+              placeholder="mis. Lomba HUT RI ke-81 — tidak digaji"
+              value={keterangan}
+              onChange={(e) => setKeterangan(e.target.value)}
+            />
+          </div>
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input type="checkbox" className="h-4 w-4 accent-gold-500" checked={digaji} onChange={(e) => setDigaji(e.target.checked)} />
+            Digaji
+          </label>
+          <button onClick={simpan} disabled={busy} className="btn-gold">
+            {busy ? "Menyimpan…" : "Simpan"}
+          </button>
+        </div>
+        {msg && <p className="mt-2 text-xs text-gold-300">{msg}</p>}
+      </div>
+
+      <div className="card overflow-hidden">
+        {loading ? (
+          <p className="p-6 text-center text-slate-400">Memuat…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-6 text-center text-slate-500">Belum ada hari khusus. Tambahkan di atas.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs uppercase text-slate-400">
+              <tr className="border-b border-white/5">
+                <th className="px-4 py-2.5">Tanggal</th>
+                <th className="px-4 py-2.5">Keterangan</th>
+                <th className="px-4 py-2.5 text-center">Status Gaji</th>
+                <th className="px-4 py-2.5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {rows.map((h) => (
+                <tr key={h.id}>
+                  <td className="px-4 py-2 font-medium tabular-nums">{tglPendek(h.tanggal)}</td>
+                  <td className="px-4 py-2 text-slate-300">{h.keterangan || "—"}</td>
+                  <td className="px-4 py-2 text-center">
+                    <span className={"badge " + (h.digaji ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300")}>
+                      {h.digaji ? "Digaji" : "Tidak digaji"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => hapus(h.tanggal)} className="btn-danger px-2.5 py-1 text-xs">Hapus</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
