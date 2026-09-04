@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-30a.hari-khusus";
+const SCHEMA_VERSION = "2026-08-30b.slip-nb";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -842,6 +842,8 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_show_from TEXT`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_show_until TEXT`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_aktif BOOLEAN NOT NULL DEFAULT FALSE`);
+    // Catatan (NB) tingkat dapur — tampil di bawah SEMUA slip karyawan.
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_nb TEXT NOT NULL DEFAULT ''`);
 
     // Konfirmasi "diterima" oleh karyawan per periode slip.
     await client.query(`

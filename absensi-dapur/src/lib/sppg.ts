@@ -33,6 +33,8 @@ export interface Sppg {
   slip_show_from: string | null;
   slip_show_until: string | null;
   slip_aktif: boolean;
+  /** Catatan (NB) yang tampil di bawah semua slip karyawan dapur ini. */
+  slip_nb: string;
   // Paket langganan + masa aktif (monetisasi per dapur).
   paket: string;
   paket_until: string | null;

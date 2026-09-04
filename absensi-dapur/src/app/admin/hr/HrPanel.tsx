@@ -36,6 +36,7 @@ interface Config {
   show_from: string | null;
   show_until: string | null;
   aktif: boolean;
+  nb: string;
 }
 
 export default function HrPanel() {
@@ -217,6 +218,7 @@ function PengaturanSlip() {
     show_from: "",
     show_until: "",
     aktif: false,
+    nb: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -233,6 +235,7 @@ function PengaturanSlip() {
           show_from: c.show_from || "",
           show_until: c.show_until || "",
           aktif: !!c.aktif,
+          nb: c.nb || "",
         });
       })
       .finally(() => setLoading(false));
@@ -297,6 +300,19 @@ function PengaturanSlip() {
         Contoh: isi periode 2 minggu, lalu atur tampil mulai Sabtu jam gajian sampai Minggu malam —
         di luar itu karyawan tidak melihat slip.
       </p>
+      <div>
+        <label className="label">Catatan (NB) di bawah semua slip</label>
+        <textarea
+          className="input min-h-[80px]"
+          value={cfg.nb}
+          onChange={(e) => setCfg({ ...cfg, nb: e.target.value })}
+          placeholder="mis. 17 Agustus (lomba HUT RI) tidak dihitung gaji · tanggal 25 setengah hari karena rapat · gajian ditransfer tiap tgl 5."
+        />
+        <p className="mt-1 text-[11px] text-slate-500">
+          Tampil di bagian bawah slip <b>setiap</b> karyawan. Cocok untuk info umum: hari setengah,
+          hari kegiatan tanpa gaji, jadwal transfer, dll. Kosongkan bila tak perlu.
+        </p>
+      </div>
       <div className="flex items-center gap-3">
         <button onClick={save} disabled={saving} className="btn-primary">
           {saving ? "Menyimpan…" : "Simpan"}

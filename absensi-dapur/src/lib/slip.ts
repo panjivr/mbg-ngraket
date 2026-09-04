@@ -49,6 +49,8 @@ export interface Slip {
   total: number;
   hari: HariSlip[];
   confirmed_at: string | null;
+  /** Catatan (NB) tingkat dapur — tampil di bawah slip. */
+  nb: string;
 }
 
 interface AbsRow {
@@ -217,6 +219,9 @@ export async function computeSlip(
     )
   )[0];
 
+  // Catatan (NB) tingkat dapur — sama untuk semua slip karyawan.
+  const nbRow = (await query<{ slip_nb: string }>(`SELECT slip_nb FROM sppg WHERE id = $1`, [sppgId]))[0];
+
   return {
     user: u,
     periode: { from, to },
@@ -232,5 +237,6 @@ export async function computeSlip(
     total,
     hari,
     confirmed_at: konf?.confirmed_at || null,
+    nb: nbRow?.slip_nb || "",
   };
 }
