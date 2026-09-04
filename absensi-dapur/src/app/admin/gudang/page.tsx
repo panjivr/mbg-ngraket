@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, TIPE_LABEL, statusStok, statusKadaluarsa,
+  KATEGORI_LABEL, KATEGORI_INFO, KATEGORI_LIST, statusStok, statusKadaluarsa,
   type Barang, type Kategori, type Mutasi, type TipeMutasi,
 } from "@/lib/gudang";
 import DashboardGudang from "@/components/gudang/DashboardGudang";
@@ -35,11 +35,65 @@ const KAD_LABEL: Record<string, string> = { kadaluarsa: "Kadaluarsa", segera: "S
 type MForm = { barang: Barang; tipe: TipeMutasi; jumlah: string; keterangan: string; tanggal: string };
 
 const STATUS_BADGE: Record<string, string> = {
-  habis: "bg-red-500/15 text-red-300",
-  menipis: "bg-amber-500/15 text-amber-300",
-  aman: "bg-emerald-500/15 text-emerald-300",
+  habis: "bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25",
+  menipis: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25",
+  aman: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25",
 };
 const STATUS_LABEL: Record<string, string> = { habis: "Habis", menipis: "Menipis", aman: "Aman" };
+const STATUS_DOT: Record<string, string> = { habis: "bg-red-400", menipis: "bg-amber-400", aman: "bg-emerald-400" };
+
+// Aksen warna per tipe mutasi — dipakai di header modal & badge tombol.
+const TIPE_ACCENT: Record<TipeMutasi, { ring: string; text: string; bg: string; grad: string; label: string }> = {
+  masuk: { ring: "ring-emerald-500/30", text: "text-emerald-300", bg: "bg-emerald-500/15", grad: "from-emerald-500/20", label: "Barang Masuk" },
+  keluar: { ring: "ring-sky-500/30", text: "text-sky-300", bg: "bg-sky-500/15", grad: "from-sky-500/20", label: "Barang Keluar" },
+  opname: { ring: "ring-amber-500/30", text: "text-amber-300", bg: "bg-amber-500/15", grad: "from-amber-500/20", label: "Stok Opname" },
+};
+
+// Ikon SVG (stroke seragam 1.75) — pengganti emoji/simbol teks agar tampil profesional.
+type IconProps = { className?: string };
+const Ic = (d: string) => ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <path d={d} />
+  </svg>
+);
+const IconPlus = Ic("M12 5v14M5 12h14");
+const IconMinus = Ic("M5 12h14");
+const IconClipboardCheck = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <rect x="8" y="3" width="8" height="4" rx="1" /><path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3" /><path d="m9 14 2 2 4-4" />
+  </svg>
+);
+const IconHistory = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
+  </svg>
+);
+const IconPencil = Ic("M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z");
+const IconTrash = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+  </svg>
+);
+const IconWarn = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" />
+  </svg>
+);
+const IconInfo = ({ className = "h-3.5 w-3.5" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+  </svg>
+);
+const IconSearch = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+  </svg>
+);
+const IconTrend = ({ className = "h-4 w-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    <path d="M23 6l-9.5 9.5-5-5L1 18" /><path d="M17 6h6v6" />
+  </svg>
+);
 
 export default function GudangPage() {
   const [list, setList] = useState<Barang[]>([]);
@@ -238,12 +292,15 @@ export default function GudangPage() {
 
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{msg}</p>}
 
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Cari nama barang…"
-        className="input"
-      />
+      <div className="relative">
+        <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Cari nama barang…"
+          className="input pl-9"
+        />
+      </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-sm">
         <span className="mr-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">Kategori</span>
@@ -257,9 +314,9 @@ export default function GudangPage() {
         <button
           onClick={() => setHanyaKad((v) => !v)}
           title="Tampilkan hanya barang kadaluarsa / akan kadaluarsa"
-          className={"rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " + (hanyaKad ? "border-red-500/40 bg-red-500/15 text-red-300" : "border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5")}
+          className={"inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors " + (hanyaKad ? "border-red-500/40 bg-red-500/15 text-red-300" : "border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5")}
         >
-          ⚠ Kadaluarsa{kadaluarsa.length > 0 ? ` (${kadaluarsa.length})` : ""}
+          <IconWarn className="h-3.5 w-3.5" /> Kadaluarsa{kadaluarsa.length > 0 ? ` (${kadaluarsa.length})` : ""}
         </button>
       </div>
 
@@ -294,10 +351,10 @@ export default function GudangPage() {
                         <button
                           type="button"
                           onClick={() => setInfoKat(infoKat === kat ? null : kat)}
-                          className="text-xs font-semibold text-gold-400 hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-gold-400 hover:underline"
                           title="Klik untuk lihat contoh isi"
                         >
-                          {KATEGORI_LABEL[kat]} <span className="text-slate-500">ⓘ</span>
+                          {KATEGORI_LABEL[kat]} <IconInfo className="h-3.5 w-3.5 text-slate-500" />
                         </button>
                         {infoKat === kat && (
                           <span className="ml-2 text-[11px] font-normal text-slate-400">
@@ -324,13 +381,14 @@ export default function GudangPage() {
                           <td className="px-3 py-1.5 text-slate-400">{fmtNum(b.stok_min)}</td>
                           <td className="px-3 py-1.5"><span className={"badge " + STATUS_BADGE[st]}>{STATUS_LABEL[st]}</span></td>
                           <td className="px-3 py-1.5">
-                            <div className="flex flex-wrap justify-end gap-1.5">
-                              <button onClick={() => setMForm({ barang: b, tipe: "masuk", jumlah: "", keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-emerald-300">+ Masuk</button>
-                              <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: "", keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-sky-300">− Keluar</button>
-                              <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: fmtNum(b.stok), keterangan: "", tanggal: jakartaToday() })} className="btn-ghost px-2 py-0.5 text-xs text-amber-300">✓ Opname</button>
-                              <button onClick={() => bukaRiwayat(b)} className="btn-ghost px-2 py-0.5 text-xs">Riwayat</button>
-                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: fmtNum(b.stok_min), harga: fmtNum(b.harga), kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif, tanggal_kadaluarsa: b.tanggal_kadaluarsa ?? "" })} className="btn-ghost px-2 py-0.5 text-xs">Edit</button>
-                              <button onClick={() => hapusBarang(b)} className="btn-danger px-2 py-0.5 text-xs">Hapus</button>
+                            <div className="flex flex-wrap items-center justify-end gap-1">
+                              <button onClick={() => setMForm({ barang: b, tipe: "masuk", jumlah: "", keterangan: "", tanggal: jakartaToday() })} title="Barang masuk" className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-300 transition-colors hover:bg-emerald-500/20"><IconPlus className="h-3.5 w-3.5" /> Masuk</button>
+                              <button onClick={() => setMForm({ barang: b, tipe: "keluar", jumlah: "", keterangan: "", tanggal: jakartaToday() })} title="Barang keluar" className="inline-flex items-center gap-1 rounded-lg border border-sky-500/25 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-300 transition-colors hover:bg-sky-500/20"><IconMinus className="h-3.5 w-3.5" /> Keluar</button>
+                              <button onClick={() => setMForm({ barang: b, tipe: "opname", jumlah: fmtNum(b.stok), keterangan: "", tanggal: jakartaToday() })} title="Stok opname" className="inline-flex items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20"><IconClipboardCheck className="h-3.5 w-3.5" /> Opname</button>
+                              <span className="mx-0.5 h-4 w-px bg-white/10" aria-hidden="true" />
+                              <button onClick={() => bukaRiwayat(b)} title="Riwayat mutasi" className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-xs font-medium text-slate-300 transition-colors hover:bg-white/5"><IconHistory className="h-3.5 w-3.5" /> Riwayat</button>
+                              <button onClick={() => setBForm({ id: b.id, nama: b.nama, kategori: b.kategori, satuan: b.satuan, stok_min: fmtNum(b.stok_min), harga: fmtNum(b.harga), kode_akun: b.kode_akun, catatan: b.catatan, aktif: b.aktif, tanggal_kadaluarsa: b.tanggal_kadaluarsa ?? "" })} title="Edit barang" aria-label="Edit barang" className="inline-flex items-center justify-center rounded-lg border border-white/10 p-1.5 text-slate-300 transition-colors hover:bg-white/5"><IconPencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => hapusBarang(b)} title="Hapus barang" aria-label="Hapus barang" className="inline-flex items-center justify-center rounded-lg border border-red-500/25 p-1.5 text-red-300 transition-colors hover:bg-red-500/15"><IconTrash className="h-3.5 w-3.5" /></button>
                             </div>
                           </td>
                         </tr>
@@ -383,27 +441,60 @@ export default function GudangPage() {
       )}
 
       {/* Modal mutasi (masuk/keluar/opname) */}
-      {mForm && (
+      {mForm && (() => {
+        const acc = TIPE_ACCENT[mForm.tipe];
+        const TipeIcon = mForm.tipe === "masuk" ? IconPlus : mForm.tipe === "keluar" ? IconMinus : IconClipboardCheck;
+        return (
         <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4" onClick={() => setMForm(null)}>
-          <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">{TIPE_LABEL[mForm.tipe]}</h2>
-            <p className="mt-1 text-sm text-slate-400">{mForm.barang.nama} · stok sekarang <b>{fmtNum(mForm.barang.stok)} {mForm.barang.satuan}</b></p>
-            <div className="mt-4 space-y-3">
+          <div className="card w-full max-w-md overflow-hidden p-0" onClick={(e) => e.stopPropagation()}>
+            {/* Header beraksen warna sesuai tipe mutasi */}
+            <div className={"flex items-start gap-3 bg-gradient-to-br to-transparent p-5 " + acc.grad}>
+              <div className={"grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ring-inset " + acc.bg + " " + acc.ring + " " + acc.text}>
+                <TipeIcon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className={"text-lg font-bold leading-tight " + acc.text}>{acc.label}</h2>
+                <p className="mt-0.5 truncate text-sm font-medium text-slate-200">{mForm.barang.nama}</p>
+              </div>
+            </div>
+            <div className="space-y-3 px-5 pb-5 pt-1">
+              {/* Pill stok sistem saat ini */}
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Stok sistem saat ini</span>
+                <span className="text-sm font-bold text-slate-100">{fmtNum(mForm.barang.stok)} <span className="font-normal text-slate-400">{mForm.barang.satuan}</span></span>
+              </div>
               <div><label className="label">Tanggal</label><input type="date" className="input" value={mForm.tanggal} onChange={(e) => setMForm({ ...mForm, tanggal: e.target.value })} /></div>
               <div>
                 <label className="label">{mForm.tipe === "opname" ? "Jumlah fisik hasil hitung" : `Jumlah ${mForm.tipe === "masuk" ? "masuk" : "keluar"}`} ({mForm.barang.satuan})</label>
                 <div className="flex items-stretch gap-1.5">
                   <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, -1) })} className="btn-ghost shrink-0 px-2.5 text-sm" title="Kurangi 1" tabIndex={-1}>−1</button>
                   <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, -0.5) })} className="btn-ghost shrink-0 px-2 text-xs" title="Kurangi 0,5" tabIndex={-1}>−½</button>
-                  <input type="text" inputMode="decimal" autoFocus className="input flex-1 text-center" value={mForm.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => { if (NUM_RE.test(e.target.value)) setMForm({ ...mForm, jumlah: e.target.value }); }} />
+                  <input type="text" inputMode="decimal" autoFocus className="input flex-1 text-center text-lg font-semibold" value={mForm.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => { if (NUM_RE.test(e.target.value)) setMForm({ ...mForm, jumlah: e.target.value }); }} />
                   <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, 0.5) })} className="btn-ghost shrink-0 px-2 text-xs" title="Tambah 0,5" tabIndex={-1}>+½</button>
                   <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, 1) })} className="btn-ghost shrink-0 px-2.5 text-sm" title="Tambah 1" tabIndex={-1}>+1</button>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-500">Boleh desimal (mis. 0,5 kg). Titik atau koma sama saja.</p>
                 {mForm.tipe === "opname" && (() => {
                   const selisih = parseNum(mForm.jumlah) - mForm.barang.stok;
-                  const warna = selisih === 0 ? "text-slate-500" : selisih > 0 ? "text-emerald-300" : "text-red-300";
-                  return <p className={"mt-1 text-xs " + warna}>Selisih vs sistem: {selisih > 0 ? "+" : ""}{fmtNum(selisih)} {mForm.barang.satuan}</p>;
+                  const cocok = selisih === 0;
+                  const naik = selisih > 0;
+                  const tone = cocok
+                    ? { box: "border-slate-500/25 bg-slate-500/10 text-slate-300", label: "text-slate-400" }
+                    : naik
+                      ? { box: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300", label: "text-emerald-400/80" }
+                      : { box: "border-red-500/30 bg-red-500/10 text-red-300", label: "text-red-400/80" };
+                  return (
+                    <div className={"mt-2 flex items-center gap-2.5 rounded-xl border px-3 py-2.5 " + tone.box}>
+                      {cocok ? <IconClipboardCheck className="h-4 w-4 shrink-0" /> : naik ? <IconTrend className="h-4 w-4 shrink-0" /> : <IconWarn className="h-4 w-4 shrink-0" />}
+                      <div className="min-w-0">
+                        <p className={"text-[11px] font-medium uppercase tracking-wide " + tone.label}>Selisih vs sistem</p>
+                        <p className="text-sm font-bold">
+                          {cocok ? "Cocok — tidak ada selisih" : `${naik ? "+" : ""}${fmtNum(selisih)} ${mForm.barang.satuan}`}
+                          {!cocok && <span className="ml-1 font-normal opacity-80">({naik ? "lebih" : "kurang"} dari sistem)</span>}
+                        </p>
+                      </div>
+                    </div>
+                  );
                 })()}
               </div>
               <div><label className="label">Keterangan (opsional)</label><input className="input" value={mForm.keterangan} onChange={(e) => setMForm({ ...mForm, keterangan: e.target.value })} placeholder={mForm.tipe === "masuk" ? "mis. beli dari supplier X" : mForm.tipe === "keluar" ? "mis. dipakai produksi" : "mis. koreksi stok"} /></div>
@@ -415,7 +506,8 @@ export default function GudangPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal riwayat */}
       {riwayat && (
