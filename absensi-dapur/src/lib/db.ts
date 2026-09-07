@@ -134,6 +134,12 @@ async function doEnsureSchema(): Promise<void> {
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(7263011)");
+    // Migrasi tak boleh dibunuh oleh statement_timeout aplikasi (20 dtk):
+    // sebagian backfill (UPDATE seluruh tabel) bisa >20 dtk saat data besar,
+    // dan bila timeout → transaksi rollback → seluruh query gagal (situs down).
+    // Nolkan timeout khusus transaksi migrasi ini saja (SET LOCAL).
+    await client.query("SET LOCAL statement_timeout = 0");
+    await client.query("SET LOCAL lock_timeout = 0");
 
     // Fast-path: lewati seluruh migrasi bila skema sudah pada versi terkini.
     await client.query(`CREATE TABLE IF NOT EXISTS app_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)`);
