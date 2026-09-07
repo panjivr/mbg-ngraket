@@ -12,7 +12,9 @@
     "vercel-build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:init": "node scripts/init-db.mjs"
+    "db:init": "node scripts/init-db.mjs",
+    "db:backup": "node --env-file=.env.local scripts/backup-db.mjs",
+    "db:restore": "node scripts/restore-db.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
