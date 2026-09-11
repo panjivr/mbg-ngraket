@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-09-11a.bank-menu";
+const SCHEMA_VERSION = "2026-09-11b.bank-komponen";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -915,6 +915,25 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bmo_sppg_paket ON bank_menu_override (sppg_id, paket_id)`);
+
+    // KOREKSI KATALOG per dapur untuk Generator Menu (komposer): perbaiki nilai
+    // default sebuah bahan (nama/satuan/per-porsi/harga) atau sembunyikan dari
+    // pilihan — tanpa mengubah katalog seed. Berlaku untuk semua komposisi.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bahan_catalog_override (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        bahan      TEXT NOT NULL,
+        nama       TEXT,
+        satuan     TEXT,
+        per_porsi  NUMERIC,
+        harga      NUMERIC,
+        hidden     BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, bahan)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bco_sppg ON bahan_catalog_override (sppg_id)`);
 
     // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
     await client.query(`
