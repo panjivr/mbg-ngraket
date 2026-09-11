@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-08-30b.slip-nb";
+const SCHEMA_VERSION = "2026-09-11a.bank-menu";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -894,6 +894,27 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_hari_khusus_sppg ON hari_khusus (sppg_id, tanggal)`);
+
+    // Koreksi admin untuk Bank Menu / Generator Purchase. Data dasar (resep per
+    // paket) berasal dari file JSON seed (RAB nyata). Tabel ini hanya menyimpan
+    // PERUBAHAN per dapur: perbaiki qty/nama/harga sebuah bahan, atau sembunyikan
+    // baris yang salah — tanpa mengubah seed. Generator = seed + override.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bank_menu_override (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        paket_id   TEXT NOT NULL,
+        bahan      TEXT NOT NULL,
+        nama       TEXT,
+        satuan     TEXT,
+        per_porsi  NUMERIC,
+        harga      NUMERIC,
+        hidden     BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, paket_id, bahan)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bmo_sppg_paket ON bank_menu_override (sppg_id, paket_id)`);
 
     // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
     await client.query(`
