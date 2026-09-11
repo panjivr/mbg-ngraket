@@ -59,6 +59,7 @@ function buildGroups(f: Flags): Group[] {
         { label: "Kepala Dapur", href: "/admin/kepala-dapur", icon: "clipboard", show: f.fullAdmin || f.aksesAudit },
         { label: "Audit Dapur", href: "/admin/audit-dapur", icon: "shield", show: f.fullAdmin || f.aksesAudit },
         { label: "Gudang", href: "/admin/gudang", icon: "box", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
+        { label: "Kebutuhan Bahan", href: "/admin/purchasing", icon: "coins", show: f.fullAdmin || f.aksesDistribusi || f.aksesGizi },
       ],
     },
     {
