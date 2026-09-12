@@ -76,10 +76,11 @@ export default function PurchasingPage() {
 
 /* ========================================================= generator resep */
 interface RBahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; kemasan: number; diedit?: boolean }
-interface RBom { id: string; n: string; s: string; peran: string; koef: number }
+interface RBom { id: string; n: string; s: string; k: number; yp: number; ed: number; ym: number; mk: number; g: number }
 interface CItem { n: string; s: string; q: number; h: number }
-interface RResep { id: string; kat: string; n: string; metode: string; satuan: string; gramTarget: number | null; yieldMasak: number; yieldPersiapan: number; pcsUtama: number | null; gramAcuan: number | null; status: string; bom: RBom[]; custom?: boolean; porsiBasis?: number; items?: CItem[] }
-interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; resep: RResep[]; bahan: RBahan[] }
+interface RResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; status: string; bom: RBom[]; custom?: boolean; porsiBasis?: number; items?: CItem[] }
+interface PorsiKB { kat: string; gramK: number; gramB: number }
+interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; porsiKB: PorsiKB[]; resep: RResep[]; bahan: RBahan[] }
 interface CustomRow { id: number; kategori: string; nama: string; porsi_basis: number; items: CItem[]; catatan: string; oleh: string }
 interface Builder { id: number | null; kategori: string; nama: string; porsi_basis: string; catatan: string; items: { n: string; s: string; q: string; h: string }[] }
 
@@ -87,11 +88,11 @@ function RecipeGenerator() {
   const [data, setData] = useState<RData | null>(null);
   const [custom, setCustom] = useState<CustomRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [besar, setBesar] = useState("500");
-  const [kecil, setKecil] = useState("500");
-  const [kecilPct, setKecilPct] = useState("80");
+  const [serdikK, setSerdikK] = useState("500");
+  const [serdikB, setSerdikB] = useState("500");
   const [cadangan, setCadangan] = useState("2");
   const [picked, setPicked] = useState<string[]>([]); // resep ids
+  const [gramOv, setGramOv] = useState<Record<string, { k: string; b: string }>>({}); // override gramasi per resep
   const [editId, setEditId] = useState<string | null>(null);
   const [ef, setEf] = useState({ nama: "", harga: "" });
   const [builder, setBuilder] = useState<Builder | null>(null);
@@ -105,44 +106,50 @@ function RecipeGenerator() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Resep custom → bentuk RResep agar seragam dengan resep bank.
+  // Resep custom → bentuk RResep agar seragam dengan resep bank (skala linear).
   const customAsResep = useMemo<RResep[]>(() => custom.map((c) => ({
-    id: "C" + c.id, kat: c.kategori, n: c.nama, metode: "CUSTOM", satuan: "porsi",
-    gramTarget: null, yieldMasak: 1, yieldPersiapan: 1, pcsUtama: null, gramAcuan: null,
+    id: "C" + c.id, kat: c.kategori, n: c.nama, gramK: 0, gramB: 0, yieldGab: 1,
     status: "RESEP DAPUR", bom: [], custom: true, porsiBasis: c.porsi_basis, items: c.items,
   })), [custom]);
   const allResep = useMemo<RResep[]>(() => [...(data?.resep || []), ...customAsResep], [data, customAsResep]);
 
-  const pB = Math.max(0, parseInt(besar, 10) || 0);
-  const pK = Math.max(0, parseInt(kecil, 10) || 0);
-  const kPct = Math.min(100, Math.max(0, parseFloat(kecilPct.replace(",", ".")) || 0)) / 100;
+  const K = Math.max(0, parseInt(serdikK, 10) || 0);
+  const B = Math.max(0, parseInt(serdikB, 10) || 0);
   const cad = Math.max(0, parseFloat(cadangan.replace(",", ".")) || 0) / 100;
 
   const bahanMap = useMemo(() => new Map((data?.bahan || []).map((b) => [b.id, b])), [data]);
   const resepMap = useMemo(() => new Map(allResep.map((r) => [r.id, r])), [allResep]);
+  // gramasi K/B efektif sebuah resep (override user > default resep).
+  const gramOf = useCallback((r: RResep) => {
+    const ov = gramOv[r.id];
+    const gk = ov && ov.k !== "" ? parseFloat(ov.k.replace(",", ".")) : r.gramK;
+    const gb = ov && ov.b !== "" ? parseFloat(ov.b.replace(",", ".")) : r.gramB;
+    return { gk: Number.isFinite(gk) ? gk : 0, gb: Number.isFinite(gb) ? gb : 0 };
+  }, [gramOv]);
 
-  /* hitung 1 resep → baris kebutuhan. Bank: rumus LOGIKA_SISTEM. Custom: skala linear
-     jumlah total (untuk porsi basis) × (target porsi / basis). */
+  /* utama mentah siap-olah (kg) sebuah resep bank untuk K/B serdik saat ini. */
+  const utamaMentahKg = useCallback((r: RResep) => {
+    const { gk, gb } = gramOf(r);
+    const target = (K * gk + B * gb) * (1 + cad) / 1000; // kg matang total
+    return r.yieldGab > 0 ? target / r.yieldGab : 0;
+  }, [K, B, cad, gramOf]);
+
+  /* hitung 1 resep → baris kebutuhan.
+     Bank: beli = utama mentah × koef ÷ yield persiapan (satuan bahan).
+     Custom: skala linear jumlah total (untuk porsi basis) × (total serdik / basis). */
   const hitung = useCallback((r: RResep) => {
-    const countPorsi = pB + pK;
     const f = 1 + cad;
     if (r.custom) {
-      const skala = (r.porsiBasis && r.porsiBasis > 0 ? countPorsi / r.porsiBasis : 0) * f;
+      const skala = (r.porsiBasis && r.porsiBasis > 0 ? (K + B) / r.porsiBasis : 0) * f;
       return (r.items || []).filter((it) => it.n).map((it) => ({
-        id: "c:" + it.n.trim().toLowerCase(), nama: it.n, satuan: it.s, qty: (it.q || 0) * skala, peran: "ITEM", hargaInline: it.h > 0 ? it.h : null as number | null,
+        id: "c:" + it.n.trim().toLowerCase(), nama: it.n, satuan: it.s, qty: (it.q || 0) * skala, hargaInline: it.h > 0 ? it.h : null as number | null,
       }));
     }
-    const massPorsi = pB + pK * kPct;
-    let netto: number;
-    if (r.metode === "COUNT") netto = (r.pcsUtama || 0) * countPorsi * (r.gramAcuan || 0) / 1000;
-    else netto = massPorsi * (r.gramTarget || 0) / 1000 / (r.yieldMasak || 1);
-    return r.bom.map((l) => {
-      let qty: number;
-      if (l.peran === "UTAMA") qty = l.s === "pcs" ? (r.pcsUtama || 0) * countPorsi : netto / (r.yieldPersiapan || 1);
-      else qty = netto * l.koef;
-      return { id: l.id, nama: l.n, satuan: l.s, qty: qty * f, peran: l.peran, hargaInline: null as number | null };
-    });
-  }, [pB, pK, kPct, cad]);
+    const utama = utamaMentahKg(r);
+    return r.bom.map((l) => ({
+      id: l.id, nama: l.n, satuan: l.s, qty: l.yp > 0 ? utama * l.k / l.yp : 0, hargaInline: null as number | null,
+    }));
+  }, [K, B, cad, utamaMentahKg]);
 
   /* konsolidasi seluruh resep terpilih per bahan */
   const belanja = useMemo(() => {
@@ -164,13 +171,14 @@ function RecipeGenerator() {
   const total = belanja.reduce((a, b) => a + b.biaya, 0);
   const unpriced = belanja.filter((b) => b.noHarga).length;
 
-  /* biaya per resep (ringkasan) */
+  /* ringkasan per resep: biaya, mentah kg, matang g/porsi K/B */
   const perResep = useMemo(() => picked.map((rid) => {
     const r = resepMap.get(rid); if (!r) return null;
     let biaya = 0;
     for (const l of hitung(r)) { const h = bahanMap.get(l.id)?.h ?? l.hargaInline; if (h != null) biaya += l.qty * h; }
-    return { id: rid, nama: r.n, kat: r.kat, biaya, porsi: pB + pK, custom: !!r.custom };
-  }).filter(Boolean) as { id: string; nama: string; kat: string; biaya: number; porsi: number; custom: boolean }[], [picked, resepMap, bahanMap, hitung, pB, pK]);
+    const g = gramOf(r);
+    return { id: rid, nama: r.n, kat: r.kat, biaya, porsi: K + B, custom: !!r.custom, mentah: r.custom ? null : utamaMentahKg(r), gk: g.gk, gb: g.gb };
+  }).filter(Boolean) as { id: string; nama: string; kat: string; biaya: number; porsi: number; custom: boolean; mentah: number | null; gk: number; gb: number }[], [picked, resepMap, bahanMap, hitung, K, B, gramOf, utamaMentahKg]);
 
   async function saveHarga(bahanNama: string) {
     const r = await fetch("/api/admin/purchasing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bahan: bahanNama, harga: ef.harga, nama: ef.nama }) });
@@ -209,14 +217,14 @@ function RecipeGenerator() {
     const body = belanja.map((b) => [b.nama, b.satuan, fmtQ(b.qty), b.harga != null ? Math.round(b.harga) : "", Math.round(b.biaya)].map(esc).join(","));
     const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a"); a.href = url; a.download = `kebutuhan-resep-${pB + pK}porsi.csv`; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement("a"); a.href = url; a.download = `kebutuhan-resep-${K + B}porsi.csv`; a.click(); URL.revokeObjectURL(url);
   }
   const waText = useMemo(() => {
     if (belanja.length === 0) return "";
     const menu = picked.map((id) => resepMap.get(id)?.n).filter(Boolean).join(", ");
     const baris = belanja.map((b) => `• ${b.nama}: ${fmtQ(b.qty)} ${b.satuan}`);
-    return `Kebutuhan Bahan (+ bumbu)\nMenu: ${menu}\nPorsi besar ${pB} · kecil ${pK}${cad ? ` (+${cadangan}% cadangan)` : ""}\n\n${baris.join("\n")}\n\nEstimasi biaya: ${rupiah(total)}`;
-  }, [belanja, picked, resepMap, pB, pK, cad, cadangan, total]);
+    return `Kebutuhan Bahan (+ bumbu)\nMenu: ${menu}\nSerdik besar ${B} · kecil ${K}${cad ? ` (+${cadangan}% cadangan)` : ""}\n\n${baris.join("\n")}\n\nEstimasi biaya: ${rupiah(total)}`;
+  }, [belanja, picked, resepMap, K, B, cad, cadangan, total]);
 
   if (!data) return <div className="card p-8 text-center text-slate-400">{msg || "Memuat resep…"}</div>;
 
@@ -225,7 +233,7 @@ function RecipeGenerator() {
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">{msg}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
         <p className="text-xs text-sky-200">
-          <b>{data.meta.resep} resep bank</b> + <b>{custom.length} resep dapur</b>. Bumbu terhitung otomatis. Pilih resep per kategori, atur porsi → daftar belanja lengkap.
+          <b>{data.meta.resep} resep bank</b> + <b>{custom.length} resep dapur</b>. Gramasi <b>matang</b>/porsi (kecil &amp; besar) → kebutuhan bahan baku (mentah) &amp; bumbu dihitung mundur otomatis. Bumbu ikut terhitung.
         </p>
         <button onClick={bukaBuilderBaru} className="btn-gold shrink-0 text-sm">+ Buat Resep Sendiri</button>
       </div>
@@ -247,29 +255,29 @@ function RecipeGenerator() {
         </div>
       )}
 
-      {/* Porsi */}
+      {/* Jumlah penerima (serdik) */}
       <div className="card p-4">
-        <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah porsi &amp; cadangan</p>
+        <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah penerima &amp; cadangan</p>
         <div className="flex flex-wrap items-end gap-3">
-          <div><label className="label">Porsi besar</label><input type="number" min={0} className="input w-28" value={besar} onFocus={(e) => e.target.select()} onChange={(e) => setBesar(e.target.value)} /></div>
-          <div><label className="label">Porsi kecil</label><input type="number" min={0} className="input w-28" value={kecil} onFocus={(e) => e.target.select()} onChange={(e) => setKecil(e.target.value)} /></div>
-          <div><label className="label">Gram porsi kecil (%)</label><input type="number" min={0} max={100} className="input w-28" value={kecilPct} onFocus={(e) => e.target.select()} onChange={(e) => setKecilPct(e.target.value)} /></div>
+          <div><label className="label">Serdik besar</label><input type="number" min={0} inputMode="numeric" className="input w-28" value={serdikB} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikB(e.target.value)} /></div>
+          <div><label className="label">Serdik kecil</label><input type="number" min={0} inputMode="numeric" className="input w-28" value={serdikK} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikK(e.target.value)} /></div>
           <div><label className="label">Cadangan (%)</label><input type="number" min={0} step="0.5" className="input w-24" value={cadangan} onFocus={(e) => e.target.select()} onChange={(e) => setCadangan(e.target.value)} /></div>
-          <p className="text-xs text-slate-500">Porsi kecil memakai {kecilPct || 0}% gramasi bahan utama (bumbu ikut menyesuaikan).</p>
+          <p className="text-xs text-slate-500">Total {K + B} porsi. Gramasi matang/porsi (kecil &amp; besar) diatur per resep di kartu kategori — kebutuhan bahan baku &amp; bumbu dihitung mundur dari situ.</p>
         </div>
       </div>
 
       {/* Pilih resep per kategori */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {data.kategori.map((kat) => {
           const bankOpts = allResep.filter((r) => r.kat === kat && !r.custom).sort((a, b) => a.n.localeCompare(b.n));
           const custOpts = allResep.filter((r) => r.kat === kat && r.custom).sort((a, b) => a.n.localeCompare(b.n));
           const chosen = picked.map((id) => resepMap.get(id)).filter((r): r is RResep => !!r && r.kat === kat);
+          const def = data.porsiKB.find((p) => p.kat === kat);
           return (
             <div key={kat} className="card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-100">{kat}</p>
-                <span className="text-xs text-slate-500">{chosen.length}</span>
+                <span className="text-xs text-slate-500">{def ? `${def.gramK}/${def.gramB} g` : chosen.length}</span>
               </div>
               <select className="input mb-2 text-sm" value="" onChange={(e) => { const v = e.target.value; if (v && !picked.includes(v)) setPicked((p) => [...p, v]); e.currentTarget.value = ""; }}>
                 <option value="">+ tambah resep… ({bankOpts.length + custOpts.length})</option>
@@ -277,12 +285,28 @@ function RecipeGenerator() {
                 <optgroup label="Resep bank">{bankOpts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}</optgroup>
               </select>
               <div className="space-y-1.5">
-                {chosen.length === 0 ? <p className="py-1 text-center text-xs text-slate-600">—</p> : chosen.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
-                    <span className="min-w-0 truncate text-sm text-slate-200">{r.custom && <span className="badge mr-1 bg-emerald-500/15 text-emerald-300">dapur</span>}{r.n}<span className="ml-1 text-[10px] text-slate-500">{(r.custom ? r.items?.length : r.bom.length) || 0} bahan</span></span>
-                    <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-xs text-slate-500 hover:text-red-300">×</button>
-                  </div>
-                ))}
+                {chosen.length === 0 ? <p className="py-1 text-center text-xs text-slate-600">—</p> : chosen.map((r) => {
+                  const g = gramOf(r);
+                  return (
+                    <div key={r.id} className="rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-sm text-slate-200">{r.custom && <span className="badge mr-1 bg-emerald-500/15 text-emerald-300">dapur</span>}{r.n}</span>
+                        <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-xs text-slate-500 hover:text-red-300">×</button>
+                      </div>
+                      {r.custom ? (
+                        <p className="mt-0.5 text-[10px] text-slate-500">{r.items?.length || 0} bahan · basis {fmtQ(r.porsiBasis || 0)} porsi (skala otomatis)</p>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="text-[10px] uppercase text-slate-500">matang g/porsi</span>
+                          <input className="input w-14 px-1.5 py-0.5 text-center text-xs" title="gram matang porsi kecil" value={gramOv[r.id]?.k ?? String(r.gramK)} onFocus={(e) => e.target.select()} onChange={(e) => setGramOv((o) => ({ ...o, [r.id]: { k: e.target.value, b: o[r.id]?.b ?? String(r.gramB) } }))} />
+                          <span className="text-[10px] text-slate-500">K</span>
+                          <input className="input w-14 px-1.5 py-0.5 text-center text-xs" title="gram matang porsi besar" value={gramOv[r.id]?.b ?? String(r.gramB)} onFocus={(e) => e.target.select()} onChange={(e) => setGramOv((o) => ({ ...o, [r.id]: { k: o[r.id]?.k ?? String(r.gramK), b: e.target.value } }))} />
+                          <span className="text-[10px] text-slate-500">B</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -291,12 +315,15 @@ function RecipeGenerator() {
 
       {/* Ringkasan per resep */}
       {perResep.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {perResep.map((p) => (
             <div key={p.id} className="stat-card">
               <p className="stat-label truncate">{p.nama}</p>
               <p className="stat-value text-lg">{rupiah(p.biaya)}</p>
               <p className="text-[11px] text-slate-500">≈ {rupiah(p.porsi ? p.biaya / p.porsi : 0)}/porsi</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {p.custom ? "resep dapur (skala)" : <>matang {fmtQ(p.gk)}/{fmtQ(p.gb)} g · baku {fmtQ(p.mentah || 0)} kg</>}
+              </p>
             </div>
           ))}
         </div>
@@ -306,7 +333,7 @@ function RecipeGenerator() {
       <div className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 p-4">
           <div>
-            <p className="text-sm font-semibold text-slate-100">Daftar belanja (+ bumbu) — {belanja.length} bahan · {pB + pK} porsi</p>
+            <p className="text-sm font-semibold text-slate-100">Daftar belanja (+ bumbu) — {belanja.length} bahan · {K + B} porsi</p>
             {unpriced > 0 && <p className="text-xs text-amber-300">{unpriced} bahan belum ada harga (klik &quot;Perbaiki harga&quot; untuk melengkapi).</p>}
           </div>
           <div className="flex gap-2">
@@ -356,8 +383,8 @@ function RecipeGenerator() {
         </div>
       </div>
       <p className="text-[11px] text-slate-500">
-        MASS: utama netto (kg) = porsi × gram target ÷ 1000 ÷ yield masak. COUNT: pcs = porsi × pcs/porsi.
-        BUMBU = utama netto × koefisien per kg. Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
+        Target matang (kg) = (serdik K × gram K + serdik B × gram B) × (1+cadangan) ÷ 1000. Bahan baku mentah siap-olah = target matang ÷ yield gabungan resep.
+        Beli tiap bahan = mentah × koefisien ÷ yield persiapan (satuan beli; kg/liter/pcs). Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
       </p>
 
       {/* Modal builder resep custom */}
