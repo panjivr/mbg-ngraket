@@ -1,7 +1,7 @@
 import { requireAkses } from "@/lib/session";
 import { query } from "@/lib/db";
 import { ok, route } from "@/lib/api";
-import { getBahanMaster, getResepAll, RESEP_META, RESEP_KATEGORI } from "@/lib/resep";
+import { getBahanMaster, getResepAll, RESEP_META, RESEP_KATEGORI, PORSI_KB } from "@/lib/resep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,5 +32,5 @@ export const GET = route(async () => {
     };
   });
 
-  return ok({ meta: RESEP_META, kategori: RESEP_KATEGORI, resep: getResepAll(), bahan });
+  return ok({ meta: RESEP_META, kategori: RESEP_KATEGORI, porsiKB: PORSI_KB, resep: getResepAll(), bahan });
 });
