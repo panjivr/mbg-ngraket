@@ -97,6 +97,7 @@ function RecipeGenerator() {
   const [ef, setEf] = useState({ nama: "", harga: "" });
   const [builder, setBuilder] = useState<Builder | null>(null);
   const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState<RResep | null>(null); // resep untuk modal penjelasan mentah→matang
 
   const load = useCallback(() => {
     fetch("/api/admin/resep", { cache: "no-store" }).then((r) => r.json())
@@ -266,6 +267,24 @@ function RecipeGenerator() {
         </div>
       </div>
 
+      {/* Ringkasan langsung */}
+      {picked.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[
+            { label: "Porsi", val: (K + B).toLocaleString("id-ID"), sub: `${B} besar · ${K} kecil`, grad: "from-sky-500/20" },
+            { label: "Resep dipilih", val: String(picked.length), sub: `${belanja.length} bahan belanja`, grad: "from-violet-500/20" },
+            { label: "Estimasi biaya", val: rupiah(total), sub: unpriced > 0 ? `${unpriced} bahan belum berharga` : "semua bahan berharga", grad: "from-emerald-500/20" },
+            { label: "Biaya / porsi", val: rupiah(K + B ? total / (K + B) : 0), sub: `cadangan ${cadangan || 0}%`, grad: "from-gold-500/20" },
+          ].map((s) => (
+            <div key={s.label} className={"rounded-2xl border border-white/10 bg-gradient-to-br to-transparent p-4 " + s.grad}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{s.label}</p>
+              <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-100">{s.val}</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Pilih resep per kategori */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {data.kategori.map((kat) => {
@@ -290,7 +309,14 @@ function RecipeGenerator() {
                   return (
                     <div key={r.id} className="rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate text-sm text-slate-200">{r.custom && <span className="badge mr-1 bg-emerald-500/15 text-emerald-300">dapur</span>}{r.n}</span>
+                        <span className="flex min-w-0 items-center gap-1.5 text-sm text-slate-200">
+                          {r.custom && <span className="badge bg-emerald-500/15 text-emerald-300">dapur</span>}
+                          <span className="truncate">{r.n}</span>
+                          {!r.custom && (
+                            <button onClick={() => setInfo(r)} title="Kenapa mentah→matang segini?" aria-label="Penjelasan mentah ke matang"
+                              className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-sky-400/15 text-[10px] font-bold leading-none text-sky-300/80 ring-1 ring-inset ring-sky-400/20 transition hover:bg-sky-400/30 hover:text-sky-200">!</button>
+                          )}
+                        </span>
                         <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-xs text-slate-500 hover:text-red-300">×</button>
                       </div>
                       {r.custom ? (
@@ -386,6 +412,81 @@ function RecipeGenerator() {
         Target matang (kg) = (serdik K × gram K + serdik B × gram B) × (1+cadangan) ÷ 1000. Bahan baku mentah siap-olah = target matang ÷ yield gabungan resep.
         Beli tiap bahan = mentah × koefisien ÷ yield persiapan (satuan beli; kg/liter/pcs). Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
       </p>
+
+      {/* Modal penjelasan ilmiah mentah → matang */}
+      {info && (() => {
+        const r = info;
+        const g = gramOf(r);
+        const utama = utamaMentahKg(r);
+        const mains = r.bom.filter((l) => l.mk === 1);
+        const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+        const targetMatang = (K * g.gk + B * g.gb) * (1 + cad) / 1000;
+        return (
+          <div className="fixed inset-0 z-40 grid place-items-center bg-black/70 p-4" onClick={() => setInfo(null)}>
+            <div className="card flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden p-0" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3 bg-gradient-to-br from-sky-500/20 via-sky-500/5 to-transparent p-5">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-300/80">Ilmu di balik angka · {r.kat}</p>
+                  <h2 className="truncate text-lg font-bold text-slate-100">{r.n}</h2>
+                  <p className="mt-0.5 text-xs text-slate-400">Target sajian matang: <b className="text-slate-200">{fmtQ(g.gk)} g</b> (kecil) &amp; <b className="text-slate-200">{fmtQ(g.gb)} g</b> (besar) per porsi.</p>
+                </div>
+                <button onClick={() => setInfo(null)} className="shrink-0 rounded-lg px-2 py-1 text-slate-400 hover:bg-white/10 hover:text-slate-100">✕</button>
+              </div>
+              <div className="flex flex-col gap-4 overflow-y-auto px-5 pb-5 pt-1">
+                <p className="text-sm text-slate-300">Kebutuhan bahan baku dihitung <b>mundur</b> dari berat matang yang ingin disajikan — karena tiap bahan menyusut (atau mengembang) melewati tahap <i>persiapan</i> dan <i>memasak</i>.</p>
+
+                {mains.map((l) => {
+                  const edible = l.ed, ym = l.ym, yp = l.yp;
+                  const notes: string[] = [];
+                  if (yp < 1) notes.push(`Susut persiapan ${pct(1 - yp)}: dikupas/disiangi/dicuci-tiris sebelum diolah (kulit, akar, bagian rusak dibuang).`);
+                  if (edible < 1) notes.push(`Bagian tak termakan ${pct(1 - edible)}: tulang, cangkang, kulit keras, atau biji yang tidak ikut disajikan.`);
+                  if (ym < 1) notes.push(`Susut masak ${pct(1 - ym)}: air menguap dan protein/serat mengkerut saat dipanaskan (rebus, tumis, goreng).`);
+                  else if (ym > 1) notes.push(`Mengembang ${pct(ym - 1)}: bahan menyerap air saat dimasak (mis. beras menjadi nasi).`);
+                  const kontribusi = l.k * edible * ym;
+                  return (
+                    <div key={l.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="mb-2 text-sm font-semibold text-slate-100">{l.n}</p>
+                      {/* alur visual */}
+                      <div className="flex items-stretch gap-1 text-center text-[10px]">
+                        {[
+                          { lbl: "Beli", val: "100%", tone: "text-slate-300" },
+                          { lbl: "Siap olah", val: pct(yp), tone: "text-amber-300" },
+                          { lbl: "Bisa dimakan", val: pct(yp * edible), tone: "text-orange-300" },
+                          { lbl: "Matang", val: pct(yp * edible * ym), tone: "text-emerald-300" },
+                        ].map((s, i) => (
+                          <div key={s.lbl} className="flex flex-1 items-center gap-1">
+                            <div className="flex-1 rounded-lg bg-white/5 py-1.5">
+                              <p className={"text-xs font-bold " + s.tone}>{s.val}</p>
+                              <p className="text-slate-500">{s.lbl}</p>
+                            </div>
+                            {i < 3 && <span className="text-slate-600">→</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <ul className="mt-2.5 space-y-1">
+                        {notes.map((n, i) => <li key={i} className="flex gap-1.5 text-xs text-slate-400"><span className="text-sky-400">•</span><span>{n}</span></li>)}
+                      </ul>
+                      <p className="mt-2 rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-200">Kesimpulan: <b>1 kg</b> {l.n.toLowerCase()} yang dibeli ≈ <b>{fmtQ(kontribusi / (l.k || 1))} kg</b> siap saji. Untuk {fmtQ(g.gb)} g/porsi besar, itu ± {fmtQ((g.gb / 1000) / (edible * ym))} kg bahan mentah siap-olah per porsi.</p>
+                    </div>
+                  );
+                })}
+
+                {/* ringkasan batch saat ini */}
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300/80">Untuk pesanan sekarang ({K + B} porsi)</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <div><p className="text-slate-400 text-xs">Total sajian matang</p><p className="font-bold text-slate-100">{fmtQ(Math.round(targetMatang * 100) / 100)} kg</p></div>
+                    <div><p className="text-slate-400 text-xs">Bahan utama mentah siap-olah</p><p className="font-bold text-slate-100">{fmtQ(Math.round(utama * 100) / 100)} kg</p></div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-400">Yield gabungan resep <b className="text-slate-200">{pct(r.yieldGab)}</b> — artinya tiap 1 kg bahan utama mentah siap-olah menghasilkan {fmtQ(Math.round(r.yieldGab * 100) / 100)} kg komponen kategori matang.</p>
+                </div>
+
+                <p className="text-[11px] text-slate-500">Angka susut adalah asumsi DRAF (mengikuti profil bahan), bukan hasil timbang aktual. Kalibrasi lewat uji dapur: timbang bruto → siap-olah → matang, lalu perbarui faktor per resep.</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal builder resep custom */}
       {builder && (
