@@ -12,7 +12,7 @@
  *
  * Tab "Paket Historis": lihat paket menu harian nyata (referensi) & skalakan.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 
 /* ------------------------------------------------------------------ util */
 const rupiah = (n: number) => "Rp " + Math.round(n || 0).toLocaleString("id-ID");
@@ -57,8 +57,20 @@ const TABS: { k: "resep" | "kerja" | "bebas" | "paket"; label: string }[] = [
   { k: "bebas", label: "Komponen Bebas" },
   { k: "paket", label: "Paket Historis" },
 ];
+export interface Shared {
+  picked: string[]; setPicked: Dispatch<SetStateAction<string[]>>;
+  serdikK: string; setSerdikK: (v: string) => void;
+  serdikB: string; setSerdikB: (v: string) => void;
+  cadangan: string; setCadangan: (v: string) => void;
+}
 export default function PurchasingPage() {
   const [tab, setTab] = useState<"resep" | "kerja" | "bebas" | "paket">("resep");
+  // State dibagi antara Generator Resep & Pembagian Kerja (menu + jumlah porsi nyambung otomatis).
+  const [picked, setPicked] = useState<string[]>([]);
+  const [serdikK, setSerdikK] = useState("500");
+  const [serdikB, setSerdikB] = useState("500");
+  const [cadangan, setCadangan] = useState("2");
+  const shared: Shared = { picked, setPicked, serdikK, setSerdikK, serdikB, setSerdikB, cadangan, setCadangan };
   return (
     <div className="space-y-5">
       <div>
@@ -70,13 +82,14 @@ export default function PurchasingPage() {
           <button key={t.k} onClick={() => setTab(t.k)} className={"rounded-lg px-4 py-1.5 text-sm font-medium transition " + (tab === t.k ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:text-slate-100")}>{t.label}</button>
         ))}
       </div>
-      {tab === "resep" ? <RecipeGenerator /> : tab === "kerja" ? <JobdeskGenerator /> : tab === "bebas" ? <Composer /> : <PaketHistoris />}
+      {tab === "resep" ? <RecipeGenerator shared={shared} /> : tab === "kerja" ? <JobdeskGenerator shared={shared} onGoMenu={() => setTab("resep")} /> : tab === "bebas" ? <Composer /> : <PaketHistoris />}
     </div>
   );
 }
 
 /* ======================================================= pembagian kerja */
-interface JResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; metode?: string; buahPotong?: number; menitBatch?: number; kgAlatBatch?: number; prepAlat?: string }
+interface JBom { id: string; n: string; s: string; k: number; yp: number; ed: number; ym: number; mk: number }
+interface JResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; metode?: string; buahPotong?: number; menitBatch?: number; kgAlatBatch?: number; prepAlat?: string; bom?: JBom[] }
 interface Alat { n: string; jumlah: number; slot: number; kap: number; sat: string; menit: number; ket: string }
 interface Langkah { t: string; l: string; a: string; k: string; p: string }
 const TAHAP_TONE: Record<string, string> = {
@@ -89,32 +102,33 @@ const TAHAP_TONE: Record<string, string> = {
   Pemorsian: "border-rose-500/30 bg-rose-500/10 text-rose-300",
 };
 
-function JobdeskGenerator() {
+function JobdeskGenerator({ shared, onGoMenu }: { shared: Shared; onGoMenu: () => void }) {
+  const { picked, serdikK, serdikB, cadangan } = shared;
+  const bankPicked = useMemo(() => picked.filter((id) => !id.startsWith("C")), [picked]);
   const [resep, setResep] = useState<JResep[]>([]);
-  const [kategori, setKategori] = useState<string[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [serdikK, setSerdikK] = useState("500");
-  const [serdikB, setSerdikB] = useState("500");
-  const [cadangan, setCadangan] = useState("2");
   const [orang, setOrang] = useState({ persiapan: 6, pengolahan: 10, pemorsian: 9 });
   const [alat, setAlat] = useState<Alat[]>([]);
-  const [picked, setPicked] = useState<string[]>([]);
   const [steps, setSteps] = useState<Record<string, Langkah[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
+  const [jam, setJam] = useState({ persiapan: "18:00", pengolahan: "23:00", pemorsian: "03:00" });
+  const [istirahat, setIstirahat] = useState({ persiapan: "0", pengolahan: "0", pemorsian: "0" });
+  const [exporting, setExporting] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/admin/resep", { cache: "no-store" }).then((r) => r.json())
-      .then((d) => { if (d.error) { setMsg(d.error); return; } setResep(d.resep || []); setKategori(d.kategori || []); }).catch(() => setMsg("Gagal memuat resep."));
+      .then((d) => { if (d.error) { setMsg(d.error); return; } setResep(d.resep || []); }).catch(() => setMsg("Gagal memuat resep."));
     fetch("/api/admin/resep/sop?ids=", { cache: "no-store" }).then((r) => r.json())
       .then((d) => { if (!d.error) { setAlat(d.alat || []); if (d.divisi) setOrang({ persiapan: d.divisi.persiapan || 6, pengolahan: d.divisi.pengolahan || 10, pemorsian: d.divisi.pemorsian || 9 }); } }).catch(() => {});
   }, []);
 
-  // ambil SOP tiap kali pilihan berubah
+  // ambil SOP tiap kali pilihan berubah (hanya resep bank)
   useEffect(() => {
-    if (picked.length === 0) { setSteps({}); return; }
-    fetch(`/api/admin/resep/sop?ids=${picked.join(",")}`, { cache: "no-store" }).then((r) => r.json())
+    if (bankPicked.length === 0) { setSteps({}); return; }
+    fetch(`/api/admin/resep/sop?ids=${bankPicked.join(",")}`, { cache: "no-store" }).then((r) => r.json())
       .then((d) => { if (!d.error) setSteps(d.steps || {}); }).catch(() => {});
-  }, [picked]);
+  }, [bankPicked]);
 
   const K = Math.max(0, parseInt(serdikK, 10) || 0);
   const B = Math.max(0, parseInt(serdikB, 10) || 0);
@@ -154,140 +168,238 @@ function JobdeskGenerator() {
   const setAlatVal = (i: number, key: keyof Alat, v: string) =>
     setAlat((a) => a.map((x, j) => j === i ? { ...x, [key]: key === "n" || key === "sat" || key === "ket" ? v : (parseFloat(v.replace(",", ".")) || 0) } : x));
 
+  // ---- jadwal berkesinambungan (jam datang tiap divisi + istirahat) ----
+  const toMin = (t: string) => { const [h, m] = t.split(":").map((x) => parseInt(x, 10)); return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0); };
+  const fmtJam = (min: number) => { const m = ((min % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+  const istP = parseInt(istirahat.persiapan, 10) || 0, istO = parseInt(istirahat.pengolahan, 10) || 0, istM = parseInt(istirahat.pemorsian, 10) || 0;
+  const jadwal = {
+    persiapan: { mulai: toMin(jam.persiapan), selesai: toMin(jam.persiapan) + waktuPrep + istP, durasi: waktuPrep, ist: istP },
+    pengolahan: { mulai: toMin(jam.pengolahan), selesai: toMin(jam.pengolahan) + waktuOlah + istO, durasi: waktuOlah, ist: istO },
+    pemorsian: { mulai: toMin(jam.pemorsian), selesai: toMin(jam.pemorsian) + waktuPorsi + istM, durasi: waktuPorsi, ist: istM },
+  };
+  // jadwal batch pengolahan: susun berurutan per lane kompor dari jam datang pengolahan
+  const jadwalOlah = useMemo(() => {
+    const lanes = Math.max(1, komporAktif || 1);
+    const laneEnd = new Array(lanes).fill(jadwal.pengolahan.mulai);
+    // resep protein/lama dulu
+    const order = [...perResep].sort((a, b) => (b.r.menitBatch || 0) - (a.r.menitBatch || 0));
+    return order.map((x) => {
+      const li = laneEnd.indexOf(Math.min(...laneEnd));
+      const mulai = laneEnd[li];
+      const selesai = mulai + x.durasi;
+      laneEnd[li] = selesai;
+      return { ...x, lane: li + 1, mulai, selesai };
+    });
+  }, [perResep, komporAktif, jadwal.pengolahan.mulai]);
+
+  // ---- saran bentuk potongan (standar dapur, DRAF) ----
+  function saranPotong(nama: string, metode?: string): string | null {
+    const n = nama.toLowerCase(); const m = (metode || "").toLowerCase();
+    const tumis = /tumis|oseng|saute|cah|gongso|tumus/.test(m);
+    const sup = /sop|sup|kuah|soto|kari|gulai|bening/.test(m);
+    if (/wortel/.test(n)) return tumis ? "korek api (julienne) ± 4 cm" : sup ? "dadu 1,5 cm" : "korek api / dadu sesuai olahan";
+    if (/kentang/.test(n)) return /perkedel/.test(m) ? "rebus lalu haluskan" : sup ? "dadu 2 cm" : "dadu / stik 1 cm";
+    if (/buncis/.test(n)) return "serong 3 cm";
+    if (/kacang panjang/.test(n)) return "potong 3–4 cm";
+    if (/kubis|kol\b|kobis/.test(n)) return "iris kasar 2 cm";
+    if (/sawi|pakcoy|pokcoy|caisim/.test(n)) return "potong 3–4 cm";
+    if (/bayam|kangkung/.test(n)) return "petik daun + batang muda";
+    if (/labu|terong|gambas|oyong/.test(n)) return "dadu / setengah bulan 1,5 cm";
+    if (/timun/.test(n)) return "iris tipis (lalapan)";
+    if (/tomat/.test(n)) return "belah 6–8 (wedges)";
+    if (/tahu/.test(n)) return "dadu 2–3 cm atau segitiga";
+    if (/tempe/.test(n)) return "iris tipis 0,5 cm atau dadu";
+    if (/bawang (merah|putih)|bombay/.test(n)) return "kupas → haluskan/iris";
+    if (/caba?i|cabe/.test(n)) return "iris serong / haluskan sesuai resep";
+    if (/daun bawang|seledri|pre\b/.test(n)) return "iris halus";
+    if (/ayam/.test(n)) return "potong sesuai porsi (8–12 potong/kg)";
+    if (/lele|ikan|nila|patin|tongkol|bandeng/.test(n)) return "siangi, kerat badan; utuh/potong sesuai porsi";
+    if (/telur/.test(n)) return "rebus/kocok sesuai resep";
+    if (/jahe|lengkuas|kunyit|kencur/.test(n)) return "kupas → geprek/haluskan";
+    if (/serai|sereh/.test(n)) return "geprek, utuh (aromatik)";
+    if (/daun (salam|jeruk)/.test(n)) return "utuh (aromatik)";
+    return null;
+  }
+
+  async function exportPNG() {
+    if (!cardRef.current) return; setExporting(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      const url = await toPng(cardRef.current, { backgroundColor: "#0b1120", pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a"); a.href = url; a.download = `jobdesk-${totalPorsi}porsi.png`; a.click();
+    } catch { setMsg("Gagal membuat gambar."); } finally { setExporting(false); }
+  }
+  async function exportPDF() {
+    if (!cardRef.current) return; setExporting(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
+      const url = await toPng(cardRef.current, { backgroundColor: "#0b1120", pixelRatio: 2, cacheBust: true });
+      const img = new Image(); img.src = url; await new Promise((r) => { img.onload = r; });
+      const pdf = new jsPDF({ orientation: img.width > img.height ? "l" : "p", unit: "px", format: [img.width, img.height] });
+      pdf.addImage(url, "PNG", 0, 0, img.width, img.height); pdf.save(`jobdesk-${totalPorsi}porsi.pdf`);
+    } catch { setMsg("Gagal membuat PDF."); } finally { setExporting(false); }
+  }
+  const waJobdesk = () => {
+    const lines = [`*JOBDESK DAPUR MBG* — ${totalPorsi} porsi (${B} besar / ${K} kecil)`, ""];
+    lines.push(`PERSIAPAN (${orang.persiapan} org) ${fmtJam(jadwal.persiapan.mulai)}–${fmtJam(jadwal.persiapan.selesai)}`);
+    lines.push(`PENGOLAHAN (${orang.pengolahan} org) ${fmtJam(jadwal.pengolahan.mulai)}–${fmtJam(jadwal.pengolahan.selesai)}`);
+    for (const x of jadwalOlah) lines.push(`  • ${x.r.n}: ${x.batch} batch, kompor ${x.lane}, ${fmtJam(x.mulai)}–${fmtJam(x.selesai)}`);
+    lines.push(`PEMORSIAN (${orang.pemorsian} org) ${fmtJam(jadwal.pemorsian.mulai)}–${fmtJam(jadwal.pemorsian.selesai)}`);
+    return `https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`;
+  };
+
+  const menuList = perResep.map((x) => x.r);
+
   return (
     <div className="space-y-5">
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">{msg}</p>}
-      <p className="rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5 text-xs text-sky-200">
-        Setelah menu &amp; belanja siap, di sini kita bagi kerja 3 divisi (<b>Persiapan</b>, <b>Pengolahan</b>, <b>Pemorsian</b>) &amp; langkah masak detail dari SOP chef. Isi jumlah orang &amp; alat, lalu pilih menu.
-      </p>
-
-      {/* Input orang & porsi */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card p-4">
-          <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah penerima</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div><label className="label">Serdik besar</label><input type="number" min={0} className="input w-24" value={serdikB} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikB(e.target.value)} /></div>
-            <div><label className="label">Serdik kecil</label><input type="number" min={0} className="input w-24" value={serdikK} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikK(e.target.value)} /></div>
-            <div><label className="label">Cadangan (%)</label><input type="number" min={0} step="0.5" className="input w-20" value={cadangan} onFocus={(e) => e.target.select()} onChange={(e) => setCadangan(e.target.value)} /></div>
-          </div>
-        </div>
-        <div className="card p-4">
-          <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah tim per divisi</p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div><label className="label">Persiapan</label><input type="number" min={0} className="input w-24" value={orang.persiapan} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, persiapan: parseInt(e.target.value, 10) || 0 })} /></div>
-            <div><label className="label">Pengolahan</label><input type="number" min={0} className="input w-24" value={orang.pengolahan} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, pengolahan: parseInt(e.target.value, 10) || 0 })} /></div>
-            <div><label className="label">Pemorsian</label><input type="number" min={0} className="input w-24" value={orang.pemorsian} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, pemorsian: parseInt(e.target.value, 10) || 0 })} /></div>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5">
+        <p className="text-xs text-sky-200">
+          Menu &amp; jumlah porsi <b>otomatis dari tab Generator Resep</b> ({B} besar / {K} kecil · {menuList.length} menu). Di sini cukup isi jam kerja, jumlah orang &amp; alat.
+        </p>
+        <button onClick={onGoMenu} className="btn-ghost shrink-0 text-xs">Ubah menu di Generator Resep →</button>
       </div>
 
-      {/* Alat */}
-      <div className="card overflow-hidden">
-        <p className="border-b border-white/5 p-4 text-sm font-semibold text-slate-100">Alat dapur (bisa diedit)</p>
-        <div className="scroll-x overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="text-left text-xs uppercase text-slate-400"><tr className="border-b border-white/5">
-              <th className="px-4 py-2">Alat</th><th className="px-4 py-2 text-right">Jumlah</th><th className="px-4 py-2 text-right">Kapasitas</th><th className="px-4 py-2">Satuan</th><th className="px-4 py-2 text-right">Menit/siklus</th>
-            </tr></thead>
-            <tbody className="divide-y divide-white/5">
-              {alat.map((a, i) => (
-                <tr key={a.n}>
-                  <td className="px-4 py-1.5 text-slate-200">{a.n}</td>
-                  <td className="px-2 py-1.5"><input className="input w-16 py-1 text-right" value={a.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "jumlah", e.target.value)} /></td>
-                  <td className="px-2 py-1.5"><input className="input w-20 py-1 text-right" value={a.kap} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "kap", e.target.value)} /></td>
-                  <td className="px-4 py-1.5 text-xs text-slate-500">{a.sat}</td>
-                  <td className="px-2 py-1.5"><input className="input w-16 py-1 text-right" value={a.menit} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "menit", e.target.value)} /></td>
-                </tr>
-              ))}
-              {alat.length === 0 && <tr><td colSpan={5} className="px-4 py-4 text-center text-slate-500">Memuat…</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pilih menu */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {kategori.map((kat) => {
-          const opts = resep.filter((r) => r.kat === kat).sort((a, b) => a.n.localeCompare(b.n));
-          const chosen = picked.map((id) => resepMap.get(id)).filter((r): r is JResep => !!r && r.kat === kat);
-          return (
-            <div key={kat} className="card p-4">
-              <p className="mb-2 text-sm font-semibold text-slate-100">{kat}</p>
-              <select className="input mb-2 text-sm" value="" onChange={(e) => { const v = e.target.value; if (v && !picked.includes(v)) setPicked((p) => [...p, v]); e.currentTarget.value = ""; }}>
-                <option value="">+ tambah… ({opts.length})</option>
-                {opts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}
-              </select>
-              <div className="space-y-1">
-                {chosen.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1 text-xs text-slate-200">
-                    <span className="truncate">{r.n}</span>
-                    <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-slate-500 hover:text-red-300">×</button>
+      {menuList.length === 0 ? (
+        <div className="card p-8 text-center text-sm text-slate-500">Belum ada menu. Buka tab <b>Generator Resep</b>, pilih resep per kategori, lalu kembali ke sini.</div>
+      ) : (
+        <>
+          {/* Jam kerja + orang + alat */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="card p-4">
+              <p className="mb-2 text-sm font-semibold text-slate-100">Jam datang &amp; istirahat per divisi</p>
+              <div className="space-y-2">
+                {([["persiapan", "Persiapan"], ["pengolahan", "Pengolahan"], ["pemorsian", "Pemorsian"]] as const).map(([k, lbl]) => (
+                  <div key={k} className="flex flex-wrap items-end gap-2">
+                    <div className="w-24 text-sm text-slate-300">{lbl}</div>
+                    <div><label className="label">Jam datang</label><input type="time" className="input w-28" value={jam[k]} onChange={(e) => setJam({ ...jam, [k]: e.target.value })} /></div>
+                    <div><label className="label">Istirahat (mnt)</label><input type="number" min={0} className="input w-20" value={istirahat[k]} onFocus={(e) => e.target.select()} onChange={(e) => setIstirahat({ ...istirahat, [k]: e.target.value })} /></div>
+                    <div><label className="label">Orang</label><input type="number" min={0} className="input w-16" value={orang[k]} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, [k]: parseInt(e.target.value, 10) || 0 })} /></div>
                   </div>
                 ))}
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {picked.length > 0 && (
-        <>
-          {/* Ringkasan beban 3 divisi */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-transparent p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-300/80">Persiapan · {orang.persiapan} orang</p>
-              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuPrep} mnt</p>
-              <p className="text-[11px] text-slate-500">{fmtQ(Math.round(totalMentah * 10) / 10)} kg bahan utama disiangi/potong/timbang</p>
-            </div>
-            <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/15 to-transparent p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-300/80">Pengolahan · {orang.pengolahan} orang</p>
-              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuOlah} mnt</p>
-              <p className="text-[11px] text-slate-500">{totalBatch} batch · {komporAktif} kompor aktif · {gelombang} gelombang</p>
-            </div>
-            <div className="rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/15 to-transparent p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-300/80">Pemorsian · {orang.pemorsian} orang</p>
-              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuPorsi} mnt</p>
-              <p className="text-[11px] text-slate-500">{totalPorsi} ompreng · {picked.length} komponen/porsi</p>
+            <div className="card overflow-hidden p-0">
+              <p className="border-b border-white/5 p-4 text-sm font-semibold text-slate-100">Alat dapur (bisa diedit)</p>
+              <div className="scroll-x max-h-[220px] overflow-auto">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead className="sticky top-0 bg-ink-900 text-left text-[11px] uppercase text-slate-400"><tr className="border-b border-white/5">
+                    <th className="px-3 py-2">Alat</th><th className="px-2 py-2 text-right">Jml</th><th className="px-2 py-2 text-right">Kapasitas</th><th className="px-2 py-2 text-right">Mnt</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-white/5">
+                    {alat.map((a, i) => (
+                      <tr key={a.n}>
+                        <td className="px-3 py-1 text-slate-200">{a.n} <span className="text-[10px] text-slate-500">{a.sat}</span></td>
+                        <td className="px-2 py-1"><input className="input w-14 py-0.5 text-right" value={a.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "jumlah", e.target.value)} /></td>
+                        <td className="px-2 py-1"><input className="input w-16 py-0.5 text-right" value={a.kap} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "kap", e.target.value)} /></td>
+                        <td className="px-2 py-1"><input className="input w-12 py-0.5 text-right" value={a.menit} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "menit", e.target.value)} /></td>
+                      </tr>
+                    ))}
+                    {alat.length === 0 && <tr><td colSpan={4} className="px-4 py-4 text-center text-slate-500">Memuat…</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          {/* Jadwal batch per resep + langkah SOP */}
-          <div className="space-y-3">
-            {perResep.map(({ id, r, mentah, batch, durasi }) => {
-              const st = steps[id] || [];
-              const open = openId === id;
-              return (
-                <div key={id} className="card overflow-hidden">
-                  <button onClick={() => setOpenId(open ? null : id)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02]">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-100">{r.n} <span className="text-xs font-normal text-slate-500">· {r.kat} · {r.metode || "olah"}</span></p>
-                      <p className="text-[11px] text-slate-400">{fmtQ(Math.round(mentah * 10) / 10)} kg bahan utama · {batch} batch × {r.menitBatch || 0} mnt ≈ {durasi} mnt {r.prepAlat ? `· bumbu: ${r.prepAlat.toLowerCase()}` : ""}</p>
-                    </div>
-                    <span className={"shrink-0 text-xs " + (open ? "text-gold-400" : "text-slate-500")}>{open ? "tutup ▲" : "langkah ▼"}</span>
-                  </button>
-                  {open && (
-                    <div className="space-y-2 border-t border-white/5 p-4">
-                      {st.length === 0 ? <p className="text-sm text-slate-500">Memuat langkah…</p> : st.map((s, i) => (
-                        <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className={"badge border " + (TAHAP_TONE[s.t] || "border-slate-500/30 bg-slate-500/10 text-slate-300")}>{i + 1}. {s.t}</span>
-                          </div>
-                          <p className="text-sm text-slate-200">{s.l}</p>
-                          {s.a && <p className="mt-1 text-xs text-amber-300/90"><b>Api/durasi:</b> {s.a}</p>}
-                          {s.k && <p className="mt-0.5 text-xs text-emerald-300/80"><b>Kriteria selesai:</b> {s.k}</p>}
-                          {s.p && <p className="mt-0.5 text-xs text-slate-500"><b>Alat/catatan:</b> {s.p}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          {/* Tombol ekspor */}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={exportPNG} disabled={exporting} className="btn-gold text-sm">{exporting ? "Menyiapkan…" : "Unduh Gambar (PNG)"}</button>
+            <button onClick={exportPDF} disabled={exporting} className="btn-ghost text-sm">Unduh PDF</button>
+            <a href={waJobdesk()} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Bagikan WhatsApp</a>
+          </div>
+
+          {/* KARTU HASIL (yang diekspor) */}
+          <div ref={cardRef} className="space-y-4 rounded-2xl bg-ink-950 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-base font-bold text-slate-100">Pembagian Kerja Dapur MBG</p>
+                <p className="text-xs text-slate-400">{totalPorsi} porsi ({B} besar / {K} kecil) · {menuList.length} menu · cadangan {cadangan || 0}%</p>
+              </div>
+              <p className="text-right text-[11px] text-slate-500">Menu:<br />{menuList.map((r) => r.n).join(" · ")}</p>
+            </div>
+
+            {/* 3 divisi + jam */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                ["persiapan", "Persiapan", "rounded-2xl border p-4 border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-transparent", "text-[11px] font-semibold uppercase tracking-wide text-sky-300/80", `${fmtQ(Math.round(totalMentah * 10) / 10)} kg disiangi/potong/timbang`],
+                ["pengolahan", "Pengolahan", "rounded-2xl border p-4 border-orange-500/20 bg-gradient-to-br from-orange-500/15 to-transparent", "text-[11px] font-semibold uppercase tracking-wide text-orange-300/80", `${totalBatch} batch · ${komporAktif} kompor · ${gelombang} gelombang`],
+                ["pemorsian", "Pemorsian", "rounded-2xl border p-4 border-rose-500/20 bg-gradient-to-br from-rose-500/15 to-transparent", "text-[11px] font-semibold uppercase tracking-wide text-rose-300/80", `${totalPorsi} ompreng · ${menuList.length} komponen/porsi`],
+              ] as const).map(([k, lbl, box, lblCls, sub]) => (
+                <div key={k} className={box}>
+                  <p className={lblCls}>{lbl} · {orang[k]} orang</p>
+                  <p className="mt-0.5 text-xl font-bold text-slate-100">{fmtJam(jadwal[k].mulai)} – {fmtJam(jadwal[k].selesai)}</p>
+                  <p className="text-[11px] text-slate-500">± {jadwal[k].durasi} mnt kerja{jadwal[k].ist ? ` + ${jadwal[k].ist} mnt istirahat` : ""}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {/* Jadwal pengolahan per kompor */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-orange-300/80">Jadwal masak per kompor (mulai {fmtJam(jadwal.pengolahan.mulai)})</p>
+              <div className="space-y-1">
+                {jadwalOlah.map((x) => (
+                  <div key={x.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0 truncate text-slate-200"><span className="mr-1 inline-block rounded bg-orange-500/15 px-1.5 text-orange-300">Kompor {x.lane}</span>{x.r.n}</span>
+                    <span className="shrink-0 tabular-nums text-slate-400">{x.batch} batch · {fmtJam(x.mulai)}–{fmtJam(x.selesai)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Detail per resep: potongan persiapan + langkah SOP */}
+            <div className="space-y-3">
+              {perResep.map(({ id, r, mentah, batch, durasi }) => {
+                const st = steps[id] || [];
+                const open = openId === id;
+                const potong = (r.bom || []).filter((l) => saranPotong(l.n, r.metode)).slice(0, 12);
+                return (
+                  <div key={id} className="card overflow-hidden">
+                    <button onClick={() => setOpenId(open ? null : id)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02]">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-100">{r.n} <span className="text-xs font-normal text-slate-500">· {r.kat} · {r.metode || "olah"}</span></p>
+                        <p className="text-[11px] text-slate-400">{fmtQ(Math.round(mentah * 10) / 10)} kg bahan utama · {batch} batch × {r.menitBatch || 0} mnt ≈ {durasi} mnt {r.prepAlat ? `· bumbu: ${r.prepAlat.toLowerCase()}` : ""}</p>
+                      </div>
+                      <span className={"shrink-0 text-xs " + (open ? "text-gold-400" : "text-slate-500")}>{open ? "tutup ▲" : "detail ▼"}</span>
+                    </button>
+                    {open && (
+                      <div className="space-y-3 border-t border-white/5 p-4">
+                        {potong.length > 0 && (
+                          <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3">
+                            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sky-300/80">Persiapan — bentuk potongan (saran)</p>
+                            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                              {potong.map((l) => (
+                                <div key={l.id} className="flex justify-between gap-2 text-xs">
+                                  <span className="text-slate-300">{l.n}</span>
+                                  <span className="shrink-0 text-slate-400">{saranPotong(l.n, r.metode)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {st.length === 0 ? <p className="text-sm text-slate-500">Memuat langkah…</p> : st.map((s, i) => (
+                          <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className={"badge border " + (TAHAP_TONE[s.t] || "border-slate-500/30 bg-slate-500/10 text-slate-300")}>{i + 1}. {s.t}</span>
+                            </div>
+                            <p className="text-sm text-slate-200">{s.l}</p>
+                            {s.a && <p className="mt-1 text-xs text-amber-300/90"><b>Api/durasi:</b> {s.a}</p>}
+                            {s.k && <p className="mt-0.5 text-xs text-emerald-300/80"><b>Kriteria selesai:</b> {s.k}</p>}
+                            {s.p && <p className="mt-0.5 text-xs text-slate-500"><b>Alat/catatan:</b> {s.p}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-500">Jadwal berkesinambungan: prep → olah → porsi mengikuti jam datang. Estimasi waktu kasar (prep 0,35 kg/org/mnt; ± {ompRate} ompreng/mnt). Bentuk potongan = saran standar dapur, sesuaikan resep &amp; hasil uji.</p>
           </div>
-          <p className="text-[11px] text-slate-500">Estimasi waktu adalah hitungan kasar (kecepatan prep 0,35 kg/orang/menit; pemorsian ± {ompRate} ompreng/menit) — untuk perencanaan, bukan patokan mutlak. Langkah masak mengikuti SOP resep; kalibrasi api &amp; durasi dari uji dapur.</p>
         </>
       )}
-      {picked.length === 0 && <div className="card p-8 text-center text-sm text-slate-500">Pilih menu per kategori untuk melihat pembagian kerja &amp; langkah masak.</div>}
     </div>
   );
 }
@@ -303,14 +415,11 @@ interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTer
 interface CustomRow { id: number; kategori: string; nama: string; porsi_basis: number; items: CItem[]; catatan: string; oleh: string }
 interface Builder { id: number | null; kategori: string; nama: string; porsi_basis: string; catatan: string; items: { n: string; s: string; q: string; h: string }[] }
 
-function RecipeGenerator() {
+function RecipeGenerator({ shared }: { shared: Shared }) {
+  const { picked, setPicked, serdikK, setSerdikK, serdikB, setSerdikB, cadangan, setCadangan } = shared;
   const [data, setData] = useState<RData | null>(null);
   const [custom, setCustom] = useState<CustomRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [serdikK, setSerdikK] = useState("500");
-  const [serdikB, setSerdikB] = useState("500");
-  const [cadangan, setCadangan] = useState("2");
-  const [picked, setPicked] = useState<string[]>([]); // resep ids
   const [gramOv, setGramOv] = useState<Record<string, { k: string; b: string }>>({}); // override gramasi per resep
   const [editId, setEditId] = useState<string | null>(null);
   const [ef, setEf] = useState({ nama: "", harga: "" });
