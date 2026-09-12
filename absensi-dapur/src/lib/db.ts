@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-09-11b.bank-komponen";
+const SCHEMA_VERSION = "2026-09-12a.resep-custom";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -934,6 +934,26 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bco_sppg ON bahan_catalog_override (sppg_id)`);
+
+    // RESEP CUSTOM per dapur untuk Generator Resep: admin membuat resep sendiri
+    // (mis. "Sayur asem Jakarta") dengan jumlah bahan+bumbu total untuk `porsi_basis`
+    // porsi. Saat generate, diskalakan linear (target / basis). items = JSONB
+    // array {n:nama, s:satuan, q:jumlah utk basis, h:harga/satuan}.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS resep_custom (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        kategori    TEXT NOT NULL,
+        nama        TEXT NOT NULL,
+        porsi_basis NUMERIC NOT NULL DEFAULT 1000,
+        items       JSONB NOT NULL DEFAULT '[]'::jsonb,
+        catatan     TEXT NOT NULL DEFAULT '',
+        oleh        TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_resep_custom_sppg ON resep_custom (sppg_id)`);
 
     // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
     await client.query(`

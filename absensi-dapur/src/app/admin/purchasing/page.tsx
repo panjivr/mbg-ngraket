@@ -77,11 +77,15 @@ export default function PurchasingPage() {
 /* ========================================================= generator resep */
 interface RBahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; kemasan: number; diedit?: boolean }
 interface RBom { id: string; n: string; s: string; peran: string; koef: number }
-interface RResep { id: string; kat: string; n: string; metode: string; satuan: string; gramTarget: number | null; yieldMasak: number; yieldPersiapan: number; pcsUtama: number | null; gramAcuan: number | null; status: string; bom: RBom[] }
+interface CItem { n: string; s: string; q: number; h: number }
+interface RResep { id: string; kat: string; n: string; metode: string; satuan: string; gramTarget: number | null; yieldMasak: number; yieldPersiapan: number; pcsUtama: number | null; gramAcuan: number | null; status: string; bom: RBom[]; custom?: boolean; porsiBasis?: number; items?: CItem[] }
 interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; resep: RResep[]; bahan: RBahan[] }
+interface CustomRow { id: number; kategori: string; nama: string; porsi_basis: number; items: CItem[]; catatan: string; oleh: string }
+interface Builder { id: number | null; kategori: string; nama: string; porsi_basis: string; catatan: string; items: { n: string; s: string; q: string; h: string }[] }
 
 function RecipeGenerator() {
   const [data, setData] = useState<RData | null>(null);
+  const [custom, setCustom] = useState<CustomRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [besar, setBesar] = useState("500");
   const [kecil, setKecil] = useState("500");
@@ -90,12 +94,24 @@ function RecipeGenerator() {
   const [picked, setPicked] = useState<string[]>([]); // resep ids
   const [editId, setEditId] = useState<string | null>(null);
   const [ef, setEf] = useState({ nama: "", harga: "" });
+  const [builder, setBuilder] = useState<Builder | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
     fetch("/api/admin/resep", { cache: "no-store" }).then((r) => r.json())
       .then((d) => (d.error ? setMsg(d.error) : setData(d))).catch(() => setMsg("Gagal memuat resep."));
+    fetch("/api/admin/resep/custom", { cache: "no-store" }).then((r) => r.json())
+      .then((d) => { if (!d.error) setCustom(d.resep || []); }).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // Resep custom → bentuk RResep agar seragam dengan resep bank.
+  const customAsResep = useMemo<RResep[]>(() => custom.map((c) => ({
+    id: "C" + c.id, kat: c.kategori, n: c.nama, metode: "CUSTOM", satuan: "porsi",
+    gramTarget: null, yieldMasak: 1, yieldPersiapan: 1, pcsUtama: null, gramAcuan: null,
+    status: "RESEP DAPUR", bom: [], custom: true, porsiBasis: c.porsi_basis, items: c.items,
+  })), [custom]);
+  const allResep = useMemo<RResep[]>(() => [...(data?.resep || []), ...customAsResep], [data, customAsResep]);
 
   const pB = Math.max(0, parseInt(besar, 10) || 0);
   const pK = Math.max(0, parseInt(kecil, 10) || 0);
@@ -103,13 +119,20 @@ function RecipeGenerator() {
   const cad = Math.max(0, parseFloat(cadangan.replace(",", ".")) || 0) / 100;
 
   const bahanMap = useMemo(() => new Map((data?.bahan || []).map((b) => [b.id, b])), [data]);
-  const resepMap = useMemo(() => new Map((data?.resep || []).map((r) => [r.id, r])), [data]);
+  const resepMap = useMemo(() => new Map(allResep.map((r) => [r.id, r])), [allResep]);
 
-  /* hitung 1 resep → baris kebutuhan (replikasi rumus LOGIKA_SISTEM) */
+  /* hitung 1 resep → baris kebutuhan. Bank: rumus LOGIKA_SISTEM. Custom: skala linear
+     jumlah total (untuk porsi basis) × (target porsi / basis). */
   const hitung = useCallback((r: RResep) => {
     const countPorsi = pB + pK;
-    const massPorsi = pB + pK * kPct;
     const f = 1 + cad;
+    if (r.custom) {
+      const skala = (r.porsiBasis && r.porsiBasis > 0 ? countPorsi / r.porsiBasis : 0) * f;
+      return (r.items || []).filter((it) => it.n).map((it) => ({
+        id: "c:" + it.n.trim().toLowerCase(), nama: it.n, satuan: it.s, qty: (it.q || 0) * skala, peran: "ITEM", hargaInline: it.h > 0 ? it.h : null as number | null,
+      }));
+    }
+    const massPorsi = pB + pK * kPct;
     let netto: number;
     if (r.metode === "COUNT") netto = (r.pcsUtama || 0) * countPorsi * (r.gramAcuan || 0) / 1000;
     else netto = massPorsi * (r.gramTarget || 0) / 1000 / (r.yieldMasak || 1);
@@ -117,25 +140,25 @@ function RecipeGenerator() {
       let qty: number;
       if (l.peran === "UTAMA") qty = l.s === "pcs" ? (r.pcsUtama || 0) * countPorsi : netto / (r.yieldPersiapan || 1);
       else qty = netto * l.koef;
-      return { id: l.id, nama: l.n, satuan: l.s, qty: qty * f, peran: l.peran };
+      return { id: l.id, nama: l.n, satuan: l.s, qty: qty * f, peran: l.peran, hargaInline: null as number | null };
     });
   }, [pB, pK, kPct, cad]);
 
   /* konsolidasi seluruh resep terpilih per bahan */
   const belanja = useMemo(() => {
-    const map = new Map<string, { id: string; nama: string; satuan: string; qty: number }>();
+    const map = new Map<string, { id: string; nama: string; satuan: string; qty: number; hargaInline: number | null }>();
     for (const rid of picked) {
       const r = resepMap.get(rid); if (!r) continue;
       for (const line of hitung(r)) {
         const cur = map.get(line.id);
-        if (cur) cur.qty += line.qty;
-        else map.set(line.id, { id: line.id, nama: line.nama, satuan: line.satuan, qty: line.qty });
+        if (cur) { cur.qty += line.qty; if (cur.hargaInline == null) cur.hargaInline = line.hargaInline; }
+        else map.set(line.id, { id: line.id, nama: line.nama, satuan: line.satuan, qty: line.qty, hargaInline: line.hargaInline });
       }
     }
     return [...map.values()].map((x) => {
       const b = bahanMap.get(x.id);
-      const harga = b?.h ?? null;
-      return { ...x, nama: b?.n || x.nama, harga, biaya: harga != null ? x.qty * harga : 0, noHarga: harga == null };
+      const harga = b?.h ?? x.hargaInline ?? null;
+      return { id: x.id, nama: b?.n || x.nama, satuan: x.satuan, qty: x.qty, harga, biaya: harga != null ? x.qty * harga : 0, noHarga: harga == null };
     }).sort((a, b) => b.biaya - a.biaya);
   }, [picked, resepMap, bahanMap, hitung]);
   const total = belanja.reduce((a, b) => a + b.biaya, 0);
@@ -145,15 +168,38 @@ function RecipeGenerator() {
   const perResep = useMemo(() => picked.map((rid) => {
     const r = resepMap.get(rid); if (!r) return null;
     let biaya = 0;
-    for (const l of hitung(r)) { const b = bahanMap.get(l.id); if (b?.h != null) biaya += l.qty * b.h; }
-    return { id: rid, nama: r.n, kat: r.kat, biaya, porsi: pB + pK };
-  }).filter(Boolean) as { id: string; nama: string; kat: string; biaya: number; porsi: number }[], [picked, resepMap, bahanMap, hitung, pB, pK]);
+    for (const l of hitung(r)) { const h = bahanMap.get(l.id)?.h ?? l.hargaInline; if (h != null) biaya += l.qty * h; }
+    return { id: rid, nama: r.n, kat: r.kat, biaya, porsi: pB + pK, custom: !!r.custom };
+  }).filter(Boolean) as { id: string; nama: string; kat: string; biaya: number; porsi: number; custom: boolean }[], [picked, resepMap, bahanMap, hitung, pB, pK]);
 
   async function saveHarga(bahanNama: string) {
     const r = await fetch("/api/admin/purchasing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bahan: bahanNama, harga: ef.harga, nama: ef.nama }) });
     if (r.status === 403) { setMsg("Koreksi harga hanya untuk Admin penuh."); return; }
     if (!r.ok) { setMsg("Gagal menyimpan harga."); return; }
     setEditId(null); setMsg(null); load();
+  }
+
+  /* ---- builder resep custom ---- */
+  function bukaBuilderBaru() { setMsg(null); setBuilder({ id: null, kategori: data?.kategori[0] || "Protein Hewani", nama: "", porsi_basis: "1000", catatan: "", items: [{ n: "", s: "kg", q: "", h: "" }] }); }
+  function editCustom(c: CustomRow) { setMsg(null); setBuilder({ id: c.id, kategori: c.kategori, nama: c.nama, porsi_basis: String(c.porsi_basis), catatan: c.catatan, items: c.items.length ? c.items.map((i) => ({ n: i.n, s: i.s, q: String(i.q), h: i.h ? String(i.h) : "" })) : [{ n: "", s: "kg", q: "", h: "" }] }); }
+  async function simpanBuilder() {
+    if (!builder) return;
+    if (!builder.nama.trim()) { setMsg("Nama resep wajib."); return; }
+    const items = builder.items.map((i) => ({ n: i.n.trim(), s: i.s.trim() || "kg", q: parseFloat(i.q.replace(",", ".")) || 0, h: parseFloat(i.h.replace(",", ".")) || 0 })).filter((i) => i.n);
+    if (items.length === 0) { setMsg("Minimal 1 bahan."); return; }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/resep/custom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: builder.id, kategori: builder.kategori, nama: builder.nama, porsi_basis: builder.porsi_basis, catatan: builder.catatan, items }) });
+      const d = await res.json().catch(() => ({}));
+      if (res.status === 403) { setMsg("Buat resep hanya untuk Admin penuh."); return; }
+      if (!res.ok) { setMsg(d.error || "Gagal menyimpan resep."); return; }
+      setBuilder(null); load();
+    } finally { setBusy(false); }
+  }
+  async function hapusCustom(c: CustomRow) {
+    if (!confirm(`Hapus resep "${c.nama}"?`)) return;
+    await fetch(`/api/admin/resep/custom?id=${c.id}`, { method: "DELETE" });
+    setPicked((p) => p.filter((x) => x !== "C" + c.id)); load();
   }
 
   function unduhCSV() {
@@ -177,10 +223,29 @@ function RecipeGenerator() {
   return (
     <div className="space-y-5">
       {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">{msg}</p>}
-      <p className="rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5 text-xs text-sky-200">
-        {data.meta.resep} resep berstatus <b>DRAF ESTIMASI</b> (untuk simulasi &amp; uji dapur). Bumbu terhitung otomatis dari koefisien per kg bahan utama.
-        Takaran &amp; harga dapat dikalibrasi dari hasil uji — gunakan &quot;Perbaiki harga&quot; untuk menyimpan koreksi per dapur.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
+        <p className="text-xs text-sky-200">
+          <b>{data.meta.resep} resep bank</b> + <b>{custom.length} resep dapur</b>. Bumbu terhitung otomatis. Pilih resep per kategori, atur porsi → daftar belanja lengkap.
+        </p>
+        <button onClick={bukaBuilderBaru} className="btn-gold shrink-0 text-sm">+ Buat Resep Sendiri</button>
+      </div>
+
+      {/* Resep dapur (custom) tersimpan */}
+      {custom.length > 0 && (
+        <div className="card p-4">
+          <p className="mb-2 text-sm font-semibold text-slate-100">Resep dapur tersimpan ({custom.length})</p>
+          <div className="flex flex-wrap gap-2">
+            {custom.map((c) => (
+              <div key={c.id} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs">
+                <span className="font-medium text-emerald-200">{c.nama}</span>
+                <span className="text-slate-500">· {c.kategori} · {c.items.length} bahan / {fmtQ(c.porsi_basis)} porsi</span>
+                <button onClick={() => editCustom(c)} className="text-sky-300 hover:text-sky-200">edit</button>
+                <button onClick={() => hapusCustom(c)} className="text-red-300 hover:text-red-200">hapus</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Porsi */}
       <div className="card p-4">
@@ -197,7 +262,8 @@ function RecipeGenerator() {
       {/* Pilih resep per kategori */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.kategori.map((kat) => {
-          const opts = data.resep.filter((r) => r.kat === kat).sort((a, b) => a.n.localeCompare(b.n));
+          const bankOpts = allResep.filter((r) => r.kat === kat && !r.custom).sort((a, b) => a.n.localeCompare(b.n));
+          const custOpts = allResep.filter((r) => r.kat === kat && r.custom).sort((a, b) => a.n.localeCompare(b.n));
           const chosen = picked.map((id) => resepMap.get(id)).filter((r): r is RResep => !!r && r.kat === kat);
           return (
             <div key={kat} className="card p-4">
@@ -206,13 +272,14 @@ function RecipeGenerator() {
                 <span className="text-xs text-slate-500">{chosen.length}</span>
               </div>
               <select className="input mb-2 text-sm" value="" onChange={(e) => { const v = e.target.value; if (v && !picked.includes(v)) setPicked((p) => [...p, v]); e.currentTarget.value = ""; }}>
-                <option value="">+ tambah resep… ({opts.length})</option>
-                {opts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}
+                <option value="">+ tambah resep… ({bankOpts.length + custOpts.length})</option>
+                {custOpts.length > 0 && <optgroup label="Resep dapur">{custOpts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>★ {r.n}</option>)}</optgroup>}
+                <optgroup label="Resep bank">{bankOpts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}</optgroup>
               </select>
               <div className="space-y-1.5">
                 {chosen.length === 0 ? <p className="py-1 text-center text-xs text-slate-600">—</p> : chosen.map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
-                    <span className="min-w-0 truncate text-sm text-slate-200">{r.n}<span className="ml-1 text-[10px] text-slate-500">{r.bom.length} bahan</span></span>
+                    <span className="min-w-0 truncate text-sm text-slate-200">{r.custom && <span className="badge mr-1 bg-emerald-500/15 text-emerald-300">dapur</span>}{r.n}<span className="ml-1 text-[10px] text-slate-500">{(r.custom ? r.items?.length : r.bom.length) || 0} bahan</span></span>
                     <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-xs text-slate-500 hover:text-red-300">×</button>
                   </div>
                 ))}
@@ -292,6 +359,56 @@ function RecipeGenerator() {
         MASS: utama netto (kg) = porsi × gram target ÷ 1000 ÷ yield masak. COUNT: pcs = porsi × pcs/porsi.
         BUMBU = utama netto × koefisien per kg. Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
       </p>
+
+      {/* Modal builder resep custom */}
+      {builder && (
+        <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4" onClick={() => setBuilder(null)}>
+          <div className="card flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden p-0" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 bg-gradient-to-br from-gold-500/15 to-transparent p-5">
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-gold-300">{builder.id ? "Ubah Resep Dapur" : "Buat Resep Dapur"}</h2>
+                <p className="mt-0.5 text-sm text-slate-300">Masukkan bahan &amp; bumbu untuk sejumlah porsi basis. Saat generate, otomatis diskalakan ke porsi target.</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 overflow-y-auto px-5 pb-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><label className="label">Nama resep</label><input className="input" value={builder.nama} onChange={(e) => setBuilder({ ...builder, nama: e.target.value })} placeholder="mis. Sayur asem Jakarta" /></div>
+                <div><label className="label">Kategori</label>
+                  <select className="input" value={builder.kategori} onChange={(e) => setBuilder({ ...builder, kategori: e.target.value })}>
+                    {(data.kategori.includes(builder.kategori) ? data.kategori : [builder.kategori, ...data.kategori]).map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><label className="label">Porsi basis (acuan takaran)</label><input type="number" min={1} className="input" value={builder.porsi_basis} onFocus={(e) => e.target.select()} onChange={(e) => setBuilder({ ...builder, porsi_basis: e.target.value })} /></div>
+                <div><label className="label">Catatan (opsional)</label><input className="input" value={builder.catatan} onChange={(e) => setBuilder({ ...builder, catatan: e.target.value })} placeholder="mis. resep chef, dari uji dapur" /></div>
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between"><label className="label mb-0">Bahan &amp; bumbu (jumlah untuk {fmtQ(parseFloat(builder.porsi_basis) || 0)} porsi)</label>
+                  <button onClick={() => setBuilder({ ...builder, items: [...builder.items, { n: "", s: "kg", q: "", h: "" }] })} className="btn-ghost px-2 py-1 text-xs">+ baris</button></div>
+                <div className="space-y-1.5">
+                  <div className="hidden grid-cols-[1fr_5rem_5rem_6rem_1.5rem] gap-1.5 px-1 text-[10px] uppercase text-slate-500 sm:grid"><span>Nama bahan</span><span>Satuan</span><span className="text-right">Jumlah</span><span className="text-right">Harga/sat</span><span /></div>
+                  {builder.items.map((it, i) => (
+                    <div key={i} className="grid grid-cols-2 gap-1.5 sm:grid-cols-[1fr_5rem_5rem_6rem_1.5rem]">
+                      <input className="input py-1 text-sm" value={it.n} onChange={(e) => { const items = [...builder.items]; items[i] = { ...it, n: e.target.value }; setBuilder({ ...builder, items }); }} placeholder="mis. Asam jawa" />
+                      <input className="input py-1 text-sm" value={it.s} onChange={(e) => { const items = [...builder.items]; items[i] = { ...it, s: e.target.value }; setBuilder({ ...builder, items }); }} placeholder="kg" />
+                      <input className="input py-1 text-right text-sm" value={it.q} onFocus={(e) => e.target.select()} onChange={(e) => { const items = [...builder.items]; items[i] = { ...it, q: e.target.value }; setBuilder({ ...builder, items }); }} placeholder="jml" />
+                      <input className="input py-1 text-right text-sm" value={it.h} onFocus={(e) => e.target.select()} onChange={(e) => { const items = [...builder.items]; items[i] = { ...it, h: e.target.value }; setBuilder({ ...builder, items }); }} placeholder="Rp" />
+                      <button onClick={() => setBuilder({ ...builder, items: builder.items.filter((_, j) => j !== i) })} className="text-slate-500 hover:text-red-300" title="hapus baris">×</button>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">Contoh: untuk 1000 porsi sayur asem → Labu siam 20 kg, Kacang panjang 10 kg, Asam jawa 2 kg, Gula merah 3 kg, dst. Generate 2500 porsi → otomatis ×2,5.</p>
+              </div>
+              {msg && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{msg}</p>}
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setBuilder(null)} className="btn-ghost flex-1">Batal</button>
+                <button onClick={simpanBuilder} disabled={busy} className="btn-gold flex-1">{busy ? "Menyimpan…" : "Simpan Resep"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
