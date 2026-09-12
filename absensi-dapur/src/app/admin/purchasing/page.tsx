@@ -51,13 +51,14 @@ interface Row {
 let RID = 1;
 
 /* ================================================================== page */
-const TABS: { k: "resep" | "bebas" | "paket"; label: string }[] = [
+const TABS: { k: "resep" | "kerja" | "bebas" | "paket"; label: string }[] = [
   { k: "resep", label: "Generator Resep" },
+  { k: "kerja", label: "Pembagian Kerja" },
   { k: "bebas", label: "Komponen Bebas" },
   { k: "paket", label: "Paket Historis" },
 ];
 export default function PurchasingPage() {
-  const [tab, setTab] = useState<"resep" | "bebas" | "paket">("resep");
+  const [tab, setTab] = useState<"resep" | "kerja" | "bebas" | "paket">("resep");
   return (
     <div className="space-y-5">
       <div>
@@ -69,7 +70,224 @@ export default function PurchasingPage() {
           <button key={t.k} onClick={() => setTab(t.k)} className={"rounded-lg px-4 py-1.5 text-sm font-medium transition " + (tab === t.k ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:text-slate-100")}>{t.label}</button>
         ))}
       </div>
-      {tab === "resep" ? <RecipeGenerator /> : tab === "bebas" ? <Composer /> : <PaketHistoris />}
+      {tab === "resep" ? <RecipeGenerator /> : tab === "kerja" ? <JobdeskGenerator /> : tab === "bebas" ? <Composer /> : <PaketHistoris />}
+    </div>
+  );
+}
+
+/* ======================================================= pembagian kerja */
+interface JResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; metode?: string; buahPotong?: number; menitBatch?: number; kgAlatBatch?: number; prepAlat?: string }
+interface Alat { n: string; jumlah: number; slot: number; kap: number; sat: string; menit: number; ket: string }
+interface Langkah { t: string; l: string; a: string; k: string; p: string }
+const TAHAP_TONE: Record<string, string> = {
+  Persiapan: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+  Bumbu: "border-violet-500/30 bg-violet-500/10 text-violet-300",
+  "Bangun kuah": "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  "Masak bertahap": "border-orange-500/30 bg-orange-500/10 text-orange-300",
+  "Muat tray": "border-orange-500/30 bg-orange-500/10 text-orange-300",
+  Selesaikan: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  Pemorsian: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+};
+
+function JobdeskGenerator() {
+  const [resep, setResep] = useState<JResep[]>([]);
+  const [kategori, setKategori] = useState<string[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [serdikK, setSerdikK] = useState("500");
+  const [serdikB, setSerdikB] = useState("500");
+  const [cadangan, setCadangan] = useState("2");
+  const [orang, setOrang] = useState({ persiapan: 6, pengolahan: 10, pemorsian: 9 });
+  const [alat, setAlat] = useState<Alat[]>([]);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [steps, setSteps] = useState<Record<string, Langkah[]>>({});
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/resep", { cache: "no-store" }).then((r) => r.json())
+      .then((d) => { if (d.error) { setMsg(d.error); return; } setResep(d.resep || []); setKategori(d.kategori || []); }).catch(() => setMsg("Gagal memuat resep."));
+    fetch("/api/admin/resep/sop?ids=", { cache: "no-store" }).then((r) => r.json())
+      .then((d) => { if (!d.error) { setAlat(d.alat || []); if (d.divisi) setOrang({ persiapan: d.divisi.persiapan || 6, pengolahan: d.divisi.pengolahan || 10, pemorsian: d.divisi.pemorsian || 9 }); } }).catch(() => {});
+  }, []);
+
+  // ambil SOP tiap kali pilihan berubah
+  useEffect(() => {
+    if (picked.length === 0) { setSteps({}); return; }
+    fetch(`/api/admin/resep/sop?ids=${picked.join(",")}`, { cache: "no-store" }).then((r) => r.json())
+      .then((d) => { if (!d.error) setSteps(d.steps || {}); }).catch(() => {});
+  }, [picked]);
+
+  const K = Math.max(0, parseInt(serdikK, 10) || 0);
+  const B = Math.max(0, parseInt(serdikB, 10) || 0);
+  const cad = Math.max(0, parseFloat(cadangan.replace(",", ".")) || 0) / 100;
+  const resepMap = useMemo(() => new Map(resep.map((r) => [r.id, r])), [resep]);
+
+  const utamaMentah = useCallback((r: JResep) => {
+    const t = (K * r.gramK + B * r.gramB) * (1 + cad) / 1000;
+    return r.yieldGab > 0 ? t / r.yieldGab : 0;
+  }, [K, B, cad]);
+
+  const komporAktif = useMemo(() => alat.find((a) => /kompor/i.test(a.n))?.jumlah || 0, [alat]);
+  const komporKap = useMemo(() => alat.find((a) => /kompor/i.test(a.n))?.kap || 0, [alat]);
+
+  // ringkasan per resep: batch & durasi olah
+  const perResep = useMemo(() => picked.map((id) => {
+    const r = resepMap.get(id); if (!r) return null;
+    const mentah = utamaMentah(r);
+    const kapBatch = r.kgAlatBatch && r.kgAlatBatch > 0 ? r.kgAlatBatch : (komporKap || 10);
+    const batch = mentah > 0 ? Math.max(1, Math.ceil(mentah / kapBatch)) : 0;
+    const durasi = batch * (r.menitBatch || 0);
+    return { id, r, mentah, batch, durasi };
+  }).filter(Boolean) as { id: string; r: JResep; mentah: number; batch: number; durasi: number }[], [picked, resepMap, utamaMentah, komporKap]);
+
+  const totalMentah = perResep.reduce((a, x) => a + x.mentah, 0);
+  const totalBatch = perResep.reduce((a, x) => a + x.batch, 0);
+  const totalPorsi = K + B;
+  // estimasi kasar
+  const prepKgPerMenit = 0.35 * orang.persiapan;
+  const waktuPrep = prepKgPerMenit > 0 ? Math.ceil(totalMentah / prepKgPerMenit) : 0;
+  const gelombang = komporAktif > 0 ? Math.ceil(totalBatch / komporAktif) : totalBatch;
+  const avgMenitBatch = perResep.length ? Math.round(perResep.reduce((a, x) => a + (x.r.menitBatch || 0), 0) / perResep.length) : 0;
+  const waktuOlah = gelombang * avgMenitBatch;
+  const ompRate = 12 * Math.max(1, Math.round(orang.pemorsian / 3)); // ompreng/menit (asumsi 7 stasiun)
+  const waktuPorsi = ompRate > 0 ? Math.ceil(totalPorsi / ompRate) : 0;
+
+  const setAlatVal = (i: number, key: keyof Alat, v: string) =>
+    setAlat((a) => a.map((x, j) => j === i ? { ...x, [key]: key === "n" || key === "sat" || key === "ket" ? v : (parseFloat(v.replace(",", ".")) || 0) } : x));
+
+  return (
+    <div className="space-y-5">
+      {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">{msg}</p>}
+      <p className="rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5 text-xs text-sky-200">
+        Setelah menu &amp; belanja siap, di sini kita bagi kerja 3 divisi (<b>Persiapan</b>, <b>Pengolahan</b>, <b>Pemorsian</b>) &amp; langkah masak detail dari SOP chef. Isi jumlah orang &amp; alat, lalu pilih menu.
+      </p>
+
+      {/* Input orang & porsi */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card p-4">
+          <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah penerima</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div><label className="label">Serdik besar</label><input type="number" min={0} className="input w-24" value={serdikB} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikB(e.target.value)} /></div>
+            <div><label className="label">Serdik kecil</label><input type="number" min={0} className="input w-24" value={serdikK} onFocus={(e) => e.target.select()} onChange={(e) => setSerdikK(e.target.value)} /></div>
+            <div><label className="label">Cadangan (%)</label><input type="number" min={0} step="0.5" className="input w-20" value={cadangan} onFocus={(e) => e.target.select()} onChange={(e) => setCadangan(e.target.value)} /></div>
+          </div>
+        </div>
+        <div className="card p-4">
+          <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah tim per divisi</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div><label className="label">Persiapan</label><input type="number" min={0} className="input w-24" value={orang.persiapan} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, persiapan: parseInt(e.target.value, 10) || 0 })} /></div>
+            <div><label className="label">Pengolahan</label><input type="number" min={0} className="input w-24" value={orang.pengolahan} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, pengolahan: parseInt(e.target.value, 10) || 0 })} /></div>
+            <div><label className="label">Pemorsian</label><input type="number" min={0} className="input w-24" value={orang.pemorsian} onFocus={(e) => e.target.select()} onChange={(e) => setOrang({ ...orang, pemorsian: parseInt(e.target.value, 10) || 0 })} /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Alat */}
+      <div className="card overflow-hidden">
+        <p className="border-b border-white/5 p-4 text-sm font-semibold text-slate-100">Alat dapur (bisa diedit)</p>
+        <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead className="text-left text-xs uppercase text-slate-400"><tr className="border-b border-white/5">
+              <th className="px-4 py-2">Alat</th><th className="px-4 py-2 text-right">Jumlah</th><th className="px-4 py-2 text-right">Kapasitas</th><th className="px-4 py-2">Satuan</th><th className="px-4 py-2 text-right">Menit/siklus</th>
+            </tr></thead>
+            <tbody className="divide-y divide-white/5">
+              {alat.map((a, i) => (
+                <tr key={a.n}>
+                  <td className="px-4 py-1.5 text-slate-200">{a.n}</td>
+                  <td className="px-2 py-1.5"><input className="input w-16 py-1 text-right" value={a.jumlah} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "jumlah", e.target.value)} /></td>
+                  <td className="px-2 py-1.5"><input className="input w-20 py-1 text-right" value={a.kap} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "kap", e.target.value)} /></td>
+                  <td className="px-4 py-1.5 text-xs text-slate-500">{a.sat}</td>
+                  <td className="px-2 py-1.5"><input className="input w-16 py-1 text-right" value={a.menit} onFocus={(e) => e.target.select()} onChange={(e) => setAlatVal(i, "menit", e.target.value)} /></td>
+                </tr>
+              ))}
+              {alat.length === 0 && <tr><td colSpan={5} className="px-4 py-4 text-center text-slate-500">Memuat…</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pilih menu */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {kategori.map((kat) => {
+          const opts = resep.filter((r) => r.kat === kat).sort((a, b) => a.n.localeCompare(b.n));
+          const chosen = picked.map((id) => resepMap.get(id)).filter((r): r is JResep => !!r && r.kat === kat);
+          return (
+            <div key={kat} className="card p-4">
+              <p className="mb-2 text-sm font-semibold text-slate-100">{kat}</p>
+              <select className="input mb-2 text-sm" value="" onChange={(e) => { const v = e.target.value; if (v && !picked.includes(v)) setPicked((p) => [...p, v]); e.currentTarget.value = ""; }}>
+                <option value="">+ tambah… ({opts.length})</option>
+                {opts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}
+              </select>
+              <div className="space-y-1">
+                {chosen.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2 py-1 text-xs text-slate-200">
+                    <span className="truncate">{r.n}</span>
+                    <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-slate-500 hover:text-red-300">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {picked.length > 0 && (
+        <>
+          {/* Ringkasan beban 3 divisi */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/15 to-transparent p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-300/80">Persiapan · {orang.persiapan} orang</p>
+              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuPrep} mnt</p>
+              <p className="text-[11px] text-slate-500">{fmtQ(Math.round(totalMentah * 10) / 10)} kg bahan utama disiangi/potong/timbang</p>
+            </div>
+            <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/15 to-transparent p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-orange-300/80">Pengolahan · {orang.pengolahan} orang</p>
+              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuOlah} mnt</p>
+              <p className="text-[11px] text-slate-500">{totalBatch} batch · {komporAktif} kompor aktif · {gelombang} gelombang</p>
+            </div>
+            <div className="rounded-2xl border border-rose-500/20 bg-gradient-to-br from-rose-500/15 to-transparent p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-300/80">Pemorsian · {orang.pemorsian} orang</p>
+              <p className="mt-0.5 text-2xl font-bold text-slate-100">± {waktuPorsi} mnt</p>
+              <p className="text-[11px] text-slate-500">{totalPorsi} ompreng · {picked.length} komponen/porsi</p>
+            </div>
+          </div>
+
+          {/* Jadwal batch per resep + langkah SOP */}
+          <div className="space-y-3">
+            {perResep.map(({ id, r, mentah, batch, durasi }) => {
+              const st = steps[id] || [];
+              const open = openId === id;
+              return (
+                <div key={id} className="card overflow-hidden">
+                  <button onClick={() => setOpenId(open ? null : id)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02]">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-100">{r.n} <span className="text-xs font-normal text-slate-500">· {r.kat} · {r.metode || "olah"}</span></p>
+                      <p className="text-[11px] text-slate-400">{fmtQ(Math.round(mentah * 10) / 10)} kg bahan utama · {batch} batch × {r.menitBatch || 0} mnt ≈ {durasi} mnt {r.prepAlat ? `· bumbu: ${r.prepAlat.toLowerCase()}` : ""}</p>
+                    </div>
+                    <span className={"shrink-0 text-xs " + (open ? "text-gold-400" : "text-slate-500")}>{open ? "tutup ▲" : "langkah ▼"}</span>
+                  </button>
+                  {open && (
+                    <div className="space-y-2 border-t border-white/5 p-4">
+                      {st.length === 0 ? <p className="text-sm text-slate-500">Memuat langkah…</p> : st.map((s, i) => (
+                        <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className={"badge border " + (TAHAP_TONE[s.t] || "border-slate-500/30 bg-slate-500/10 text-slate-300")}>{i + 1}. {s.t}</span>
+                          </div>
+                          <p className="text-sm text-slate-200">{s.l}</p>
+                          {s.a && <p className="mt-1 text-xs text-amber-300/90"><b>Api/durasi:</b> {s.a}</p>}
+                          {s.k && <p className="mt-0.5 text-xs text-emerald-300/80"><b>Kriteria selesai:</b> {s.k}</p>}
+                          {s.p && <p className="mt-0.5 text-xs text-slate-500"><b>Alat/catatan:</b> {s.p}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-slate-500">Estimasi waktu adalah hitungan kasar (kecepatan prep 0,35 kg/orang/menit; pemorsian ± {ompRate} ompreng/menit) — untuk perencanaan, bukan patokan mutlak. Langkah masak mengikuti SOP resep; kalibrasi api &amp; durasi dari uji dapur.</p>
+        </>
+      )}
+      {picked.length === 0 && <div className="card p-8 text-center text-sm text-slate-500">Pilih menu per kategori untuk melihat pembagian kerja &amp; langkah masak.</div>}
     </div>
   );
 }
