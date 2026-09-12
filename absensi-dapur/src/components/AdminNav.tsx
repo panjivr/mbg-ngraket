@@ -29,6 +29,8 @@ interface Item {
   also?: string[];
   exact?: boolean;
   show: boolean;
+  /** Sub-kelompok di dalam dropdown (untuk merapikan grup panjang). */
+  section?: string;
 }
 interface Group {
   key: string;
@@ -49,17 +51,17 @@ function buildGroups(f: Flags): Group[] {
       label: "Operasional",
       icon: "truck",
       items: [
-        { label: "Distribusi", href: "/admin/distribusi", icon: "truck", show: f.aksesDistribusi && has("distribusi") },
-        { label: "Aslap Lapangan", href: "/admin/aslap", icon: "truck", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
-        { label: "Menu", href: "/admin/menu", icon: "utensils", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
-        { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
-        { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", show: f.aksesLaporan && has("distribusi") },
-        { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
-        { label: "Chef Produksi", href: "/admin/chef", icon: "utensils", show: (f.fullAdmin || f.aksesGizi || f.aksesLaporan) && (has("ahli_gizi") || has("distribusi")) },
-        { label: "Kepala Dapur", href: "/admin/kepala-dapur", icon: "clipboard", show: f.fullAdmin || f.aksesAudit },
-        { label: "Audit Dapur", href: "/admin/audit-dapur", icon: "shield", show: f.fullAdmin || f.aksesAudit },
-        { label: "Gudang", href: "/admin/gudang", icon: "box", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
-        { label: "Kebutuhan Bahan", href: "/admin/purchasing", icon: "coins", show: f.fullAdmin || f.aksesDistribusi || f.aksesGizi },
+        { label: "Distribusi", href: "/admin/distribusi", icon: "truck", section: "Distribusi & Laporan", show: f.aksesDistribusi && has("distribusi") },
+        { label: "Aslap Lapangan", href: "/admin/aslap", icon: "truck", section: "Distribusi & Laporan", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
+        { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", section: "Distribusi & Laporan", show: f.aksesLaporan && has("distribusi") },
+        { label: "Menu", href: "/admin/menu", icon: "utensils", section: "Dapur & Menu", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
+        { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
+        { label: "Chef Produksi", href: "/admin/chef", icon: "utensils", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi || f.aksesLaporan) && (has("ahli_gizi") || has("distribusi")) },
+        { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], section: "Belanja & Stok", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
+        { label: "Kebutuhan Bahan", href: "/admin/purchasing", icon: "coins", section: "Belanja & Stok", show: f.fullAdmin || f.aksesDistribusi || f.aksesGizi },
+        { label: "Gudang", href: "/admin/gudang", icon: "box", section: "Belanja & Stok", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },
+        { label: "Kepala Dapur", href: "/admin/kepala-dapur", icon: "clipboard", section: "Pengawasan", show: f.fullAdmin || f.aksesAudit },
+        { label: "Audit Dapur", href: "/admin/audit-dapur", icon: "shield", section: "Pengawasan", show: f.fullAdmin || f.aksesAudit },
       ],
     },
     {
@@ -189,24 +191,32 @@ export default function AdminNav(flags: Flags) {
               <ChevronIcon open={isOpen} />
             </button>
             {isOpen && (
-              <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
-                {vis.map((it) => (
-                  <Link
-                    key={it.href}
-                    href={it.href}
-                    onClick={() => setOpen(null)}
-                    className={
-                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition " +
-                      (isActive(pathname, it) ? "bg-gold-500/15 text-gold-400" : "text-slate-300 hover:bg-white/5 hover:text-slate-100")
-                    }
-                  >
-                    <DapurIcon
-                      name={it.icon}
-                      className={"h-[18px] w-[18px] shrink-0 " + (isActive(pathname, it) ? "text-gold-400" : "text-slate-400")}
-                    />
-                    {it.label}
-                  </Link>
-                ))}
+              <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-[210px] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
+                {vis.map((it, i) => {
+                  // Sisipkan header sub-kelompok saat section berganti (rapikan grup panjang).
+                  const showHeader = it.section && it.section !== vis[i - 1]?.section;
+                  return (
+                    <div key={it.href}>
+                      {showHeader && (
+                        <p className={"px-3 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 " + (i === 0 ? "pt-1" : "mt-1 border-t border-white/5 pt-1.5")}>{it.section}</p>
+                      )}
+                      <Link
+                        href={it.href}
+                        onClick={() => setOpen(null)}
+                        className={
+                          "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition " +
+                          (isActive(pathname, it) ? "bg-gold-500/15 text-gold-400" : "text-slate-300 hover:bg-white/5 hover:text-slate-100")
+                        }
+                      >
+                        <DapurIcon
+                          name={it.icon}
+                          className={"h-[18px] w-[18px] shrink-0 " + (isActive(pathname, it) ? "text-gold-400" : "text-slate-400")}
+                        />
+                        {it.label}
+                      </Link>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
