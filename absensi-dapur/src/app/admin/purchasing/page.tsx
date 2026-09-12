@@ -51,19 +51,247 @@ interface Row {
 let RID = 1;
 
 /* ================================================================== page */
+const TABS: { k: "resep" | "bebas" | "paket"; label: string }[] = [
+  { k: "resep", label: "Generator Resep" },
+  { k: "bebas", label: "Komponen Bebas" },
+  { k: "paket", label: "Paket Historis" },
+];
 export default function PurchasingPage() {
-  const [tab, setTab] = useState<"gen" | "paket">("gen");
+  const [tab, setTab] = useState<"resep" | "bebas" | "paket">("resep");
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">Generator Purchase — Kebutuhan Bahan</h1>
-        <p className="text-sm text-slate-400">Rakit menu dari komponen, isi porsi &amp; gramasi → daftar belanja bahan otomatis dari data RAB nyata 6 bulan.</p>
+        <p className="text-sm text-slate-400">Pilih resep per kategori → kebutuhan bahan <b>+ bumbunya</b> terhitung otomatis, lengkap dengan estimasi biaya.</p>
       </div>
-      <div className="flex gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1 w-fit">
-        <button onClick={() => setTab("gen")} className={"rounded-lg px-4 py-1.5 text-sm font-medium transition " + (tab === "gen" ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:text-slate-100")}>Generator Menu</button>
-        <button onClick={() => setTab("paket")} className={"rounded-lg px-4 py-1.5 text-sm font-medium transition " + (tab === "paket" ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:text-slate-100")}>Paket Historis</button>
+      <div className="flex flex-wrap gap-1 rounded-xl border border-white/10 bg-white/[0.02] p-1 w-fit">
+        {TABS.map((t) => (
+          <button key={t.k} onClick={() => setTab(t.k)} className={"rounded-lg px-4 py-1.5 text-sm font-medium transition " + (tab === t.k ? "bg-gold-500/15 text-gold-400" : "text-slate-400 hover:text-slate-100")}>{t.label}</button>
+        ))}
       </div>
-      {tab === "gen" ? <Composer /> : <PaketHistoris />}
+      {tab === "resep" ? <RecipeGenerator /> : tab === "bebas" ? <Composer /> : <PaketHistoris />}
+    </div>
+  );
+}
+
+/* ========================================================= generator resep */
+interface RBahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; kemasan: number; diedit?: boolean }
+interface RBom { id: string; n: string; s: string; peran: string; koef: number }
+interface RResep { id: string; kat: string; n: string; metode: string; satuan: string; gramTarget: number | null; yieldMasak: number; yieldPersiapan: number; pcsUtama: number | null; gramAcuan: number | null; status: string; bom: RBom[] }
+interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; resep: RResep[]; bahan: RBahan[] }
+
+function RecipeGenerator() {
+  const [data, setData] = useState<RData | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [besar, setBesar] = useState("500");
+  const [kecil, setKecil] = useState("500");
+  const [kecilPct, setKecilPct] = useState("80");
+  const [cadangan, setCadangan] = useState("2");
+  const [picked, setPicked] = useState<string[]>([]); // resep ids
+  const [editId, setEditId] = useState<string | null>(null);
+  const [ef, setEf] = useState({ nama: "", harga: "" });
+
+  const load = useCallback(() => {
+    fetch("/api/admin/resep", { cache: "no-store" }).then((r) => r.json())
+      .then((d) => (d.error ? setMsg(d.error) : setData(d))).catch(() => setMsg("Gagal memuat resep."));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const pB = Math.max(0, parseInt(besar, 10) || 0);
+  const pK = Math.max(0, parseInt(kecil, 10) || 0);
+  const kPct = Math.min(100, Math.max(0, parseFloat(kecilPct.replace(",", ".")) || 0)) / 100;
+  const cad = Math.max(0, parseFloat(cadangan.replace(",", ".")) || 0) / 100;
+
+  const bahanMap = useMemo(() => new Map((data?.bahan || []).map((b) => [b.id, b])), [data]);
+  const resepMap = useMemo(() => new Map((data?.resep || []).map((r) => [r.id, r])), [data]);
+
+  /* hitung 1 resep → baris kebutuhan (replikasi rumus LOGIKA_SISTEM) */
+  const hitung = useCallback((r: RResep) => {
+    const countPorsi = pB + pK;
+    const massPorsi = pB + pK * kPct;
+    const f = 1 + cad;
+    let netto: number;
+    if (r.metode === "COUNT") netto = (r.pcsUtama || 0) * countPorsi * (r.gramAcuan || 0) / 1000;
+    else netto = massPorsi * (r.gramTarget || 0) / 1000 / (r.yieldMasak || 1);
+    return r.bom.map((l) => {
+      let qty: number;
+      if (l.peran === "UTAMA") qty = l.s === "pcs" ? (r.pcsUtama || 0) * countPorsi : netto / (r.yieldPersiapan || 1);
+      else qty = netto * l.koef;
+      return { id: l.id, nama: l.n, satuan: l.s, qty: qty * f, peran: l.peran };
+    });
+  }, [pB, pK, kPct, cad]);
+
+  /* konsolidasi seluruh resep terpilih per bahan */
+  const belanja = useMemo(() => {
+    const map = new Map<string, { id: string; nama: string; satuan: string; qty: number }>();
+    for (const rid of picked) {
+      const r = resepMap.get(rid); if (!r) continue;
+      for (const line of hitung(r)) {
+        const cur = map.get(line.id);
+        if (cur) cur.qty += line.qty;
+        else map.set(line.id, { id: line.id, nama: line.nama, satuan: line.satuan, qty: line.qty });
+      }
+    }
+    return [...map.values()].map((x) => {
+      const b = bahanMap.get(x.id);
+      const harga = b?.h ?? null;
+      return { ...x, nama: b?.n || x.nama, harga, biaya: harga != null ? x.qty * harga : 0, noHarga: harga == null };
+    }).sort((a, b) => b.biaya - a.biaya);
+  }, [picked, resepMap, bahanMap, hitung]);
+  const total = belanja.reduce((a, b) => a + b.biaya, 0);
+  const unpriced = belanja.filter((b) => b.noHarga).length;
+
+  /* biaya per resep (ringkasan) */
+  const perResep = useMemo(() => picked.map((rid) => {
+    const r = resepMap.get(rid); if (!r) return null;
+    let biaya = 0;
+    for (const l of hitung(r)) { const b = bahanMap.get(l.id); if (b?.h != null) biaya += l.qty * b.h; }
+    return { id: rid, nama: r.n, kat: r.kat, biaya, porsi: pB + pK };
+  }).filter(Boolean) as { id: string; nama: string; kat: string; biaya: number; porsi: number }[], [picked, resepMap, bahanMap, hitung, pB, pK]);
+
+  async function saveHarga(bahanNama: string) {
+    const r = await fetch("/api/admin/purchasing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bahan: bahanNama, harga: ef.harga, nama: ef.nama }) });
+    if (r.status === 403) { setMsg("Koreksi harga hanya untuk Admin penuh."); return; }
+    if (!r.ok) { setMsg("Gagal menyimpan harga."); return; }
+    setEditId(null); setMsg(null); load();
+  }
+
+  function unduhCSV() {
+    if (belanja.length === 0) return;
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const head = ["Bahan", "Satuan", "Qty beli", "Harga satuan", "Estimasi biaya"];
+    const body = belanja.map((b) => [b.nama, b.satuan, fmtQ(b.qty), b.harga != null ? Math.round(b.harga) : "", Math.round(b.biaya)].map(esc).join(","));
+    const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = `kebutuhan-resep-${pB + pK}porsi.csv`; a.click(); URL.revokeObjectURL(url);
+  }
+  const waText = useMemo(() => {
+    if (belanja.length === 0) return "";
+    const menu = picked.map((id) => resepMap.get(id)?.n).filter(Boolean).join(", ");
+    const baris = belanja.map((b) => `• ${b.nama}: ${fmtQ(b.qty)} ${b.satuan}`);
+    return `Kebutuhan Bahan (+ bumbu)\nMenu: ${menu}\nPorsi besar ${pB} · kecil ${pK}${cad ? ` (+${cadangan}% cadangan)` : ""}\n\n${baris.join("\n")}\n\nEstimasi biaya: ${rupiah(total)}`;
+  }, [belanja, picked, resepMap, pB, pK, cad, cadangan, total]);
+
+  if (!data) return <div className="card p-8 text-center text-slate-400">{msg || "Memuat resep…"}</div>;
+
+  return (
+    <div className="space-y-5">
+      {msg && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">{msg}</p>}
+      <p className="rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-2.5 text-xs text-sky-200">
+        {data.meta.resep} resep berstatus <b>DRAF ESTIMASI</b> (untuk simulasi &amp; uji dapur). Bumbu terhitung otomatis dari koefisien per kg bahan utama.
+        Takaran &amp; harga dapat dikalibrasi dari hasil uji — gunakan &quot;Perbaiki harga&quot; untuk menyimpan koreksi per dapur.
+      </p>
+
+      {/* Porsi */}
+      <div className="card p-4">
+        <p className="mb-2 text-sm font-semibold text-slate-100">Jumlah porsi &amp; cadangan</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div><label className="label">Porsi besar</label><input type="number" min={0} className="input w-28" value={besar} onFocus={(e) => e.target.select()} onChange={(e) => setBesar(e.target.value)} /></div>
+          <div><label className="label">Porsi kecil</label><input type="number" min={0} className="input w-28" value={kecil} onFocus={(e) => e.target.select()} onChange={(e) => setKecil(e.target.value)} /></div>
+          <div><label className="label">Gram porsi kecil (%)</label><input type="number" min={0} max={100} className="input w-28" value={kecilPct} onFocus={(e) => e.target.select()} onChange={(e) => setKecilPct(e.target.value)} /></div>
+          <div><label className="label">Cadangan (%)</label><input type="number" min={0} step="0.5" className="input w-24" value={cadangan} onFocus={(e) => e.target.select()} onChange={(e) => setCadangan(e.target.value)} /></div>
+          <p className="text-xs text-slate-500">Porsi kecil memakai {kecilPct || 0}% gramasi bahan utama (bumbu ikut menyesuaikan).</p>
+        </div>
+      </div>
+
+      {/* Pilih resep per kategori */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {data.kategori.map((kat) => {
+          const opts = data.resep.filter((r) => r.kat === kat).sort((a, b) => a.n.localeCompare(b.n));
+          const chosen = picked.map((id) => resepMap.get(id)).filter((r): r is RResep => !!r && r.kat === kat);
+          return (
+            <div key={kat} className="card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-100">{kat}</p>
+                <span className="text-xs text-slate-500">{chosen.length}</span>
+              </div>
+              <select className="input mb-2 text-sm" value="" onChange={(e) => { const v = e.target.value; if (v && !picked.includes(v)) setPicked((p) => [...p, v]); e.currentTarget.value = ""; }}>
+                <option value="">+ tambah resep… ({opts.length})</option>
+                {opts.map((r) => <option key={r.id} value={r.id} disabled={picked.includes(r.id)}>{r.n}</option>)}
+              </select>
+              <div className="space-y-1.5">
+                {chosen.length === 0 ? <p className="py-1 text-center text-xs text-slate-600">—</p> : chosen.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5">
+                    <span className="min-w-0 truncate text-sm text-slate-200">{r.n}<span className="ml-1 text-[10px] text-slate-500">{r.bom.length} bahan</span></span>
+                    <button onClick={() => setPicked((p) => p.filter((x) => x !== r.id))} className="shrink-0 text-xs text-slate-500 hover:text-red-300">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Ringkasan per resep */}
+      {perResep.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {perResep.map((p) => (
+            <div key={p.id} className="stat-card">
+              <p className="stat-label truncate">{p.nama}</p>
+              <p className="stat-value text-lg">{rupiah(p.biaya)}</p>
+              <p className="text-[11px] text-slate-500">≈ {rupiah(p.porsi ? p.biaya / p.porsi : 0)}/porsi</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Daftar belanja */}
+      <div className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 p-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-100">Daftar belanja (+ bumbu) — {belanja.length} bahan · {pB + pK} porsi</p>
+            {unpriced > 0 && <p className="text-xs text-amber-300">{unpriced} bahan belum ada harga (klik &quot;Perbaiki harga&quot; untuk melengkapi).</p>}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={unduhCSV} disabled={belanja.length === 0} className="btn-ghost">Unduh CSV</button>
+            <a href={belanja.length ? `https://wa.me/?text=${encodeURIComponent(waText)}` : undefined} target="_blank" rel="noopener noreferrer" className={"btn-gold" + (belanja.length ? "" : " pointer-events-none opacity-40")}>Bagikan WhatsApp</a>
+          </div>
+        </div>
+        <div className="scroll-x overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead className="text-left text-xs uppercase text-slate-400"><tr className="border-b border-white/5">
+              <th className="px-4 py-2.5">Bahan</th><th className="px-4 py-2.5">Satuan</th>
+              <th className="px-4 py-2.5 text-right">Qty beli</th><th className="px-4 py-2.5 text-right">Harga</th>
+              <th className="px-4 py-2.5 text-right">Estimasi</th><th className="px-4 py-2.5 text-right">Koreksi</th>
+            </tr></thead>
+            <tbody className="divide-y divide-white/5">
+              {belanja.map((b) => editId === b.id ? (
+                <tr key={b.id} className="bg-white/5">
+                  <td className="px-4 py-1.5"><input className="input py-1" value={ef.nama} onChange={(e) => setEf({ ...ef, nama: e.target.value })} /></td>
+                  <td className="px-4 py-1.5 text-slate-400">{b.satuan}</td>
+                  <td className="px-4 py-1.5 text-right tabular-nums text-slate-400">{fmtQ(b.qty)}</td>
+                  <td className="px-4 py-1.5"><input className="input w-28 py-1 text-right" value={ef.harga} onFocus={(e) => e.target.select()} onChange={(e) => setEf({ ...ef, harga: e.target.value })} placeholder="Rp/satuan" /></td>
+                  <td className="px-4 py-1.5" />
+                  <td className="px-4 py-1.5"><div className="flex justify-end gap-1.5">
+                    <button onClick={() => saveHarga(b.nama)} className="btn-gold px-2.5 py-1 text-xs">Simpan</button>
+                    <button onClick={() => setEditId(null)} className="btn-ghost px-2.5 py-1 text-xs">Batal</button>
+                  </div></td>
+                </tr>
+              ) : (
+                <tr key={b.id} className={b.noHarga ? "bg-amber-500/[0.05]" : undefined}>
+                  <td className="px-4 py-2 font-medium">{b.nama}</td>
+                  <td className="px-4 py-2 text-slate-400">{b.satuan}</td>
+                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmtQ(b.qty)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-slate-400">{b.harga != null ? rupiah(b.harga) : <span className="badge bg-amber-500/15 text-amber-300">kosong</span>}</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-emerald-300">{b.harga != null ? rupiah(b.biaya) : "—"}</td>
+                  <td className="px-4 py-2 text-right">
+                    <button onClick={() => { setEditId(b.id); setEf({ nama: b.nama, harga: b.harga != null ? String(Math.round(b.harga)) : "" }); }} className="btn-ghost px-2 py-0.5 text-xs">Perbaiki harga</button>
+                  </td>
+                </tr>
+              ))}
+              {belanja.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">Pilih resep per kategori di atas untuk melihat kebutuhan bahan &amp; bumbu.</td></tr>}
+            </tbody>
+            {belanja.length > 0 && <tfoot><tr className="border-t border-white/10 font-bold">
+              <td className="px-4 py-2.5" colSpan={4}>Total estimasi biaya{unpriced > 0 ? " (sebagian bahan belum berharga)" : ""}</td>
+              <td className="px-4 py-2.5 text-right tabular-nums text-emerald-300">{rupiah(total)}</td><td />
+            </tr></tfoot>}
+          </table>
+        </div>
+      </div>
+      <p className="text-[11px] text-slate-500">
+        MASS: utama netto (kg) = porsi × gram target ÷ 1000 ÷ yield masak. COUNT: pcs = porsi × pcs/porsi.
+        BUMBU = utama netto × koefisien per kg. Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
+      </p>
     </div>
   );
 }
