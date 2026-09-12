@@ -75,12 +75,13 @@ export default function PurchasingPage() {
 }
 
 /* ========================================================= generator resep */
-interface RBahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; kemasan: number; diedit?: boolean }
-interface RBom { id: string; n: string; s: string; k: number; yp: number; ed: number; ym: number; mk: number; g: number }
+interface RBahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; ou: string; oi: number; okl: number; ppk: number; min: number; max: number; dia: number; diedit?: boolean }
+interface RBom { id: string; n: string; s: string; k: number; yp: number; ed: number; ym: number; mk: number }
 interface CItem { n: string; s: string; q: number; h: number }
-interface RResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; status: string; bom: RBom[]; custom?: boolean; porsiBasis?: number; items?: CItem[] }
+interface RResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; status: string; bom: RBom[]; metode?: string; buahPotong?: number; custom?: boolean; porsiBasis?: number; items?: CItem[] }
 interface PorsiKB { kat: string; gramK: number; gramB: number }
-interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; porsiKB: PorsiKB[]; resep: RResep[]; bahan: RBahan[] }
+interface KemasT { n: string; perPack: number }
+interface RData { meta: { sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string }; kategori: string[]; porsiKB: PorsiKB[]; kemasTambahan: KemasT[]; resep: RResep[]; bahan: RBahan[] }
 interface CustomRow { id: number; kategori: string; nama: string; porsi_basis: number; items: CItem[]; catatan: string; oleh: string }
 interface Builder { id: number | null; kategori: string; nama: string; porsi_basis: string; catatan: string; items: { n: string; s: string; q: string; h: string }[] }
 
@@ -152,23 +153,35 @@ function RecipeGenerator() {
     }));
   }, [K, B, cad, utamaMentahKg]);
 
-  /* konsolidasi seluruh resep terpilih per bahan */
+  /* konsolidasi seluruh resep terpilih per bahan + konversi satuan order (kemasan) */
   const belanja = useMemo(() => {
     const map = new Map<string, { id: string; nama: string; satuan: string; qty: number; hargaInline: number | null }>();
+    const add = (id: string, nama: string, satuan: string, qty: number, hargaInline: number | null) => {
+      const cur = map.get(id);
+      if (cur) { cur.qty += qty; if (cur.hargaInline == null) cur.hargaInline = hargaInline; }
+      else map.set(id, { id, nama, satuan, qty, hargaInline });
+    };
     for (const rid of picked) {
       const r = resepMap.get(rid); if (!r) continue;
-      for (const line of hitung(r)) {
-        const cur = map.get(line.id);
-        if (cur) { cur.qty += line.qty; if (cur.hargaInline == null) cur.hargaInline = line.hargaInline; }
-        else map.set(line.id, { id: line.id, nama: line.nama, satuan: line.satuan, qty: line.qty, hargaInline: line.hargaInline });
-      }
+      for (const line of hitung(r)) add(line.id, line.nama, line.satuan, line.qty, line.hargaInline);
+      // Kemasan tambahan: buah potong → 1 pcs OPP per porsi.
+      if (r.buahPotong) for (const kt of (data?.kemasTambahan || [])) add("kemas:" + kt.n, kt.n, "pcs", (K + B) * (1 + cad) * kt.perPack, null);
     }
     return [...map.values()].map((x) => {
       const b = bahanMap.get(x.id);
       const harga = b?.h ?? x.hargaInline ?? null;
-      return { id: x.id, nama: b?.n || x.nama, satuan: x.satuan, qty: x.qty, harga, biaya: harga != null ? x.qty * harga : 0, noHarga: harga == null };
+      // order unit (botol/kardus/pcs/renteng/balok/kg)
+      let order: string | null = null;
+      if (b && b.ou && b.oi > 0 && b.ou.toLowerCase() !== x.satuan.toLowerCase()) {
+        const kl = b.okl > 0 ? b.okl : 1;
+        const o = Math.ceil(x.qty / b.oi / kl) * kl;
+        order = `${fmtQ(o)} ${b.ou}`;
+      } else if (x.id.startsWith("kemas:")) {
+        order = `${fmtQ(Math.ceil(x.qty))} pcs`;
+      }
+      return { id: x.id, nama: b?.n || x.nama, satuan: x.satuan, qty: x.qty, order, harga, biaya: harga != null ? x.qty * harga : 0, noHarga: harga == null && !x.id.startsWith("kemas:") };
     }).sort((a, b) => b.biaya - a.biaya);
-  }, [picked, resepMap, bahanMap, hitung]);
+  }, [picked, resepMap, bahanMap, hitung, data, K, B, cad]);
   const total = belanja.reduce((a, b) => a + b.biaya, 0);
   const unpriced = belanja.filter((b) => b.noHarga).length;
 
@@ -214,8 +227,8 @@ function RecipeGenerator() {
   function unduhCSV() {
     if (belanja.length === 0) return;
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const head = ["Bahan", "Satuan", "Qty beli", "Harga satuan", "Estimasi biaya"];
-    const body = belanja.map((b) => [b.nama, b.satuan, fmtQ(b.qty), b.harga != null ? Math.round(b.harga) : "", Math.round(b.biaya)].map(esc).join(","));
+    const head = ["Bahan", "Kebutuhan", "Satuan", "Beli (kemasan)", "Harga satuan", "Estimasi biaya"];
+    const body = belanja.map((b) => [b.nama, fmtQ(b.qty), b.satuan, b.order || "", b.harga != null ? Math.round(b.harga) : "", Math.round(b.biaya)].map(esc).join(","));
     const csv = "﻿" + [head.map(esc).join(","), ...body].join("\r\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url; a.download = `kebutuhan-resep-${K + B}porsi.csv`; a.click(); URL.revokeObjectURL(url);
@@ -223,7 +236,7 @@ function RecipeGenerator() {
   const waText = useMemo(() => {
     if (belanja.length === 0) return "";
     const menu = picked.map((id) => resepMap.get(id)?.n).filter(Boolean).join(", ");
-    const baris = belanja.map((b) => `• ${b.nama}: ${fmtQ(b.qty)} ${b.satuan}`);
+    const baris = belanja.map((b) => `• ${b.nama}: ${b.order || `${fmtQ(b.qty)} ${b.satuan}`}`);
     return `Kebutuhan Bahan (+ bumbu)\nMenu: ${menu}\nSerdik besar ${B} · kecil ${K}${cad ? ` (+${cadangan}% cadangan)` : ""}\n\n${baris.join("\n")}\n\nEstimasi biaya: ${rupiah(total)}`;
   }, [belanja, picked, resepMap, K, B, cad, cadangan, total]);
 
@@ -370,16 +383,16 @@ function RecipeGenerator() {
         <div className="scroll-x overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="text-left text-xs uppercase text-slate-400"><tr className="border-b border-white/5">
-              <th className="px-4 py-2.5">Bahan</th><th className="px-4 py-2.5">Satuan</th>
-              <th className="px-4 py-2.5 text-right">Qty beli</th><th className="px-4 py-2.5 text-right">Harga</th>
+              <th className="px-4 py-2.5">Bahan</th><th className="px-4 py-2.5">Kebutuhan</th>
+              <th className="px-4 py-2.5">Beli (kemasan)</th><th className="px-4 py-2.5 text-right">Harga</th>
               <th className="px-4 py-2.5 text-right">Estimasi</th><th className="px-4 py-2.5 text-right">Koreksi</th>
             </tr></thead>
             <tbody className="divide-y divide-white/5">
               {belanja.map((b) => editId === b.id ? (
                 <tr key={b.id} className="bg-white/5">
                   <td className="px-4 py-1.5"><input className="input py-1" value={ef.nama} onChange={(e) => setEf({ ...ef, nama: e.target.value })} /></td>
-                  <td className="px-4 py-1.5 text-slate-400">{b.satuan}</td>
-                  <td className="px-4 py-1.5 text-right tabular-nums text-slate-400">{fmtQ(b.qty)}</td>
+                  <td className="px-4 py-1.5 text-slate-400">{fmtQ(b.qty)} {b.satuan}</td>
+                  <td className="px-4 py-1.5 text-slate-400">{b.order || "—"}</td>
                   <td className="px-4 py-1.5"><input className="input w-28 py-1 text-right" value={ef.harga} onFocus={(e) => e.target.select()} onChange={(e) => setEf({ ...ef, harga: e.target.value })} placeholder="Rp/satuan" /></td>
                   <td className="px-4 py-1.5" />
                   <td className="px-4 py-1.5"><div className="flex justify-end gap-1.5">
@@ -390,9 +403,9 @@ function RecipeGenerator() {
               ) : (
                 <tr key={b.id} className={b.noHarga ? "bg-amber-500/[0.05]" : undefined}>
                   <td className="px-4 py-2 font-medium">{b.nama}</td>
-                  <td className="px-4 py-2 text-slate-400">{b.satuan}</td>
-                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmtQ(b.qty)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-slate-400">{b.harga != null ? rupiah(b.harga) : <span className="badge bg-amber-500/15 text-amber-300">kosong</span>}</td>
+                  <td className="px-4 py-2 tabular-nums text-slate-300">{fmtQ(b.qty)} <span className="text-slate-500">{b.satuan}</span></td>
+                  <td className="px-4 py-2 font-semibold tabular-nums text-sky-200">{b.order || <span className="text-slate-600">—</span>}</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-slate-400">{b.harga != null ? rupiah(b.harga) : (b.id.startsWith("kemas:") ? "—" : <span className="badge bg-amber-500/15 text-amber-300">kosong</span>)}</td>
                   <td className="px-4 py-2 text-right tabular-nums text-emerald-300">{b.harga != null ? rupiah(b.biaya) : "—"}</td>
                   <td className="px-4 py-2 text-right">
                     <button onClick={() => { setEditId(b.id); setEf({ nama: b.nama, harga: b.harga != null ? String(Math.round(b.harga)) : "" }); }} className="btn-ghost px-2 py-0.5 text-xs">Perbaiki harga</button>
@@ -410,7 +423,7 @@ function RecipeGenerator() {
       </div>
       <p className="text-[11px] text-slate-500">
         Target matang (kg) = (serdik K × gram K + serdik B × gram B) × (1+cadangan) ÷ 1000. Bahan baku mentah siap-olah = target matang ÷ yield gabungan resep.
-        Beli tiap bahan = mentah × koefisien ÷ yield persiapan (satuan beli; kg/liter/pcs). Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
+        Beli tiap bahan = mentah × koefisien ÷ yield persiapan, lalu dikonversi ke satuan kemasan nyata (mis. kecap → botol, minyak → kardus 12 L, lele/telur/tahu → pcs/balok, buah → per buah, bumbu sachet → renteng). Buah potong otomatis ditambah plastik OPP per porsi. Harga blanko tidak dihitung ke total. Sumber: {data.meta.sumber}.
       </p>
 
       {/* Modal penjelasan ilmiah mentah → matang */}

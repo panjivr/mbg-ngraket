@@ -11,7 +11,15 @@ import raw from "@/data/resep-master.json";
  *   utama mentah siap olah (kg) = target matang / yieldGab
  *   beli per bahan = utama mentah × koef ÷ yield persiapan   (satuan beli bahan)
  */
-export interface Bahan { id: string; n: string; s: string; h: number | null; hsrc: string | null; kemasan: number }
+export interface Bahan {
+  id: string; n: string; s: string; h: number | null; hsrc: string | null;
+  ou: string;  // satuan order (botol/kardus/pcs/renteng/balok/kg)
+  oi: number;  // isi satuan dasar per 1 satuan order
+  okl: number; // kelipatan order
+  ppk: number; // pcs per kg (0 = abaikan)
+  min: number; max: number; dia: number; // kg/buah & diameter (buah potong)
+}
+export interface KemasTambahan { n: string; perPack: number }
 export interface BomLine {
   id: string; n: string; s: string;
   k: number;  // koefisien satuan netto / kg utama
@@ -19,16 +27,16 @@ export interface BomLine {
   ed: number; // fraksi edible
   ym: number; // yield masak (matang/mentah)
   mk: number; // 1 = komponen kategori (dihitung ke gramasi), 0 = bumbu/kuah
-  g: number;  // gram bruto per pcs (untuk bahan satuan pcs)
 }
 export interface Resep {
   id: string; kat: string; n: string;
   gramK: number; gramB: number; yieldGab: number; status: string; bom: BomLine[];
+  metode: string; buahPotong: number; menitBatch: number; kgAlatBatch: number; prepAlat: string;
 }
 export interface PorsiKB { kat: string; gramK: number; gramB: number }
 interface Data {
   _meta: { generated: string; sumber: string; resep: number; bahan: number; hargaTerisi: number; hargaKosong: number; status: string; model: string };
-  kategori: string[]; porsiKB: PorsiKB[]; bahan: Bahan[]; resep: Resep[];
+  kategori: string[]; porsiKB: PorsiKB[]; kemasTambahan: KemasTambahan[]; bahan: Bahan[]; resep: Resep[];
 }
 
 const DATA = raw as unknown as Data;
@@ -36,5 +44,6 @@ const DATA = raw as unknown as Data;
 export const RESEP_META = DATA._meta;
 export const RESEP_KATEGORI = DATA.kategori;
 export const PORSI_KB = DATA.porsiKB;
+export const KEMAS_TAMBAHAN = DATA.kemasTambahan;
 export function getBahanMaster(): Bahan[] { return DATA.bahan; }
 export function getResepAll(): Resep[] { return DATA.resep; }
