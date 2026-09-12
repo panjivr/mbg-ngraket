@@ -110,6 +110,7 @@ export default function GudangPage() {
   const [copied, setCopied] = useState(false);
   const [q, setQ] = useState("");
   const [hanyaKad, setHanyaKad] = useState(false);
+  const [kuras, setKuras] = useState<Set<number> | null>(null); // null = modal tertutup
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -242,6 +243,24 @@ export default function GudangPage() {
       setMForm(null); await load();
     } finally { setBusy(false); }
   }
+  // Buka modal Kuras Gudang — default centang semua barang (terfilter) yang masih bersisa stok.
+  function bukaKuras() {
+    setMsg(null);
+    setKuras(new Set(shown.filter((b) => (b.stok || 0) !== 0).map((b) => b.id)));
+  }
+  async function jalankanKuras() {
+    if (!kuras || kuras.size === 0) return;
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch("/api/admin/gudang/kuras", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...kuras] }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(d.error || "Gagal menguras gudang."); return; }
+      setKuras(null); await load();
+    } finally { setBusy(false); }
+  }
   async function bukaRiwayat(b: Barang) {
     const res = await fetch(`/api/admin/gudang/mutasi?barang_id=${b.id}`, { cache: "no-store" });
     const d = await res.json();
@@ -264,6 +283,7 @@ export default function GudangPage() {
                 <span className="ml-0.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-amber-300">{perluBeli.length}</span>
               )}
             </button>
+            <button onClick={bukaKuras} disabled={shown.length === 0} title="Set stok jadi 0 untuk barang habis (massal)" className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-40"><IconTrash className="h-4 w-4" /> Kuras Gudang</button>
             <button onClick={() => { setMsg(null); setBForm({ ...emptyB }); }} className="btn-gold">+ Tambah Barang</button>
           </div>
         )}
@@ -474,6 +494,9 @@ export default function GudangPage() {
                   <button type="button" onClick={() => setMForm({ ...mForm, jumlah: bumpNum(mForm.jumlah, 1) })} className="btn-ghost shrink-0 px-2.5 text-sm" title="Tambah 1" tabIndex={-1}>+1</button>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-500">Boleh desimal (mis. 0,5 kg). Titik atau koma sama saja.</p>
+                {mForm.tipe === "opname" && parseNum(mForm.jumlah) !== 0 && (
+                  <button type="button" onClick={() => setMForm({ ...mForm, jumlah: "0" })} className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20">Tandai habis — set 0</button>
+                )}
                 {mForm.tipe === "opname" && (() => {
                   const selisih = parseNum(mForm.jumlah) - mForm.barang.stok;
                   const cocok = selisih === 0;
@@ -506,6 +529,55 @@ export default function GudangPage() {
             </div>
           </div>
         </div>
+        );
+      })()}
+
+      {/* Modal Kuras Gudang — set stok terpilih jadi 0 (barang habis) */}
+      {kuras !== null && (() => {
+        const kandidat = shown.filter((b) => (b.stok || 0) !== 0);
+        const allChecked = kandidat.length > 0 && kandidat.every((b) => kuras.has(b.id));
+        const toggle = (id: number) => { const n = new Set(kuras); n.has(id) ? n.delete(id) : n.add(id); setKuras(n); };
+        const toggleAll = () => setKuras(allChecked ? new Set() : new Set(kandidat.map((b) => b.id)));
+        return (
+          <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-4" onClick={() => setKuras(null)}>
+            <div className="card flex max-h-[85dvh] w-full max-w-md flex-col p-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start gap-3 bg-gradient-to-br from-red-500/20 to-transparent p-5">
+                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/30"><IconTrash className="h-5 w-5" /></div>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold leading-tight text-red-300">Kuras Gudang</h2>
+                  <p className="mt-0.5 text-sm text-slate-300">Set stok jadi <b>0</b> untuk barang yang dicentang (dicatat sebagai opname).</p>
+                </div>
+              </div>
+              <div className="flex flex-col overflow-hidden px-5 pb-5">
+                {kandidat.length === 0 ? (
+                  <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">Tidak ada barang bersisa stok pada tampilan ini.</p>
+                ) : (
+                  <>
+                    <div className="mb-2 flex items-center justify-between">
+                      <button onClick={toggleAll} className="text-xs font-medium text-gold-300 hover:text-gold-200">{allChecked ? "Kosongkan pilihan" : "Pilih semua"}</button>
+                      <span className="text-xs text-slate-400">{kuras.size} dari {kandidat.length} dipilih</span>
+                    </div>
+                    <div className="scroll-x flex-1 space-y-1 overflow-y-auto pr-1">
+                      {kandidat.map((b) => (
+                        <label key={b.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                          <input type="checkbox" checked={kuras.has(b.id)} onChange={() => toggle(b.id)} className="h-4 w-4 accent-red-500" />
+                          <span className="min-w-0 flex-1 truncate text-sm text-slate-200">{b.nama}</span>
+                          <span className="shrink-0 text-xs text-slate-400">{fmtNum(b.stok)} {b.satuan}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">Stok barang terpilih akan jadi 0. Riwayatnya tercatat di kartu stok — tidak menghapus barang.</p>
+                    {msg && <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{msg}</p>}
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => setKuras(null)} className="btn-ghost flex-1">Batal</button>
+                      <button onClick={jalankanKuras} disabled={busy || kuras.size === 0} className="flex-1 rounded-lg border border-red-500/30 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/25 disabled:opacity-40">{busy ? "Menguras…" : `Kuras ${kuras.size} barang`}</button>
+                    </div>
+                  </>
+                )}
+                {kandidat.length === 0 && <button onClick={() => setKuras(null)} className="btn-ghost mt-3">Tutup</button>}
+              </div>
+            </div>
+          </div>
         );
       })()}
 
