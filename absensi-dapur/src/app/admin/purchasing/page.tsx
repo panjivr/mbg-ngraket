@@ -92,6 +92,30 @@ interface JBom { id: string; n: string; s: string; k: number; yp: number; ed: nu
 interface JResep { id: string; kat: string; n: string; gramK: number; gramB: number; yieldGab: number; metode?: string; buahPotong?: number; menitBatch?: number; kgAlatBatch?: number; prepAlat?: string; bom?: JBom[] }
 interface Alat { n: string; jumlah: number; slot: number; kap: number; sat: string; menit: number; ket: string }
 interface Langkah { t: string; l: string; a: string; k: string; p: string }
+// HACCP — titik kendali kritis (CCP) rantai dapur MBG (standar keamanan pangan).
+const HACCP_CCP: { ccp: string; judul: string; isi: string }[] = [
+  { ccp: "CCP-1", judul: "Penerimaan barang", isi: "Cek suhu saat datang: beku ≤ -18 °C, dingin ≤ 4 °C, kering utuh & tidak apek. Cek tanggal, kemasan, jumlah vs PURCHASE. Tolak lot rusak/berbau/menetes; catat suhu & ukuran riil." },
+  { ccp: "CCP-2", judul: "Penyimpanan & zona", isi: "Pisah zona: protein mentah (paling bawah), sayur, buah, dan matang (paling atas). Kulkas ≤ 4 °C, freezer ≤ -18 °C. FIFO/FEFO. Wadah tertutup & berlabel tanggal." },
+  { ccp: "CCP-3", judul: "Persiapan (anti kontaminasi silang)", isi: "Talenan & pisau berkode warna: MERAH=protein mentah, HIJAU=sayur/buah, PUTIH=matang/siap saji. Cuci tangan 20 dtk tiap ganti bahan. Jangan campur protein mentah dengan buah siap makan." },
+  { ccp: "CCP-4", judul: "Pemasakan (suhu inti)", isi: "Suhu inti minimum: unggas/ayam 74 °C, ikan/lele 63 °C, telur & olahan matang menyeluruh 71 °C, daging sapi 71 °C, tahu/tempe/sayur matang menyeluruh. Ukur bagian tertebal dengan termometer." },
+  { ccp: "CCP-5", judul: "Holding (jaga suhu)", isi: "Zona bahaya 5–60 °C maksimal 2 jam (kumulatif 4 jam). Panas tahan ≥ 60 °C; buah potong dingin ≤ 5 °C. Jangan diamkan matang di suhu ruang menunggu porsi." },
+  { ccp: "CCP-6", judul: "Pemorsian", isi: "Petugas sarung tangan/alat bersih, tidak sakit. Timbang gramasi K/B; QC jumlah, tutup & label waktu. Simpan sampel makanan 2×24 jam (≥100 g/menu) di kulkas untuk uji bila perlu." },
+  { ccp: "CCP-7", judul: "Distribusi", isi: "Ompreng tertutup rapat, wadah bersih. Catat jam matang & jam kirim; total waktu masak→makan sesuai batas holding. Jaga suhu selama transport." },
+];
+// Suhu inti & catatan keamanan per resep, berdasarkan bahan utama & kategori.
+function foodSafety(namaResep: string, kat: string, bahanUtama?: string): { suhu: string; note: string } {
+  const s = (bahanUtama || namaResep).toLowerCase();
+  if (/ayam|unggas|bebek|puyuh/.test(s)) return { suhu: "74 °C", note: "Unggas: tusuk bagian tertebal, tidak ada bagian merah/berdarah." };
+  if (/lele|ikan|nila|patin|tongkol|bandeng|udang|cumi/.test(s)) return { suhu: "63 °C", note: "Ikan/seafood: daging opaque & mudah terurai; jaga rantai dingin sebelum olah." };
+  if (/telur/.test(s)) return { suhu: "71 °C", note: "Telur: putih & kuning set (tidak berair) untuk sajian anak." };
+  if (/sapi|daging|rendang|empal/.test(s)) return { suhu: "71 °C", note: "Daging: empuk, cairan bening bukan merah." };
+  if (kat === "Buah") return { suhu: "≤ 5 °C", note: "Tanpa masak — cuci air mengalir, kupas dengan alat bersih, simpan dingin ≤ 5 °C, sajikan < 4 jam." };
+  if (kat === "Sayur") return { suhu: "matang menyeluruh", note: "Sayur: matang merata tapi tidak lembek berlebih; tiriskan, jangan rendam air lama." };
+  if (/tahu|tempe|kacang/.test(s)) return { suhu: "matang menyeluruh", note: "Nabati: goreng/masak hingga matang penuh; minyak bersih." };
+  if (kat === "Karbohidrat") return { suhu: "≥ 74 °C", note: "Nasi/karbo: matang merata; holding panas ≥ 60 °C, jangan tambah air ke nasi matang." };
+  return { suhu: "matang menyeluruh", note: "Masak hingga matang penuh; ukur bagian tertebal." };
+}
+
 const TAHAP_TONE: Record<string, string> = {
   Persiapan: "border-sky-500/30 bg-sky-500/10 text-sky-300",
   Bumbu: "border-violet-500/30 bg-violet-500/10 text-violet-300",
@@ -111,6 +135,7 @@ function JobdeskGenerator({ shared, onGoMenu }: { shared: Shared; onGoMenu: () =
   const [alat, setAlat] = useState<Alat[]>([]);
   const [steps, setSteps] = useState<Record<string, Langkah[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
+  const [expandAll, setExpandAll] = useState(false);
   const [jam, setJam] = useState({ persiapan: "18:00", pengolahan: "23:00", pemorsian: "03:00" });
   const [istirahat, setIstirahat] = useState({ persiapan: "0", pengolahan: "0", pemorsian: "0" });
   const [exporting, setExporting] = useState(false);
@@ -221,31 +246,63 @@ function JobdeskGenerator({ shared, onGoMenu }: { shared: Shared; onGoMenu: () =
     return null;
   }
 
+  // Render seluruh detail (buka semua) sebelum capture agar tak ada yang ke-hide.
+  async function withAllExpanded<T>(fn: () => Promise<T>): Promise<T> {
+    setExpandAll(true);
+    await new Promise((r) => setTimeout(r, 350)); // tunggu render & muat langkah
+    try { return await fn(); } finally { setExpandAll(false); }
+  }
+  async function snapshot() {
+    const { toPng } = await import("html-to-image");
+    const el = cardRef.current!;
+    return toPng(el, { backgroundColor: "#0b1120", pixelRatio: 2, cacheBust: true, width: el.scrollWidth, height: el.scrollHeight });
+  }
   async function exportPNG() {
     if (!cardRef.current) return; setExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
-      const url = await toPng(cardRef.current, { backgroundColor: "#0b1120", pixelRatio: 2, cacheBust: true });
+      const url = await withAllExpanded(snapshot);
       const a = document.createElement("a"); a.href = url; a.download = `jobdesk-${totalPorsi}porsi.png`; a.click();
     } catch { setMsg("Gagal membuat gambar."); } finally { setExporting(false); }
   }
   async function exportPDF() {
     if (!cardRef.current) return; setExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
-      const url = await toPng(cardRef.current, { backgroundColor: "#0b1120", pixelRatio: 2, cacheBust: true });
+      const url = await withAllExpanded(snapshot);
       const img = new Image(); img.src = url; await new Promise((r) => { img.onload = r; });
-      const pdf = new jsPDF({ orientation: img.width > img.height ? "l" : "p", unit: "px", format: [img.width, img.height] });
-      pdf.addImage(url, "PNG", 0, 0, img.width, img.height); pdf.save(`jobdesk-${totalPorsi}porsi.pdf`);
+      // Bagi ke halaman A4 potret agar konten panjang tidak terpotong.
+      const pw = 595, ph = 842, margin = 24, cw = pw - margin * 2;
+      const scaled = (cw / img.width) * img.height;
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+      let y = margin, remaining = scaled;
+      // gambar penuh, lalu geser viewport per halaman
+      const pageContent = ph - margin * 2;
+      let srcY = 0;
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d")!;
+      const ratio = img.width / cw;
+      while (remaining > 0) {
+        const sliceH = Math.min(pageContent, remaining) * ratio;
+        canvas.width = img.width; canvas.height = sliceH;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, srcY, img.width, sliceH, 0, 0, img.width, sliceH);
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, y, cw, sliceH / ratio);
+        remaining -= pageContent; srcY += sliceH;
+        if (remaining > 0) { pdf.addPage(); y = margin; }
+      }
+      pdf.save(`jobdesk-${totalPorsi}porsi.pdf`);
     } catch { setMsg("Gagal membuat PDF."); } finally { setExporting(false); }
   }
   const waJobdesk = () => {
     const lines = [`*JOBDESK DAPUR MBG* — ${totalPorsi} porsi (${B} besar / ${K} kecil)`, ""];
     lines.push(`PERSIAPAN (${orang.persiapan} org) ${fmtJam(jadwal.persiapan.mulai)}–${fmtJam(jadwal.persiapan.selesai)}`);
     lines.push(`PENGOLAHAN (${orang.pengolahan} org) ${fmtJam(jadwal.pengolahan.mulai)}–${fmtJam(jadwal.pengolahan.selesai)}`);
-    for (const x of jadwalOlah) lines.push(`  • ${x.r.n}: ${x.batch} batch, kompor ${x.lane}, ${fmtJam(x.mulai)}–${fmtJam(x.selesai)}`);
+    for (const x of jadwalOlah) {
+      const fs = foodSafety(x.r.n, x.r.kat, x.r.bom?.find((l) => l.mk === 1)?.n);
+      lines.push(`  • ${x.r.n}: ${x.batch} batch, kompor ${x.lane}, ${fmtJam(x.mulai)}–${fmtJam(x.selesai)} (suhu inti ${fs.suhu})`);
+    }
     lines.push(`PEMORSIAN (${orang.pemorsian} org) ${fmtJam(jadwal.pemorsian.mulai)}–${fmtJam(jadwal.pemorsian.selesai)}`);
+    lines.push("", "*HACCP:* pisah talenan protein/sayur/buah · masak sampai suhu inti · holding panas ≥60°C, buah ≤5°C · simpan sampel 2×24 jam · label waktu.");
     return `https://wa.me/?text=${encodeURIComponent(lines.join("\n"))}`;
   };
 
@@ -304,10 +361,12 @@ function JobdeskGenerator({ shared, onGoMenu }: { shared: Shared; onGoMenu: () =
           </div>
 
           {/* Tombol ekspor */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button onClick={exportPNG} disabled={exporting} className="btn-gold text-sm">{exporting ? "Menyiapkan…" : "Unduh Gambar (PNG)"}</button>
             <button onClick={exportPDF} disabled={exporting} className="btn-ghost text-sm">Unduh PDF</button>
             <a href={waJobdesk()} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Bagikan WhatsApp</a>
+            <button onClick={() => setExpandAll((v) => !v)} className="btn-ghost text-sm">{expandAll ? "Tutup semua langkah" : "Buka semua langkah"}</button>
+            {exporting && <span className="text-xs text-slate-400">menyiapkan seluruh detail…</span>}
           </div>
 
           {/* KARTU HASIL (yang diekspor) */}
@@ -349,23 +408,43 @@ function JobdeskGenerator({ shared, onGoMenu }: { shared: Shared; onGoMenu: () =
               </div>
             </div>
 
-            {/* Detail per resep: potongan persiapan + langkah SOP */}
+            {/* HACCP — titik kendali kritis (selalu tampil) */}
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-300/80">HACCP — Titik Kendali Kritis (keamanan pangan)</p>
+              <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                {HACCP_CCP.map((c) => (
+                  <div key={c.ccp} className="text-[11px]">
+                    <span className="font-semibold text-emerald-300">{c.ccp} · {c.judul}. </span>
+                    <span className="text-slate-400">{c.isi}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Detail per resep: keamanan + potongan persiapan + langkah SOP */}
             <div className="space-y-3">
               {perResep.map(({ id, r, mentah, batch, durasi }) => {
                 const st = steps[id] || [];
-                const open = openId === id;
-                const potong = (r.bom || []).filter((l) => saranPotong(l.n, r.metode)).slice(0, 12);
+                const open = expandAll || openId === id;
+                const potong = (r.bom || []).filter((l) => saranPotong(l.n, r.metode)).slice(0, 14);
+                const utamaNama = r.bom?.find((l) => l.mk === 1)?.n;
+                const fs = foodSafety(r.n, r.kat, utamaNama);
                 return (
                   <div key={id} className="card overflow-hidden">
-                    <button onClick={() => setOpenId(open ? null : id)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02]">
+                    <button onClick={() => setOpenId(openId === id ? null : id)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02]">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-100">{r.n} <span className="text-xs font-normal text-slate-500">· {r.kat} · {r.metode || "olah"}</span></p>
-                        <p className="text-[11px] text-slate-400">{fmtQ(Math.round(mentah * 10) / 10)} kg bahan utama · {batch} batch × {r.menitBatch || 0} mnt ≈ {durasi} mnt {r.prepAlat ? `· bumbu: ${r.prepAlat.toLowerCase()}` : ""}</p>
+                        <p className="text-[11px] text-slate-400">{fmtQ(Math.round(mentah * 10) / 10)} kg bahan utama · {batch} batch × {r.menitBatch || 0} mnt ≈ {durasi} mnt · <span className="text-emerald-300/90">suhu inti {fs.suhu}</span></p>
                       </div>
                       <span className={"shrink-0 text-xs " + (open ? "text-gold-400" : "text-slate-500")}>{open ? "tutup ▲" : "detail ▼"}</span>
                     </button>
                     {open && (
                       <div className="space-y-3 border-t border-white/5 p-4">
+                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-xs">
+                          <span className="font-semibold text-emerald-300">Keamanan pangan: </span>
+                          <span className="text-slate-300">Suhu inti target <b>{fs.suhu}</b>. {fs.note}</span>
+                          {r.prepAlat ? <span className="text-slate-400"> · Bumbu dihaluskan pakai {r.prepAlat.toLowerCase()}.</span> : null}
+                        </div>
                         {potong.length > 0 && (
                           <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3">
                             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sky-300/80">Persiapan — bentuk potongan (saran)</p>
