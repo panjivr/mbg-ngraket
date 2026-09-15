@@ -85,16 +85,21 @@ function Inner() {
       </div>
 
       <div className="mx-auto max-w-[800px] bg-white p-8 font-serif text-black">
-        {/* Kop */}
-        <div className="relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/bgn-logo.webp" alt="Logo BGN" className="absolute left-0 top-1/2 h-16 w-16 -translate-y-1/2 object-contain" />
-          <div className="px-20 text-center leading-snug">
-            <p className="text-base font-bold">LAPORAN KEGIATAN HARIAN</p>
-            <p className="text-sm font-bold">SPPG {namaSppg.toUpperCase()}</p>
-            <p className="text-xs">{alamat}</p>
+        {/* Kop — logo & teks dalam satu baris flex (bukan absolute) supaya
+            logo tidak pernah menimpa garis pembatas di bawahnya. */}
+        <div className="print-keep">
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/bgn-logo.webp" alt="Logo BGN" className="h-16 w-16 shrink-0 object-contain" />
+            <div className="min-w-0 flex-1 text-center leading-snug">
+              <p className="text-base font-bold">LAPORAN KEGIATAN HARIAN</p>
+              <p className="text-sm font-bold">SPPG {namaSppg.toUpperCase()}</p>
+              <p className="text-xs">{alamat}</p>
+            </div>
+            {/* Penyeimbang lebar logo agar teks tetap center optis di kertas. */}
+            <div className="h-16 w-16 shrink-0" aria-hidden="true" />
           </div>
-          <div className="mt-2 border-b-4 border-black" />
+          <div className="mt-3 border-b-4 border-black" />
         </div>
 
         {/* Info */}
