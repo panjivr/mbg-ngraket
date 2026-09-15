@@ -472,3 +472,112 @@ html[data-theme="light"] .sheen::after {
     transparent
   );
 }
+
+/* ==========================================================================
+   CETAK / PDF — aturan global untuk semua halaman /cetak
+   Masalah lama: layout "ketimpa-timpa" saat print karena
+   (1) kontainer dokumen memakai lebar tetap px (mis. max-w-[800px] = 211mm)
+       sehingga melebihi area cetak A4/F4 dan isinya terpotong/tumpang tindih,
+   (2) tidak ada kontrol page-break: baris tabel & foto terpotong di batas
+       halaman lalu sisanya menimpa konten halaman berikutnya.
+   Blok ini hanya aktif saat media print, jadi tampilan layar tidak berubah.
+   ========================================================================== */
+@media print {
+  html,
+  body {
+    width: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Warna latar tabel/badge tetap tercetak (header biru, baris total, dll). */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Elemen khusus layar tidak ikut tercetak. */
+  .no-print,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Lebar tetap dalam px selalu melebihi area cetak → paksa ikut lebar kertas. */
+  [class*="max-w-"] {
+    max-width: 100% !important;
+  }
+
+  /* Kontainer dokumen (mx-auto + max-w-*): buang padding samping supaya
+     margin kertas dari @page yang menentukan, bukan padding ganda. */
+  [class*="mx-auto"][class*="max-w-"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* min-h-screen bikin halaman kosong ekstra di akhir dokumen. */
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+
+  /* --- Kontrol pemenggalan halaman --- */
+  table {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  thead {
+    display: table-header-group; /* header tabel diulang tiap halaman */
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  tr,
+  td,
+  th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Foto & blok grid tidak boleh terbelah antar halaman. */
+  img,
+  figure,
+  .grid > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  img {
+    max-width: 100% !important;
+  }
+
+  /* Judul tidak ditinggal sendirian di kaki halaman. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Efek layar (bayangan/blur/rounded tebal) bikin hasil PDF kotor. */
+  .shadow,
+  [class*="shadow-"] {
+    box-shadow: none !important;
+  }
+
+  /* Penanda manual bila sebuah blok harus mulai di halaman baru. */
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+  .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

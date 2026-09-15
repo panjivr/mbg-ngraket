@@ -107,7 +107,7 @@ function Inner() {
 
         {/* Foto menu (2 foto) — di atas rincian menu */}
         {foto.menu.length > 0 && (
-          <div className="mt-3">
+          <div className="print-keep mt-3">
             <p className="mb-1 text-sm font-bold">Foto Menu</p>
             <FotoRow srcs={foto.menu} cols={2} alt="Foto Menu" ratio="4/5" />
           </div>
@@ -174,16 +174,20 @@ function Inner() {
         </table>
 
         {/* Rangkaian kegiatan */}
-        <p className="mt-5 text-sm font-bold">Rangkaian Kegiatan:</p>
-        <ol className="ml-6 list-decimal text-sm">
-          {isi.kegiatan.map((k, i) => <li key={i} className="py-0.5">{k}</li>)}
-        </ol>
+        <div className="print-keep">
+          <p className="mt-5 text-sm font-bold">Rangkaian Kegiatan:</p>
+          <ol className="ml-6 list-decimal text-sm">
+            {isi.kegiatan.map((k, i) => <li key={i} className="py-0.5">{k}</li>)}
+          </ol>
+        </div>
 
         {/* Kendala & solusi */}
-        <p className="mt-4 text-sm font-bold">Kendala:</p>
-        <p className="text-justify text-sm">{isi.kendala}</p>
-        <p className="mt-3 text-sm font-bold">Solusi:</p>
-        <p className="text-justify text-sm">{isi.solusi}</p>
+        <div className="print-keep">
+          <p className="mt-4 text-sm font-bold">Kendala:</p>
+          <p className="text-justify text-sm">{isi.kendala}</p>
+          <p className="mt-3 text-sm font-bold">Solusi:</p>
+          <p className="text-justify text-sm">{isi.solusi}</p>
+        </div>
 
         {/* Dokumentasi foto */}
         <p className="mt-5 text-sm font-bold">Dokumentasi Kegiatan:</p>

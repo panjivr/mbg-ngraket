@@ -133,6 +133,11 @@ async function doEnsureSchema(): Promise<void> {
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
+    // Bebaskan transaksi migrasi dari statement_timeout pool (20s). Backfill
+    // UPDATE table-scan pada data produksi yang sudah besar bisa >20s; bila
+    // kena timeout, transaksi migrasi throw dan SEMUA query gagal (ensureSchema
+    // dipanggil sebelum tiap query). SET LOCAL hanya berlaku di transaksi ini.
+    await client.query("SET LOCAL statement_timeout = 0");
     await client.query("SELECT pg_advisory_xact_lock(7263011)");
     // Migrasi tak boleh dibunuh oleh statement_timeout aplikasi (20 dtk):
     // sebagian backfill (UPDATE seluruh tabel) bisa >20 dtk saat data besar,
