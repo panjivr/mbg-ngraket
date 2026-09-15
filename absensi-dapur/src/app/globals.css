@@ -493,15 +493,37 @@ html[data-theme="light"] .sheen::after {
     color: #000 !important;
   }
 
-  /* Warna latar tabel/badge tetap tercetak (header biru, baris total, dll). */
-  * {
+  /* Latar gelap aplikasi (gradien biru tua pada body::before) posisinya fixed,
+     jadi saat dicetak ia ikut ter-render dan muncul sebagai BLOK HITAM di sisa
+     lembar setelah konten habis. Matikan seluruh dekorasi layar saat cetak. */
+  body::before,
+  body::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+  }
+
+  /* Warna latar tabel/badge tetap tercetak (header biru, baris total, dll).
+     Sengaja TIDAK memakai selektor `*` — memaksa semua elemen mencetak
+     warnanya membuat panel/overlay gelap khas layar ikut jadi blok hitam. */
+  table,
+  thead,
+  tfoot,
+  tr,
+  th,
+  td,
+  img,
+  svg {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Elemen khusus layar tidak ikut tercetak. */
+  /* Elemen khusus layar tidak ikut tercetak: tombol, pemutar musik, dan apa
+     pun yang fixed/sticky (selalu salah posisi di kertas). */
   .no-print,
-  [data-no-print] {
+  [data-no-print],
+  [class~="fixed"],
+  [class~="sticky"] {
     display: none !important;
   }
 
@@ -510,11 +532,24 @@ html[data-theme="light"] .sheen::after {
     max-width: 100% !important;
   }
 
-  /* Kontainer dokumen (mx-auto + max-w-*): buang padding samping supaya
-     margin kertas dari @page yang menentukan, bukan padding ganda. */
+  /* Kontainer dokumen (mx-auto + max-w-*): ganti padding layar (p-8 = 32px)
+     dengan margin pengaman 5mm di kiri-kanan. Printer punya area tak tercetak
+     ~3-5mm di tepi, jadi konten yang mepet ke batas @page bisa terpotong. */
   [class*="mx-auto"][class*="max-w-"] {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 5mm !important;
+    padding-right: 5mm !important;
+  }
+
+  /* Tabel lebar (6 kolom) bisa melar melebihi kertas karena isi sel panjang
+     tidak mau dipotong → paksa ikut lebar kertas & pecah kata bila perlu. */
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  th,
+  td {
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   /* min-h-screen bikin halaman kosong ekstra di akhir dokumen. */
