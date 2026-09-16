@@ -44,6 +44,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/admin/ahli-gizi") ||
       pathname.startsWith("/admin/menu") ||
       pathname.startsWith("/admin/jadwal-menu") ||
+      pathname.startsWith("/admin/info-gizi") ||
       pathname.startsWith("/cetak/ahli-gizi");
     // Sub-admin Audit Dapur (mutu). Penjagaan presisi (flag akses_audit terbaru
     // dari DB) ada di server component halaman & route (requireAkses("audit")).

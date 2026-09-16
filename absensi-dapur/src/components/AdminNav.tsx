@@ -57,6 +57,7 @@ function buildGroups(f: Flags): Group[] {
         { label: "Menu", href: "/admin/menu", icon: "utensils", section: "Dapur & Menu", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
         { label: "Chef Produksi", href: "/admin/chef", icon: "utensils", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi || f.aksesLaporan) && (has("ahli_gizi") || has("distribusi")) },
+        { label: "Info Gizi Publik (QR)", href: "/admin/info-gizi", icon: "leaf", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
         { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", icon: "calendar", also: ["/admin/belanja"], section: "Belanja & Stok", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Kebutuhan Bahan", href: "/admin/purchasing", icon: "coins", section: "Belanja & Stok", show: f.fullAdmin || f.aksesDistribusi || f.aksesGizi },
         { label: "Gudang", href: "/admin/gudang", icon: "box", section: "Belanja & Stok", show: (f.fullAdmin || f.aksesLaporan) && has("gudang") },

@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-09-12a.resep-custom";
+const SCHEMA_VERSION = "2026-09-16a.info-gizi-publik";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -959,6 +959,21 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_resep_custom_sppg ON resep_custom (sppg_id)`);
+
+    // INFO GIZI PUBLIK: satu baris per (dapur, tanggal) berisi "poster" harian
+    // yang dibuka publik tanpa login lewat scan QR (/info-gizi/<id-dapur>).
+    // isi = JSONB InfoGiziIsi (menu per kategori, gizi porsi kecil/besar,
+    // batas akhir konsumsi, peringatan). Lihat src/lib/info-gizi.ts.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS info_gizi (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        tanggal    DATE NOT NULL,
+        isi        JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (sppg_id, tanggal)
+      );
+    `);
 
     // Kasbon / hutang gaji per pegawai (ditampilkan di slip hanya bila ada yang belum lunas).
     await client.query(`
