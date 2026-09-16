@@ -6,6 +6,7 @@ import {
   KATEGORI_MENU,
   KATEGORI_MENU_LABEL,
   GIZI_LABEL,
+  PORSI,
   DESAIN_MODE,
   DESAIN_MAX_CHARS,
   DESAIN_RASIO,
@@ -13,6 +14,7 @@ import {
   DESAIN_TINGGI,
   type InfoGiziIsi,
   type GiziPorsi,
+  type PorsiKey,
   type KategoriMenu,
   type DesainMode,
 } from "@/lib/info-gizi";
@@ -137,8 +139,11 @@ export default function AdminInfoGiziPage() {
   const set = <K extends keyof InfoGiziIsi>(k: K, v: InfoGiziIsi[K]) =>
     setIsi((s) => ({ ...s, [k]: v }));
 
-  const setGizi = (porsi: "gizi_kecil" | "gizi_besar", k: keyof GiziPorsi, v: number) =>
-    setIsi((s) => ({ ...s, [porsi]: { ...s[porsi], [k]: v } }));
+  const setGizi = (porsi: PorsiKey, k: keyof GiziPorsi, v: number) =>
+    setIsi((s) => ({
+      ...s,
+      gizi: { ...s.gizi, [porsi]: { ...s.gizi[porsi], [k]: v } },
+    }));
 
   const setMenu = (i: number, patch: Partial<InfoGiziIsi["menu"][number]>) =>
     setIsi((s) => ({ ...s, menu: s.menu.map((m, j) => (j === i ? { ...m, ...patch } : m)) }));
@@ -146,7 +151,7 @@ export default function AdminInfoGiziPage() {
   const tambahMenu = () =>
     setIsi((s) => ({
       ...s,
-      menu: [...s.menu, { kategori: "karbohidrat", nama: "", harga_kecil: 0, harga_besar: 0 }],
+      menu: [...s.menu, { kategori: "karbohidrat", nama: "" }],
     }));
 
   const hapusMenu = (i: number) =>
@@ -372,25 +377,26 @@ export default function AdminInfoGiziPage() {
             />
             Tayangkan ke publik
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-400">
-            <input
-              type="checkbox"
-              checked={isi.tampil_harga}
-              onChange={(e) => set("tampil_harga", e.target.checked)}
-            />
-            Tampilkan harga per item
-          </label>
         </div>
       </section>
 
       {/* Kandungan gizi */}
       <section className="card space-y-3 p-4">
         <h2 className="text-sm font-semibold text-gold-300">Kandungan gizi per porsi</h2>
+        <p className="text-sm text-slate-400">
+          Isi kandungan gizi untuk keempat kelompok penerima. Kelompok yang dibiarkan kosong
+          otomatis disembunyikan di halaman publik.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          {(["gizi_kecil", "gizi_besar"] as const).map((porsi) => (
-            <div key={porsi} className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-              <p className="mb-2 text-[11px] font-semibold tracking-wide text-slate-400">
-                {porsi === "gizi_kecil" ? "PORSI KECIL" : "PORSI BESAR"}
+          {PORSI.map((p) => (
+            <div
+              key={p.key}
+              className="rounded-lg border-l-4 border border-white/5 bg-white/[0.02] p-2"
+              style={{ borderLeftColor: p.warna }}
+            >
+              <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-slate-300">
+                <span aria-hidden>{p.emoji}</span>
+                {p.label.toUpperCase()}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {GIZI_LABEL.map(({ key, label, sat }) => (
@@ -403,8 +409,8 @@ export default function AdminInfoGiziPage() {
                       min={0}
                       step="0.1"
                       className="input"
-                      value={isi[porsi][key]}
-                      onChange={(e) => setGizi(porsi, key, Number(e.target.value))}
+                      value={isi.gizi[p.key][key]}
+                      onChange={(e) => setGizi(p.key, key, Number(e.target.value))}
                     />
                   </div>
                 ))}
@@ -427,7 +433,7 @@ export default function AdminInfoGiziPage() {
           {isi.menu.map((m, i) => (
             <div
               key={i}
-              className="grid gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 sm:grid-cols-[150px_1fr_110px_110px_auto]"
+              className="grid gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 sm:grid-cols-[180px_1fr_auto]"
             >
               <div>
                 <label className="label">Kategori</label>
@@ -449,26 +455,6 @@ export default function AdminInfoGiziPage() {
                   className="input"
                   value={m.nama}
                   onChange={(e) => setMenu(i, { nama: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label">Harga kecil</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="input"
-                  value={m.harga_kecil}
-                  onChange={(e) => setMenu(i, { harga_kecil: Number(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="label">Harga besar</label>
-                <input
-                  type="number"
-                  min={0}
-                  className="input"
-                  value={m.harga_besar}
-                  onChange={(e) => setMenu(i, { harga_besar: Number(e.target.value) })}
                 />
               </div>
               <div className="flex items-end">

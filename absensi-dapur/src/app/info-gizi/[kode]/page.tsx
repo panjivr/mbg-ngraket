@@ -6,18 +6,16 @@ import { localDate } from "@/lib/time";
 import {
   mergeInfoGizi,
   angkaId,
-  rupiah,
   tanggalPanjang,
-  GIZI_LABEL,
   KATEGORI_MENU,
   KATEGORI_MENU_LABEL,
   DESAIN_RASIO,
   DESAIN_LEBAR,
   DESAIN_TINGGI,
   type InfoGiziIsi,
-  type GiziPorsi,
   type KategoriMenu,
 } from "@/lib/info-gizi";
+import { PorsiTabs, Countdown, ShareButton } from "./Interaktif";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,49 +61,12 @@ function JudulBagian({ children }: { children: React.ReactNode }) {
   );
 }
 
-function KolomGizi({ judul, g, utama }: { judul: string; g: GiziPorsi; utama: boolean }) {
-  return (
-    <div
-      className="flex-1 rounded-xl border p-3"
-      style={{
-        borderColor: utama ? "rgba(11,107,58,0.28)" : "rgba(0,0,0,0.08)",
-        background: utama
-          ? "linear-gradient(160deg,#eefaf2 0%,#f7faf8 100%)"
-          : "linear-gradient(160deg,#fbfdfc 0%,#f4f7f5 100%)",
-      }}
-    >
-      <p
-        className="mb-2 text-center text-[11px] font-bold tracking-[0.12em]"
-        style={{ color: HIJAU }}
-      >
-        {judul}
-      </p>
-      <dl className="space-y-1">
-        {GIZI_LABEL.map(({ key, label, sat }) => (
-          <div
-            key={key}
-            className="flex items-baseline justify-between gap-2 border-b border-dashed border-black/5 pb-1 last:border-b-0 last:pb-0"
-          >
-            <dt className="text-[12px] text-slate-600">{label}</dt>
-            <dd className="text-[13px] font-semibold tabular-nums text-slate-900">
-              {angkaId(g[key])}{" "}
-              <span className="text-[11px] font-normal text-slate-500">{sat}</span>
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
 function BarisMenu({
   kategori,
   items,
-  tampilHarga,
 }: {
   kategori: KategoriMenu;
   items: InfoGiziIsi["menu"];
-  tampilHarga: boolean;
 }) {
   if (!items.length) return null;
   return (
@@ -114,18 +75,13 @@ function BarisMenu({
         {KATEGORI_MENU_LABEL[kategori]}
       </p>
       {items.map((m, i) => (
-        <div key={i} className="mt-0.5 flex items-baseline justify-between gap-3">
+        <div key={i} className="mt-0.5 flex items-baseline gap-2">
+          <span
+            aria-hidden
+            className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: HIJAU }}
+          />
           <p className="text-[15px] font-semibold leading-snug text-slate-900">{m.nama}</p>
-          {tampilHarga && (m.harga_kecil > 0 || m.harga_besar > 0) && (
-            <p className="shrink-0 text-right text-[11px] leading-tight text-slate-500">
-              {m.harga_kecil > 0 && (
-                <span className="block tabular-nums">PK {rupiah(m.harga_kecil)}</span>
-              )}
-              {m.harga_besar > 0 && m.harga_besar !== m.harga_kecil && (
-                <span className="block tabular-nums">PB {rupiah(m.harga_besar)}</span>
-              )}
-            </p>
-          )}
         </div>
       ))}
     </div>
@@ -254,13 +210,13 @@ export default async function InfoGiziPublikPage({
                   )}
                 </Kartu>
 
-                {/* Kandungan gizi */}
+                {/* Kandungan gizi — tab per kelompok porsi (interaktif) */}
                 <Kartu>
                   <JudulBagian>KANDUNGAN GIZI PER PORSI</JudulBagian>
-                  <div className="flex gap-2">
-                    <KolomGizi judul="PORSI KECIL" g={isi.gizi_kecil} utama={false} />
-                    <KolomGizi judul="PORSI BESAR" g={isi.gizi_besar} utama />
-                  </div>
+                  <PorsiTabs gizi={isi.gizi} />
+                  <p className="mt-2.5 text-[10px] leading-snug text-slate-400">
+                    Ketuk kelompok porsi untuk melihat rincian gizinya.
+                  </p>
                 </Kartu>
 
                 {/* Menu hari ini */}
@@ -274,7 +230,6 @@ export default async function InfoGiziPublikPage({
                         key={k}
                         kategori={k}
                         items={isi.menu.filter((m) => m.kategori === k)}
-                        tampilHarga={isi.tampil_harga}
                       />
                     ))
                   )}
@@ -303,6 +258,7 @@ export default async function InfoGiziPublikPage({
                   <p className="text-4xl font-black leading-none tabular-nums text-[#3b2f00]">
                     {isi.batas_konsumsi} <span className="text-lg font-bold">{isi.zona}</span>
                   </p>
+                  <Countdown batas={isi.batas_konsumsi} zona={isi.zona} />
                 </section>
 
                 {isi.catatan && (
@@ -318,6 +274,11 @@ export default async function InfoGiziPublikPage({
         )}
 
         <footer className="pt-4 text-center">
+          {tersedia && (
+            <div className="mb-3">
+              <ShareButton judul={`${isi.judul} — SPPG ${namaSppg}`} />
+            </div>
+          )}
           {isi.sosmed && (
             <p className="text-[13px] font-semibold" style={{ color: EMAS }}>
               {isi.sosmed}

@@ -2,8 +2,9 @@
  * Info Gizi Publik — data satu "poster" harian yang dibuka publik lewat scan QR.
  *
  * Halaman publik (`/info-gizi/<id-dapur>`) menampilkan menu hari ini, kandungan
- * gizi porsi kecil & besar, serta batas akhir waktu konsumsi. Isinya disimpan
- * per (sppg_id, tanggal) sebagai JSONB, jadi tiap hari tampilannya ikut menu.
+ * gizi untuk 4 kelompok porsi (Peserta Didik Besar/Kecil, Bumil & Busui, Balita),
+ * serta batas akhir waktu konsumsi. Isinya disimpan per (sppg_id, tanggal) sebagai
+ * JSONB, jadi tiap hari tampilannya ikut menu.
  */
 
 export type KategoriMenu =
@@ -41,12 +42,35 @@ export interface GiziPorsi {
   serat: number;
 }
 
+/** Empat kelompok porsi yang dilayani dapur MBG. */
+export type PorsiKey = "pd_besar" | "pd_kecil" | "b2" | "balita";
+
+export interface PorsiMeta {
+  key: PorsiKey;
+  /** Label penuh untuk editor & judul kolom. */
+  label: string;
+  /** Label ringkas untuk tab di layar sempit. */
+  singkat: string;
+  emoji: string;
+  /** Warna aksen kolom/tab di halaman publik. */
+  warna: string;
+}
+
+export const PORSI: PorsiMeta[] = [
+  { key: "pd_besar", label: "Peserta Didik Besar", singkat: "PD Besar", emoji: "🎓", warna: "#0b6b3a" },
+  { key: "pd_kecil", label: "Peserta Didik Kecil", singkat: "PD Kecil", emoji: "🧒", warna: "#0d9488" },
+  { key: "b2", label: "Bumil & Busui (B2)", singkat: "Bumil & Busui", emoji: "🤰", warna: "#be185d" },
+  { key: "balita", label: "Balita", singkat: "Balita", emoji: "🍼", warna: "#d97706" },
+];
+
+export const PORSI_KEYS: PorsiKey[] = PORSI.map((p) => p.key);
+
+/** Gizi untuk semua kelompok porsi sekaligus. */
+export type GiziSemua = Record<PorsiKey, GiziPorsi>;
+
 export interface MenuPublik {
   kategori: KategoriMenu;
   nama: string;
-  /** Harga per porsi kecil / besar (rupiah). 0 = tidak ditampilkan. */
-  harga_kecil: number;
-  harga_besar: number;
 }
 
 export interface InfoGiziIsi {
@@ -56,9 +80,8 @@ export interface InfoGiziIsi {
   judul: string;
   subjudul: string;
   porsi_total: number;
-  tampil_harga: boolean;
-  gizi_kecil: GiziPorsi;
-  gizi_besar: GiziPorsi;
+  /** Kandungan gizi per kelompok porsi. */
+  gizi: GiziSemua;
   menu: MenuPublik[];
   /** "HH.MM" batas akhir konsumsi + zona waktu tampilan ("WIB"). */
   batas_konsumsi: string;
@@ -108,15 +131,22 @@ export const GIZI_LABEL: { key: keyof GiziPorsi; label: string; sat: string }[] 
 
 const GIZI_KOSONG: GiziPorsi = { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
 
+function giziSemuaKosong(): GiziSemua {
+  return {
+    pd_besar: { ...GIZI_KOSONG },
+    pd_kecil: { ...GIZI_KOSONG },
+    b2: { ...GIZI_KOSONG },
+    balita: { ...GIZI_KOSONG },
+  };
+}
+
 export const INFO_GIZI_KOSONG: InfoGiziIsi = {
   aktif: true,
   instansi: "BADAN GIZI NASIONAL",
   judul: "INFORMASI GIZI",
   subjudul: "",
   porsi_total: 0,
-  tampil_harga: true,
-  gizi_kecil: { ...GIZI_KOSONG },
-  gizi_besar: { ...GIZI_KOSONG },
+  gizi: giziSemuaKosong(),
   menu: [],
   batas_konsumsi: "11.00",
   zona: "WIB",
@@ -149,6 +179,21 @@ function bacaGizi(v: unknown): GiziPorsi {
   };
 }
 
+/**
+ * Migrasi kompatibel mundur: poster lama hanya punya `gizi_kecil` & `gizi_besar`.
+ * Dua porsi lama itu dipetakan ke Peserta Didik Kecil & Besar supaya poster yang
+ * sudah tayang tetap tampil benar. Porsi baru (B2, balita) mulai dari kosong.
+ */
+function bacaGiziSemua(o: Record<string, unknown>): GiziSemua {
+  const g = (o.gizi ?? {}) as Record<string, unknown>;
+  return {
+    pd_besar: bacaGizi(g.pd_besar ?? o.gizi_besar),
+    pd_kecil: bacaGizi(g.pd_kecil ?? o.gizi_kecil),
+    b2: bacaGizi(g.b2),
+    balita: bacaGizi(g.balita),
+  };
+}
+
 function bacaMenu(v: unknown): MenuPublik[] {
   if (!Array.isArray(v)) return [];
   return v.slice(0, MENU_MAX).map((raw) => {
@@ -159,8 +204,6 @@ function bacaMenu(v: unknown): MenuPublik[] {
         ? (k as KategoriMenu)
         : "tambahan",
       nama: teks(o.nama, 120),
-      harga_kecil: Math.round(angka(o.harga_kecil, 1_000_000)),
-      harga_besar: Math.round(angka(o.harga_besar, 1_000_000)),
     };
   });
 }
@@ -199,9 +242,7 @@ export function mergeInfoGizi(v: unknown): InfoGiziIsi {
     judul: teks(o.judul, 80) || d.judul,
     subjudul: teks(o.subjudul, 120),
     porsi_total: Math.round(angka(o.porsi_total, 1_000_000)),
-    tampil_harga: o.tampil_harga === undefined ? d.tampil_harga : !!o.tampil_harga,
-    gizi_kecil: bacaGizi(o.gizi_kecil),
-    gizi_besar: bacaGizi(o.gizi_besar),
+    gizi: bacaGiziSemua(o),
     menu: bacaMenu(o.menu),
     batas_konsumsi: teks(o.batas_konsumsi, 10) || d.batas_konsumsi,
     zona: teks(o.zona, 10) || d.zona,
@@ -217,10 +258,6 @@ export function mergeInfoGizi(v: unknown): InfoGiziIsi {
 /** Angka gaya Indonesia: 3100 -> "3.100", 629.4 -> "629,4". */
 export function angkaId(n: number): string {
   return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(n || 0);
-}
-
-export function rupiah(n: number): string {
-  return `Rp ${new Intl.NumberFormat("id-ID").format(Math.round(n || 0))}`;
 }
 
 export function tanggalPanjang(tgl: string): string {
