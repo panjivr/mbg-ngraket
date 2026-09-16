@@ -6,9 +6,15 @@ import {
   KATEGORI_MENU,
   KATEGORI_MENU_LABEL,
   GIZI_LABEL,
+  DESAIN_MODE,
+  DESAIN_MAX_CHARS,
+  DESAIN_RASIO,
+  DESAIN_LEBAR,
+  DESAIN_TINGGI,
   type InfoGiziIsi,
   type GiziPorsi,
   type KategoriMenu,
+  type DesainMode,
 } from "@/lib/info-gizi";
 
 interface Data {
@@ -29,6 +35,50 @@ function jakartaToday(): string {
   }).format(new Date());
 }
 
+/**
+ * Baca file gambar → potong tengah jadi rasio 4:5 → kecilkan ke 1080×1350 →
+ * JPEG data URL. Semua dikerjakan di browser supaya server tidak perlu
+ * memproses gambar dan ukuran request tetap kecil.
+ */
+function potongPotrait(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const rasio = DESAIN_LEBAR / DESAIN_TINGGI;
+      const wSrc = Math.min(img.width, img.height * rasio);
+      const hSrc = Math.min(img.height, img.width / rasio);
+      const canvas = document.createElement("canvas");
+      canvas.width = DESAIN_LEBAR;
+      canvas.height = DESAIN_TINGGI;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("canvas tidak tersedia"));
+        return;
+      }
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(
+        img,
+        (img.width - wSrc) / 2,
+        (img.height - hSrc) / 2,
+        wSrc,
+        hSrc,
+        0,
+        0,
+        DESAIN_LEBAR,
+        DESAIN_TINGGI,
+      );
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objUrl);
+      reject(new Error("gambar tidak terbaca"));
+    };
+    img.src = objUrl;
+  });
+}
+
 export default function AdminInfoGiziPage() {
   const [tanggal, setTanggal] = useState(jakartaToday());
   const [data, setData] = useState<Data | null>(null);
@@ -36,6 +86,7 @@ export default function AdminInfoGiziPage() {
   const [err, setErr] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [olahGambar, setOlahGambar] = useState(false);
 
   const muat = useCallback(async () => {
     setErr("");
@@ -183,6 +234,95 @@ export default function AdminInfoGiziPage() {
           </div>
         </section>
       )}
+
+      {/* Desain poster harian */}
+      <section className="card space-y-3 p-4">
+        <h2 className="text-sm font-semibold text-gold-300">Desain poster harian (4:5)</h2>
+        <p className="text-sm text-slate-400">
+          Gambar ini menempel pada tanggal di atas, jadi otomatis berganti tiap hari tanpa
+          mencetak QR baru. Foto apa pun akan dipotong tengah jadi potrait 4:5 ({DESAIN_LEBAR}×
+          {DESAIN_TINGGI}) dan dikecilkan di browser.
+        </p>
+        <div className="flex flex-wrap items-start gap-4">
+          <div
+            className="w-40 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30"
+            style={{ aspectRatio: DESAIN_RASIO }}
+          >
+            {isi.desain ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={isi.desain}
+                alt="Pratinjau desain"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <p className="flex h-full items-center justify-center px-2 text-center text-xs text-slate-500">
+                Belum ada desain
+              </p>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <label className="label" htmlFor="desain-file">
+                Unggah gambar (JPG/PNG/WebP)
+              </label>
+              <input
+                id="desain-file"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="input"
+                disabled={olahGambar}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  setErr("");
+                  setOlahGambar(true);
+                  try {
+                    const dataUrl = await potongPotrait(file);
+                    if (dataUrl.length > DESAIN_MAX_CHARS) {
+                      setErr("Gambar terlalu besar setelah dikompresi. Coba gambar lain.");
+                      return;
+                    }
+                    set("desain", dataUrl);
+                    setInfo("Desain siap. Klik Simpan supaya tayang di halaman publik.");
+                  } catch {
+                    setErr("Gambar tidak bisa dibaca.");
+                  } finally {
+                    setOlahGambar(false);
+                  }
+                }}
+              />
+              {olahGambar && <p className="mt-1 text-xs text-slate-400">Memproses gambar…</p>}
+            </div>
+            <div>
+              <label className="label">Posisi di halaman publik</label>
+              <select
+                className="input"
+                value={isi.desain_mode}
+                onChange={(e) => set("desain_mode", e.target.value as DesainMode)}
+              >
+                {DESAIN_MODE.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {DESAIN_MODE.find((m) => m.value === isi.desain_mode)?.hint}
+              </p>
+            </div>
+            {isi.desain && (
+              <button
+                className="rounded-lg border border-red-500/30 px-3 py-1.5 text-sm text-red-300"
+                onClick={() => set("desain", "")}
+              >
+                Hapus desain
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Kop & status tayang */}
       <section className="card space-y-3 p-4">

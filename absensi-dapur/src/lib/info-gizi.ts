@@ -67,7 +67,36 @@ export interface InfoGiziIsi {
   peringatan_teks: string;
   sosmed: string;
   catatan: string;
+  /**
+   * Gambar desain poster rasio 4:5 (potrait) yang diunggah admin.
+   * Disimpan sebagai data URL `data:image/...` hasil kompresi di browser,
+   * atau URL https:// bila gambar di-host di tempat lain. "" = tidak ada.
+   */
+  desain: string;
+  /** Cara menampilkan desain di halaman publik. */
+  desain_mode: DesainMode;
 }
+
+/**
+ * - `atas`  : desain tampil di atas, kartu rincian tetap ada (default)
+ * - `saja`  : hanya desain, kartu rincian disembunyikan
+ * - `bawah` : kartu rincian dulu, desain di bawah sebagai penutup
+ */
+export type DesainMode = "atas" | "saja" | "bawah";
+
+export const DESAIN_MODE: { value: DesainMode; label: string; hint: string }[] = [
+  { value: "atas", label: "Desain di atas", hint: "Gambar dulu, lalu rincian menu & gizi." },
+  { value: "saja", label: "Hanya desain", hint: "Rincian menu & gizi disembunyikan." },
+  { value: "bawah", label: "Desain di bawah", hint: "Rincian dulu, gambar sebagai penutup." },
+];
+
+/** Batas panjang data URL desain (~2,4 MB base64) supaya request tetap aman. */
+export const DESAIN_MAX_CHARS = 2_400_000;
+
+/** Rasio & ukuran baku desain potrait (dipakai editor + halaman publik). */
+export const DESAIN_RASIO = "4 / 5";
+export const DESAIN_LEBAR = 1080;
+export const DESAIN_TINGGI = 1350;
 
 export const GIZI_LABEL: { key: keyof GiziPorsi; label: string; sat: string }[] = [
   { key: "energi", label: "Energi", sat: "kkal" },
@@ -96,6 +125,8 @@ export const INFO_GIZI_KOSONG: InfoGiziIsi = {
     "Makanan ini disiapkan khusus untuk dikonsumsi di waktu yang telah ditentukan.",
   sosmed: "",
   catatan: "",
+  desain: "",
+  desain_mode: "atas",
 };
 
 const MENU_MAX = 20;
@@ -135,6 +166,27 @@ function bacaMenu(v: unknown): MenuPublik[] {
 }
 
 /**
+ * Gambar desain divalidasi terpisah (bukan lewat `teks()`) karena data URL
+ * panjangnya ratusan ribu karakter — dipotong sedikit saja gambarnya rusak.
+ * Hanya skema aman yang diterima: data URL gambar atau URL https.
+ */
+const DESAIN_DATA_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\s]+$/;
+
+function bacaDesain(v: unknown): string {
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  if (s.length > DESAIN_MAX_CHARS) return "";
+  if (DESAIN_DATA_RE.test(s)) return s;
+  if (/^https:\/\/[^\s]+$/i.test(s) && s.length <= 500) return s;
+  return "";
+}
+
+function bacaDesainMode(v: unknown): DesainMode {
+  const s = String(v ?? "");
+  return DESAIN_MODE.some((m) => m.value === s) ? (s as DesainMode) : "atas";
+}
+
+/**
  * Normalisasi isi dari DB atau dari body request admin ke bentuk lengkap &
  * aman (dipakai untuk kedua arah supaya tidak ada validasi ganda yang beda).
  */
@@ -157,6 +209,8 @@ export function mergeInfoGizi(v: unknown): InfoGiziIsi {
     peringatan_teks: teks(o.peringatan_teks, 400) || d.peringatan_teks,
     sosmed: teks(o.sosmed, 120),
     catatan: teks(o.catatan, 400),
+    desain: bacaDesain(o.desain),
+    desain_mode: bacaDesainMode(o.desain_mode),
   };
 }
 

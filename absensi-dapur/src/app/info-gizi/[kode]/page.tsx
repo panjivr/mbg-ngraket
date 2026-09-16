@@ -11,6 +11,9 @@ import {
   GIZI_LABEL,
   KATEGORI_MENU,
   KATEGORI_MENU_LABEL,
+  DESAIN_RASIO,
+  DESAIN_LEBAR,
+  DESAIN_TINGGI,
   type InfoGiziIsi,
   type GiziPorsi,
   type KategoriMenu,
@@ -32,17 +35,45 @@ const HIJAU_TUA = "#04341f";
 const HIJAU = "#0b6b3a";
 const EMAS = "#f5c518";
 
+/**
+ * Latar berlapis: gradien utama + dua cahaya radial (emas di atas, hijau muda
+ * di bawah) supaya halaman tidak terlihat rata saat dipindai di layar HP.
+ */
+const LATAR = [
+  "radial-gradient(120% 60% at 50% -10%, rgba(245,197,24,0.22) 0%, rgba(245,197,24,0) 60%)",
+  "radial-gradient(90% 50% at 0% 100%, rgba(16,185,129,0.20) 0%, rgba(16,185,129,0) 65%)",
+  `linear-gradient(170deg, ${HIJAU} 0%, ${HIJAU_TUA} 55%, #021a10 100%)`,
+].join(", ");
+
 function Kartu({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-      {children}
+    <section className="overflow-hidden rounded-2xl bg-white/[0.97] shadow-[0_14px_36px_rgba(0,0,0,0.30)] ring-1 ring-black/5">
+      <div className="h-1 w-full bg-gradient-to-r from-[#0b6b3a] via-[#16a34a] to-[#f5c518]" />
+      <div className="p-4">{children}</div>
     </section>
   );
 }
 
-function KolomGizi({ judul, g }: { judul: string; g: GiziPorsi }) {
+function JudulBagian({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 rounded-xl border border-black/10 bg-[#f7faf8] p-3">
+    <h2 className="mb-2.5 flex items-center gap-2 text-[11px] font-bold tracking-[0.14em] text-slate-500">
+      <span className="h-3 w-1 rounded-full" style={{ backgroundColor: EMAS }} />
+      {children}
+    </h2>
+  );
+}
+
+function KolomGizi({ judul, g, utama }: { judul: string; g: GiziPorsi; utama: boolean }) {
+  return (
+    <div
+      className="flex-1 rounded-xl border p-3"
+      style={{
+        borderColor: utama ? "rgba(11,107,58,0.28)" : "rgba(0,0,0,0.08)",
+        background: utama
+          ? "linear-gradient(160deg,#eefaf2 0%,#f7faf8 100%)"
+          : "linear-gradient(160deg,#fbfdfc 0%,#f4f7f5 100%)",
+      }}
+    >
       <p
         className="mb-2 text-center text-[11px] font-bold tracking-[0.12em]"
         style={{ color: HIJAU }}
@@ -51,7 +82,10 @@ function KolomGizi({ judul, g }: { judul: string; g: GiziPorsi }) {
       </p>
       <dl className="space-y-1">
         {GIZI_LABEL.map(({ key, label, sat }) => (
-          <div key={key} className="flex items-baseline justify-between gap-2">
+          <div
+            key={key}
+            className="flex items-baseline justify-between gap-2 border-b border-dashed border-black/5 pb-1 last:border-b-0 last:pb-0"
+          >
             <dt className="text-[12px] text-slate-600">{label}</dt>
             <dd className="text-[13px] font-semibold tabular-nums text-slate-900">
               {angkaId(g[key])}{" "}
@@ -98,6 +132,28 @@ function BarisMenu({
   );
 }
 
+/**
+ * Poster harian 4:5. Tingginya selalu mengikuti lebar kolom (aspect-ratio),
+ * jadi tidak ada layout shift saat gambar selesai dimuat.
+ */
+function Desain({ src, tanggal }: { src: string; tanggal: string }) {
+  return (
+    <figure className="lg:order-1 lg:sticky lg:top-6">
+      <div className="overflow-hidden rounded-2xl bg-black/20 shadow-[0_18px_50px_rgba(0,0,0,0.45)] ring-1 ring-white/15">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={`Desain menu ${tanggalPanjang(tanggal)}`}
+          width={DESAIN_LEBAR}
+          height={DESAIN_TINGGI}
+          className="block w-full object-cover"
+          style={{ aspectRatio: DESAIN_RASIO }}
+        />
+      </div>
+    </figure>
+  );
+}
+
 export default async function InfoGiziPublikPage({
   params,
   searchParams,
@@ -127,16 +183,18 @@ export default async function InfoGiziPublikPage({
   const tersedia = !!row && isi.aktif;
   const namaSppg = (sppg.nama || "").replace(/^SPPG\s+/i, "");
 
+  // Poster disimpan per tanggal, jadi otomatis berganti tiap hari tanpa
+  // mengubah QR. Mode menentukan posisinya terhadap kartu rincian.
+  const adaDesain = tersedia && !!isi.desain;
+  const desain = adaDesain ? <Desain src={isi.desain} tanggal={tanggal} /> : null;
+  const tampilRincian = !adaDesain || isi.desain_mode !== "saja";
+  const duaKolom = adaDesain && tampilRincian;
+
   return (
-    <main
-      className="min-h-screen w-full px-4 py-6"
-      style={{
-        background: `linear-gradient(170deg, ${HIJAU} 0%, ${HIJAU_TUA} 55%, #021a10 100%)`,
-      }}
-    >
-      <div className="mx-auto w-full max-w-md space-y-3">
+    <main className="min-h-screen w-full px-4 py-6" style={{ background: LATAR }}>
+      <div className={`mx-auto w-full ${duaKolom ? "max-w-md lg:max-w-5xl" : "max-w-md"}`}>
         {/* Kop */}
-        <header className="flex items-center gap-3 pb-1">
+        <header className="mb-3 flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/bgn-logo.webp"
@@ -164,86 +222,102 @@ export default async function InfoGiziPublikPage({
             </p>
           </Kartu>
         ) : (
-          <>
-            {/* Porsi & tanggal */}
-            <Kartu>
-              <div className="flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">
-                    PORSI DISIAPKAN
+          <div
+            className={
+              duaKolom
+                ? "space-y-3 lg:grid lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-start lg:gap-5 lg:space-y-0"
+                : "space-y-3"
+            }
+          >
+            {isi.desain_mode !== "bawah" && desain}
+
+            {tampilRincian && (
+              <div className="space-y-3 lg:order-2">
+                {/* Porsi & tanggal */}
+                <Kartu>
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">
+                        PORSI DISIAPKAN
+                      </p>
+                      <p className="bg-gradient-to-br from-[#0b6b3a] to-[#16a34a] bg-clip-text text-4xl font-black leading-none tabular-nums text-transparent">
+                        {angkaId(isi.porsi_total)}
+                        <span className="ml-1 text-base font-bold">PORSI</span>
+                      </p>
+                    </div>
+                    <p className="pb-1 text-right text-[11px] font-semibold leading-tight text-slate-500">
+                      {tanggalPanjang(tanggal)}
+                    </p>
+                  </div>
+                  {isi.subjudul && (
+                    <p className="mt-2 text-[12px] text-slate-600">{isi.subjudul}</p>
+                  )}
+                </Kartu>
+
+                {/* Kandungan gizi */}
+                <Kartu>
+                  <JudulBagian>KANDUNGAN GIZI PER PORSI</JudulBagian>
+                  <div className="flex gap-2">
+                    <KolomGizi judul="PORSI KECIL" g={isi.gizi_kecil} utama={false} />
+                    <KolomGizi judul="PORSI BESAR" g={isi.gizi_besar} utama />
+                  </div>
+                </Kartu>
+
+                {/* Menu hari ini */}
+                <Kartu>
+                  <JudulBagian>MENU HARI INI</JudulBagian>
+                  {isi.menu.length === 0 ? (
+                    <p className="py-3 text-center text-sm text-slate-500">Menu belum diisi.</p>
+                  ) : (
+                    KATEGORI_MENU.map((k) => (
+                      <BarisMenu
+                        key={k}
+                        kategori={k}
+                        items={isi.menu.filter((m) => m.kategori === k)}
+                        tampilHarga={isi.tampil_harga}
+                      />
+                    ))
+                  )}
+                </Kartu>
+
+                {/* Peringatan */}
+                <section className="rounded-2xl border-2 border-[#fca5a5] bg-gradient-to-b from-[#fff5f5] to-[#fee2e2] p-4 text-center shadow-[0_10px_28px_rgba(185,28,28,0.18)]">
+                  <p className="text-[13px] font-black leading-snug text-[#b91c1c]">
+                    {isi.peringatan_judul}
                   </p>
-                  <p
-                    className="text-4xl font-black leading-none tabular-nums"
-                    style={{ color: HIJAU }}
-                  >
-                    {angkaId(isi.porsi_total)}
-                    <span className="ml-1 text-base font-bold">PORSI</span>
+                  <p className="mt-1 text-[12px] leading-snug text-[#7f1d1d]">
+                    {isi.peringatan_teks}
                   </p>
-                </div>
-                <p className="pb-1 text-right text-[11px] font-semibold leading-tight text-slate-500">
-                  {tanggalPanjang(tanggal)}
-                </p>
+                </section>
+
+                {/* Batas konsumsi */}
+                <section
+                  className="rounded-2xl p-4 text-center shadow-[0_12px_30px_rgba(245,197,24,0.25)]"
+                  style={{
+                    background: `linear-gradient(160deg,#ffe486 0%,${EMAS} 55%,#e0ac00 100%)`,
+                  }}
+                >
+                  <p className="text-[11px] font-bold tracking-[0.16em] text-[#4a3b00]">
+                    BATAS AKHIR KONSUMSI
+                  </p>
+                  <p className="text-4xl font-black leading-none tabular-nums text-[#3b2f00]">
+                    {isi.batas_konsumsi} <span className="text-lg font-bold">{isi.zona}</span>
+                  </p>
+                </section>
+
+                {isi.catatan && (
+                  <Kartu>
+                    <p className="text-[12px] leading-relaxed text-slate-600">{isi.catatan}</p>
+                  </Kartu>
+                )}
               </div>
-              {isi.subjudul && <p className="mt-2 text-[12px] text-slate-600">{isi.subjudul}</p>}
-            </Kartu>
-
-            {/* Kandungan gizi */}
-            <Kartu>
-              <h2 className="mb-2 text-[11px] font-bold tracking-[0.14em] text-slate-400">
-                KANDUNGAN GIZI PER PORSI
-              </h2>
-              <div className="flex gap-2">
-                <KolomGizi judul="PORSI KECIL" g={isi.gizi_kecil} />
-                <KolomGizi judul="PORSI BESAR" g={isi.gizi_besar} />
-              </div>
-            </Kartu>
-
-            {/* Menu hari ini */}
-            <Kartu>
-              <h2 className="mb-2 text-[11px] font-bold tracking-[0.14em] text-slate-400">
-                MENU HARI INI
-              </h2>
-              {isi.menu.length === 0 ? (
-                <p className="py-3 text-center text-sm text-slate-500">Menu belum diisi.</p>
-              ) : (
-                KATEGORI_MENU.map((k) => (
-                  <BarisMenu
-                    key={k}
-                    kategori={k}
-                    items={isi.menu.filter((m) => m.kategori === k)}
-                    tampilHarga={isi.tampil_harga}
-                  />
-                ))
-              )}
-            </Kartu>
-
-            {/* Peringatan */}
-            <section className="rounded-2xl border-2 border-[#fca5a5] bg-[#fef2f2] p-4 text-center">
-              <p className="text-[13px] font-black leading-snug text-[#b91c1c]">
-                {isi.peringatan_judul}
-              </p>
-              <p className="mt-1 text-[12px] leading-snug text-[#7f1d1d]">{isi.peringatan_teks}</p>
-            </section>
-
-            {/* Batas konsumsi */}
-            <section className="rounded-2xl p-4 text-center" style={{ backgroundColor: EMAS }}>
-              <p className="text-[11px] font-bold tracking-[0.16em] text-[#4a3b00]">
-                BATAS AKHIR KONSUMSI
-              </p>
-              <p className="text-4xl font-black leading-none tabular-nums text-[#3b2f00]">
-                {isi.batas_konsumsi} <span className="text-lg font-bold">{isi.zona}</span>
-              </p>
-            </section>
-
-            {isi.catatan && (
-              <Kartu>
-                <p className="text-[12px] leading-relaxed text-slate-600">{isi.catatan}</p>
-              </Kartu>
             )}
-          </>
+
+            {isi.desain_mode === "bawah" && desain}
+          </div>
         )}
 
-        <footer className="pt-1 text-center">
+        <footer className="pt-4 text-center">
           {isi.sosmed && (
             <p className="text-[13px] font-semibold" style={{ color: EMAS }}>
               {isi.sosmed}
