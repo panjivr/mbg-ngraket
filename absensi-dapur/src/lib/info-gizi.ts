@@ -129,6 +129,35 @@ export const GIZI_LABEL: { key: keyof GiziPorsi; label: string; sat: string }[] 
   { key: "serat", label: "Serat", sat: "g" },
 ];
 
+/** Ikon & warna aksen tiap kelompok menu untuk kartu "Menu Hari Ini". */
+export const KATEGORI_MENU_META: Record<KategoriMenu, { emoji: string; warna: string }> = {
+  karbohidrat: { emoji: "🍚", warna: "#d97706" },
+  hewani: { emoji: "🍗", warna: "#dc2626" },
+  nabati: { emoji: "🫘", warna: "#16a34a" },
+  sayur: { emoji: "🥦", warna: "#15803d" },
+  buah: { emoji: "🍊", warna: "#ea580c" },
+  tambahan: { emoji: "🥛", warna: "#2563eb" },
+};
+
+/**
+ * Angka Kecukupan Gizi (AKG) harian per kelompok — acuan Permenkes 28/2019
+ * (dibulatkan). Dipakai hanya untuk memperkirakan "% kebutuhan harian" pada
+ * halaman publik. Nilai bersifat perkiraan rata-rata, bukan anjuran medis
+ * individual — selalu tampilkan dengan penanda "±/perkiraan".
+ */
+export const AKG_HARIAN: Record<PorsiKey, GiziPorsi> = {
+  pd_besar: { energi: 2100, protein: 65, lemak: 70, karbo: 300, serat: 29 },
+  pd_kecil: { energi: 1650, protein: 40, lemak: 55, karbo: 250, serat: 23 },
+  b2: { energi: 2500, protein: 80, lemak: 85, karbo: 360, serat: 35 },
+  balita: { energi: 1350, protein: 20, lemak: 45, karbo: 215, serat: 19 },
+};
+
+/**
+ * Kalori per gram makronutrien (faktor Atwater). Dipakai untuk menghitung
+ * komposisi energi: berapa persen kalori berasal dari protein/lemak/karbo.
+ */
+export const KALORI_PER_GRAM = { protein: 4, karbo: 4, lemak: 9 } as const;
+
 const GIZI_KOSONG: GiziPorsi = { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
 
 function giziSemuaKosong(): GiziSemua {

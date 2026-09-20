@@ -4,33 +4,98 @@
  * Bagian interaktif halaman info gizi publik (client island).
  *
  * Dipisah dari page.tsx (server component) supaya sisa halaman tetap dirender
- * di server. Berisi tiga fitur "seru":
- *  - PorsiTabs : tab per kelompok porsi + bar gizi beranimasi
- *  - Countdown : hitung mundur menuju batas akhir konsumsi (update tiap detik)
- *  - ShareButton: bagikan halaman via Web Share API, fallback salin ke clipboard
+ * di server. Berisi fitur interaktif & informatif:
+ *  - PorsiTabs   : tab per kelompok porsi + energi utama + cincin komposisi
+ *                  kalori + bar gizi beranimasi dengan perkiraan % kebutuhan harian
+ *  - ManfaatGizi : kartu edukasi "Tahukah kamu?" yang berganti otomatis
+ *  - Countdown   : hitung mundur menuju batas akhir konsumsi (update tiap detik)
+ *  - ShareButton : bagikan halaman via Web Share API, fallback salin ke clipboard
  */
 
 import { useEffect, useState } from "react";
 import {
   PORSI,
   GIZI_LABEL,
+  AKG_HARIAN,
+  KALORI_PER_GRAM,
   angkaId,
   type GiziSemua,
   type GiziPorsi,
   type PorsiKey,
 } from "@/lib/info-gizi";
 
-/** Nilai acuan untuk skala bar (perkiraan porsi MBG, bukan AKG resmi). */
-const GIZI_MAKS: Record<keyof GiziPorsi, number> = {
-  energi: 800,
-  protein: 40,
-  lemak: 40,
-  karbo: 120,
-  serat: 15,
-};
-
 const adaIsi = (g: GiziPorsi): boolean =>
   g.energi > 0 || g.protein > 0 || g.lemak > 0 || g.karbo > 0 || g.serat > 0;
+
+const bulat = (n: number): number => Math.round(n);
+const persenDari = (bagian: number, total: number): number =>
+  total > 0 ? Math.round((bagian / total) * 100) : 0;
+
+/** Kalori dari tiap makronutrien (faktor Atwater) untuk cincin komposisi. */
+function komposisiKalori(g: GiziPorsi) {
+  const p = g.protein * KALORI_PER_GRAM.protein;
+  const l = g.lemak * KALORI_PER_GRAM.lemak;
+  const k = g.karbo * KALORI_PER_GRAM.karbo;
+  const total = p + l + k;
+  return {
+    total,
+    protein: { kkal: p, pct: persenDari(p, total) },
+    lemak: { kkal: l, pct: persenDari(l, total) },
+    karbo: { kkal: k, pct: persenDari(k, total) },
+  };
+}
+
+const MAKRO = [
+  { key: "karbo" as const, label: "Karbohidrat", warna: "#f59e0b" },
+  { key: "protein" as const, label: "Protein", warna: "#0b6b3a" },
+  { key: "lemak" as const, label: "Lemak", warna: "#dc2626" },
+];
+
+/** Cincin donat komposisi energi (conic-gradient, tanpa dependensi grafik). */
+function CincinKalori({ g }: { g: GiziPorsi }) {
+  const k = komposisiKalori(g);
+  if (k.total <= 0) return null;
+
+  const stop1 = k.karbo.pct;
+  const stop2 = k.karbo.pct + k.protein.pct;
+  const ring = `conic-gradient(${MAKRO[0].warna} 0% ${stop1}%, ${MAKRO[1].warna} ${stop1}% ${stop2}%, ${MAKRO[2].warna} ${stop2}% 100%)`;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div
+        className="relative grid h-24 w-24 shrink-0 place-items-center rounded-full"
+        style={{ background: ring }}
+        role="img"
+        aria-label={`Komposisi energi: karbohidrat ${k.karbo.pct}%, protein ${k.protein.pct}%, lemak ${k.lemak.pct}%`}
+      >
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-white text-center leading-none">
+          <span className="text-[15px] font-black tabular-nums text-slate-900">
+            {angkaId(bulat(g.energi))}
+          </span>
+          <span className="text-[8px] font-semibold tracking-wide text-slate-400">kkal</span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <p className="text-[10px] font-bold tracking-[0.12em] text-slate-400">
+          SUMBER ENERGI
+        </p>
+        {MAKRO.map((m) => (
+          <div key={m.key} className="flex items-center gap-2 text-[12px]">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-sm"
+              style={{ background: m.warna }}
+            />
+            <span className="flex-1 text-slate-600">{m.label}</span>
+            <span className="font-bold tabular-nums text-slate-900">
+              {k[m.key].pct}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function PorsiTabs({ gizi }: { gizi: GiziSemua }) {
   // Hanya tampilkan kelompok yang sudah diisi; kalau semua kosong, tampilkan semua.
@@ -39,6 +104,7 @@ export function PorsiTabs({ gizi }: { gizi: GiziSemua }) {
   const [aktif, setAktif] = useState<PorsiKey>(daftar[0].key);
   const meta = PORSI.find((p) => p.key === aktif) ?? PORSI[0];
   const g = gizi[aktif];
+  const akg = AKG_HARIAN[aktif];
 
   return (
     <div>
@@ -65,10 +131,17 @@ export function PorsiTabs({ gizi }: { gizi: GiziSemua }) {
         })}
       </div>
 
-      <div className="mt-3 space-y-2">
+      {/* Cincin komposisi energi + energi utama */}
+      <div className="mt-3.5 rounded-xl bg-slate-50 p-3 ring-1 ring-black/5">
+        <CincinKalori g={g} />
+      </div>
+
+      {/* Rincian gizi + perkiraan % kebutuhan harian */}
+      <div className="mt-3 space-y-2.5">
         {GIZI_LABEL.map(({ key, label, sat }) => {
           const val = g[key];
-          const pct = Math.max(2, Math.min(100, (val / GIZI_MAKS[key]) * 100));
+          const persen = akg[key] > 0 ? Math.round((val / akg[key]) * 100) : 0;
+          const lebar = Math.max(2, Math.min(100, persen));
           return (
             <div key={key}>
               <div className="flex items-baseline justify-between text-[12px]">
@@ -76,17 +149,77 @@ export function PorsiTabs({ gizi }: { gizi: GiziSemua }) {
                 <span className="font-semibold tabular-nums text-slate-900">
                   {angkaId(val)}{" "}
                   <span className="text-[10px] font-normal text-slate-500">{sat}</span>
+                  {val > 0 && (
+                    <span
+                      className="ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                      style={{ background: `${meta.warna}1a`, color: meta.warna }}
+                    >
+                      ±{persen}%
+                    </span>
+                  )}
                 </span>
               </div>
-              <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-black/10">
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-black/10">
                 <div
                   className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ width: val > 0 ? `${pct}%` : 0, background: meta.warna }}
+                  style={{ width: val > 0 ? `${lebar}%` : 0, background: meta.warna }}
                 />
               </div>
             </div>
           );
         })}
+      </div>
+
+      <p className="mt-3 text-[10px] leading-snug text-slate-400">
+        Persentase adalah <b>perkiraan kontribusi terhadap kebutuhan harian</b> untuk
+        kelompok {meta.label} (acuan AKG Permenkes 28/2019), bukan anjuran medis
+        perorangan. Satu porsi MBG dirancang memenuhi sebagian kebutuhan sehari.
+      </p>
+    </div>
+  );
+}
+
+/** Fakta gizi singkat yang berputar otomatis — edukatif & ringan. */
+const TIPS = [
+  { emoji: "💪", judul: "Protein", teks: "Membentuk otot serta memperbaiki jaringan tubuh yang rusak." },
+  { emoji: "⚡", judul: "Karbohidrat", teks: "Sumber energi utama untuk belajar, bermain, dan beraktivitas." },
+  { emoji: "🧠", judul: "Lemak sehat", teks: "Membantu penyerapan vitamin dan mendukung perkembangan otak." },
+  { emoji: "🌾", judul: "Serat", teks: "Melancarkan pencernaan dan membuat kenyang lebih lama." },
+  { emoji: "🥗", judul: "Gizi seimbang", teks: "Kombinasi nasi, lauk, sayur, dan buah sesuai anjuran Isi Piringku." },
+  { emoji: "💧", judul: "Cukup minum", teks: "Lengkapi makanmu dengan air putih agar tubuh tetap segar." },
+];
+
+export function ManfaatGizi() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIdx((i) => (i + 1) % TIPS.length), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const tip = TIPS[idx];
+  return (
+    <div>
+      <div
+        className="flex items-start gap-3 rounded-xl p-3"
+        style={{ background: "linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%)" }}
+      >
+        <span aria-hidden className="text-2xl leading-none">{tip.emoji}</span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-black text-[#0b6b3a]">{tip.judul}</p>
+          <p className="mt-0.5 text-[12px] leading-snug text-slate-600">{tip.teks}</p>
+        </div>
+      </div>
+      <div className="mt-2 flex justify-center gap-1.5" aria-hidden>
+        {TIPS.map((_, i) => (
+          <span
+            key={i}
+            className="h-1.5 rounded-full transition-all duration-300"
+            style={{
+              width: i === idx ? 16 : 6,
+              background: i === idx ? "#0b6b3a" : "rgba(0,0,0,0.15)",
+            }}
+          />
+        ))}
       </div>
     </div>
   );

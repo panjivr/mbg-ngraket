@@ -9,13 +9,14 @@ import {
   tanggalPanjang,
   KATEGORI_MENU,
   KATEGORI_MENU_LABEL,
+  KATEGORI_MENU_META,
   DESAIN_RASIO,
   DESAIN_LEBAR,
   DESAIN_TINGGI,
   type InfoGiziIsi,
   type KategoriMenu,
 } from "@/lib/info-gizi";
-import { PorsiTabs, Countdown, ShareButton } from "./Interaktif";
+import { PorsiTabs, Countdown, ShareButton, ManfaatGizi } from "./Interaktif";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,21 +70,90 @@ function BarisMenu({
   items: InfoGiziIsi["menu"];
 }) {
   if (!items.length) return null;
+  const meta = KATEGORI_MENU_META[kategori];
   return (
-    <div className="border-t border-dashed border-black/10 py-2.5 first:border-t-0 first:pt-0">
-      <p className="text-[10px] font-bold tracking-[0.14em] text-slate-400">
-        {KATEGORI_MENU_LABEL[kategori]}
-      </p>
-      {items.map((m, i) => (
-        <div key={i} className="mt-0.5 flex items-baseline gap-2">
-          <span
-            aria-hidden
-            className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: HIJAU }}
-          />
-          <p className="text-[15px] font-semibold leading-snug text-slate-900">{m.nama}</p>
+    <div
+      className="flex gap-3 rounded-xl p-2.5 ring-1 ring-black/5"
+      style={{ background: `${meta.warna}0d` }}
+    >
+      <div
+        aria-hidden
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl"
+        style={{ background: `${meta.warna}1f` }}
+      >
+        {meta.emoji}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p
+          className="text-[10px] font-bold tracking-[0.12em]"
+          style={{ color: meta.warna }}
+        >
+          {KATEGORI_MENU_LABEL[kategori].toUpperCase()}
+        </p>
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {items.map((m, i) => (
+            <span key={i} className="text-[15px] font-semibold leading-snug text-slate-900">
+              {m.nama}
+              {i < items.length - 1 && <span className="text-slate-300"> ·</span>}
+            </span>
+          ))}
         </div>
-      ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Panel "Isi Piringku" — menunjukkan kelompok makanan yang hadir hari ini
+ * mengikuti pedoman gizi seimbang (makanan pokok, lauk, sayur, buah).
+ */
+const EMPAT_SEHAT: { kategori: KategoriMenu[]; label: string }[] = [
+  { kategori: ["karbohidrat"], label: "Makanan Pokok" },
+  { kategori: ["hewani", "nabati"], label: "Lauk-Pauk" },
+  { kategori: ["sayur"], label: "Sayuran" },
+  { kategori: ["buah"], label: "Buah" },
+];
+
+function IsiPiringku({ menu }: { menu: InfoGiziIsi["menu"] }) {
+  const hadir = (kats: KategoriMenu[]): boolean =>
+    menu.some((m) => kats.includes(m.kategori));
+  const jumlah = EMPAT_SEHAT.filter((g) => hadir(g.kategori)).length;
+
+  return (
+    <div>
+      <div className="grid grid-cols-4 gap-2">
+        {EMPAT_SEHAT.map((g) => {
+          const on = hadir(g.kategori);
+          const meta = KATEGORI_MENU_META[g.kategori[0]];
+          return (
+            <div
+              key={g.label}
+              className="flex flex-col items-center gap-1 rounded-xl p-2 text-center ring-1"
+              style={{
+                background: on ? `${meta.warna}0f` : "rgba(0,0,0,0.03)",
+                borderColor: "transparent",
+                boxShadow: on ? `inset 0 0 0 1px ${meta.warna}33` : "none",
+                opacity: on ? 1 : 0.5,
+              }}
+            >
+              <span aria-hidden className="text-xl leading-none">{meta.emoji}</span>
+              <span className="text-[9px] font-bold leading-tight text-slate-600">
+                {g.label}
+              </span>
+              <span
+                className="text-[9px] font-black"
+                style={{ color: on ? meta.warna : "#94a3b8" }}
+              >
+                {on ? "✓ Ada" : "—"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2.5 text-[11px] leading-snug text-slate-500">
+        Menu hari ini memenuhi <b className="text-slate-800">{jumlah} dari 4</b> kelompok
+        pangan gizi seimbang (pedoman <b>Isi Piringku</b> Kementerian Kesehatan).
+      </p>
     </div>
   );
 }
@@ -225,14 +295,30 @@ export default async function InfoGiziPublikPage({
                   {isi.menu.length === 0 ? (
                     <p className="py-3 text-center text-sm text-slate-500">Menu belum diisi.</p>
                   ) : (
-                    KATEGORI_MENU.map((k) => (
-                      <BarisMenu
-                        key={k}
-                        kategori={k}
-                        items={isi.menu.filter((m) => m.kategori === k)}
-                      />
-                    ))
+                    <div className="space-y-2">
+                      {KATEGORI_MENU.map((k) => (
+                        <BarisMenu
+                          key={k}
+                          kategori={k}
+                          items={isi.menu.filter((m) => m.kategori === k)}
+                        />
+                      ))}
+                    </div>
                   )}
+                </Kartu>
+
+                {/* Isi Piringku — kelengkapan gizi seimbang */}
+                {isi.menu.length > 0 && (
+                  <Kartu>
+                    <JudulBagian>ISI PIRINGKU — GIZI SEIMBANG</JudulBagian>
+                    <IsiPiringku menu={isi.menu} />
+                  </Kartu>
+                )}
+
+                {/* Edukasi gizi berputar */}
+                <Kartu>
+                  <JudulBagian>TAHUKAH KAMU?</JudulBagian>
+                  <ManfaatGizi />
                 </Kartu>
 
                 {/* Peringatan */}
