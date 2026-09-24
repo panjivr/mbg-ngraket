@@ -99,6 +99,18 @@ export default function DapurNav({
         Absen
       </Link>
 
+      <Link
+        href="/dapur/game"
+        className={
+          "shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition " +
+          (pathname.startsWith("/dapur/game")
+            ? "bg-gold-500/15 text-gold-400"
+            : "text-slate-400 hover:bg-white/5 hover:text-slate-100")
+        }
+      >
+        🎮 Game
+      </Link>
+
       {groups.map((g) => {
         const groupActive = g.items.some((it) => pathname.startsWith(it.href));
         const isOpen = open === g.key;

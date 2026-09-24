@@ -138,6 +138,9 @@ export default function DapurBottomNav({
   const absenActive = pathname === "/dapur";
 
   const groups: SheetGroup[] = [
+    { title: "Hiburan", links: [
+      { href: "/dapur/game", label: "Game Blok Gizi", icon: "grid" },
+    ] },
     { title: "Kinerja", links: [
       { href: "/dapur/peringkat", label: "Peringkat", icon: "trophy" },
       { href: "/dapur/jadwal", label: "Jadwal", icon: "calendar" },

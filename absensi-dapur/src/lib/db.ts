@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-09-16a.info-gizi-publik";
+const SCHEMA_VERSION = "2026-09-24a.game-blok-gizi";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -1439,6 +1439,56 @@ async function doEnsureSchema(): Promise<void> {
         gap_catatan   TEXT NOT NULL DEFAULT ''
       );
     `);
+
+    // --- Game "Blok Gizi": skor & turnamen online lintas dapur ---
+    // Papan peringkat global (semua akun nyambung). Turnamen dikelola admin pusat.
+    // `game_skor` menyimpan rekor terbaik sepanjang masa per akun (papan global).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS game_skor (
+        user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        skor_terbaik  INTEGER NOT NULL DEFAULT 0,
+        total_main    INTEGER NOT NULL DEFAULT 0,
+        terakhir_main TIMESTAMPTZ,
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_game_skor_terbaik ON game_skor (skor_terbaik DESC)`,
+    );
+    // Riwayat tiap permainan selesai — dipakai untuk peringkat turnamen
+    // (skor tertinggi per pemain dalam rentang waktu turnamen).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS game_riwayat (
+        id         BIGSERIAL PRIMARY KEY,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        skor       INTEGER NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_game_riwayat_user ON game_riwayat (user_id)`,
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_game_riwayat_waktu ON game_riwayat (created_at)`,
+    );
+    // Turnamen: rentang waktu + hadiah juara 1/2/3. Dibuat oleh admin pusat.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS game_turnamen (
+        id          SERIAL PRIMARY KEY,
+        nama        TEXT NOT NULL,
+        mulai       TIMESTAMPTZ NOT NULL,
+        selesai     TIMESTAMPTZ NOT NULL,
+        hadiah1     TEXT NOT NULL DEFAULT '',
+        hadiah2     TEXT NOT NULL DEFAULT '',
+        hadiah3     TEXT NOT NULL DEFAULT '',
+        catatan     TEXT NOT NULL DEFAULT '',
+        created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_game_turnamen_waktu ON game_turnamen (mulai, selesai)`,
+    );
 
     // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
     await client.query(

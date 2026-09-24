@@ -102,6 +102,7 @@ function buildGroups(f: Flags): Group[] {
         { label: "Dashboard Dapur", href: "/admin/pusat/dashboard", icon: "gauge", show: f.isSuper },
         { label: "Rekap Absensi", href: "/admin/pusat", icon: "calendar", exact: true, show: f.isSuper },
         { label: "Kelola Dapur", href: "/admin/sppg", icon: "building", show: f.isSuper },
+        { label: "Turnamen Game", href: "/admin/pusat/turnamen", icon: "trophy", show: f.isSuper },
       ],
     },
   ];
