@@ -231,10 +231,14 @@ export interface BahanGiziRinci {
   terhitung: boolean; // false = bahan tak ada di tabel TKPI / satuan tak terkonversi
 }
 
-/** Rincian gizi 1 porsi menu: kontribusi tiap bahan + total. */
+/** Vitamin & mineral per porsi (mikronutrien). */
+export interface MikroGizi { kalsium: number; besi: number; vit_a: number; vit_c: number; zinc: number }
+export function mikroKosong(): MikroGizi { return { kalsium: 0, besi: 0, vit_a: 0, vit_c: 0, zinc: 0 }; }
+
+/** Rincian gizi 1 porsi menu: kontribusi tiap bahan + total (makro + mikro). */
 export interface RincianGizi {
   bahan: BahanGiziRinci[];
-  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number; mikro: MikroGizi };
   cocok: number; // jumlah bahan yang berhasil dihitung
   totalBahan: number; // jumlah bahan bernama
   takTerhitung: string[];
@@ -251,7 +255,7 @@ export function rincianGiziPerPorsi(
 ): RincianGizi {
   const out: RincianGizi = {
     bahan: [],
-    total: { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 },
+    total: { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0, mikro: mikroKosong() },
     cocok: 0,
     totalBahan: 0,
     takTerhitung: [],
@@ -285,6 +289,12 @@ export function rincianGiziPerPorsi(
     out.total.lemak += row.lemak;
     out.total.karbo += row.karbo;
     out.total.serat += row.serat;
+    // Mikronutrien (hanya untuk bahan yang punya data mikro di TKPI).
+    out.total.mikro.kalsium += (gizi.kalsium ?? 0) * f;
+    out.total.mikro.besi += (gizi.besi ?? 0) * f;
+    out.total.mikro.vit_a += (gizi.vit_a ?? 0) * f;
+    out.total.mikro.vit_c += (gizi.vit_c ?? 0) * f;
+    out.total.mikro.zinc += (gizi.zinc ?? 0) * f;
     out.cocok += 1;
   }
   return out;

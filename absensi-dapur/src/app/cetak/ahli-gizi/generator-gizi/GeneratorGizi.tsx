@@ -82,7 +82,7 @@ export interface GeneratorHasil {
   jumlahPorsi: number;
   beratTotal: number;
   rows: GeneratorHasilRow[];
-  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number; mikro?: { kalsium: number; besi: number; vit_a: number; vit_c: number; zinc: number } };
 }
 
 /** Urutan kategori untuk pengelompokan <optgroup>. */
@@ -246,6 +246,7 @@ export default function GeneratorGizi({
       lemak: total.lemak,
       karbo: total.karbo,
       serat: total.serat,
+      mikro: { kalsium: total.kalsium, besi: total.besi, vit_a: total.vit_a, vit_c: total.vit_c, zinc: total.zinc },
     },
   };
 

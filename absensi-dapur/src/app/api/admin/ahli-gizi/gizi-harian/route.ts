@@ -6,11 +6,13 @@ import { localDate } from "@/lib/time";
 import { type Sasaran } from "@/lib/jadwal";
 import {
   rincianGiziPerPorsi,
+  mikroKosong,
   KATEGORI_MENU_LABEL,
   normalizeKategoriMenu,
   normalizeKomponen,
   type KomponenGizi,
   type BahanGiziRinci,
+  type MikroGizi,
 } from "@/lib/menu";
 
 export const runtime = "nodejs";
@@ -35,22 +37,23 @@ interface BahanRow {
   komponen: string;
 }
 
+interface Total { energi: number; protein: number; lemak: number; karbo: number; serat: number; mikro: MikroGizi }
 interface MenuGizi {
   jadwal_id: number;
   menu_id: number;
   nama: string;
   waktu: string; // label kategori (Sarapan / Makan Siang / ...)
   bahan: BahanGiziRinci[];
-  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  total: Total;
   takTerhitung: string[];
 }
 interface SasaranGizi {
   menus: MenuGizi[];
-  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  total: Total;
 }
 
-function totalKosong() {
-  return { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0 };
+function totalKosong(): Total {
+  return { energi: 0, protein: 0, lemak: 0, karbo: 0, serat: 0, mikro: mikroKosong() };
 }
 
 /**
@@ -123,6 +126,11 @@ export const GET = route(async (req: NextRequest) => {
     grp.total.lemak += rincian.total.lemak;
     grp.total.karbo += rincian.total.karbo;
     grp.total.serat += rincian.total.serat;
+    grp.total.mikro.kalsium += rincian.total.mikro.kalsium;
+    grp.total.mikro.besi += rincian.total.mikro.besi;
+    grp.total.mikro.vit_a += rincian.total.mikro.vit_a;
+    grp.total.mikro.vit_c += rincian.total.mikro.vit_c;
+    grp.total.mikro.zinc += rincian.total.mikro.zinc;
   }
 
   return ok({ tanggal, reguler: perSasaran.reguler, b3: perSasaran.b3 });
