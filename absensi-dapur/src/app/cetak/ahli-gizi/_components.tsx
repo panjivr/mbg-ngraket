@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
-import { getSasaran, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
+import { getSasaran, MEAL_FRACTION, MIKRO_KEYS, MIKRO_META } from "@/lib/gizi-nutrisi";
 import GeneratorGizi, { type GeneratorHasil } from "./generator-gizi/GeneratorGizi";
 
 /** Angka tanggal 1..31 untuk header grid bulanan. */
@@ -173,9 +173,10 @@ interface MenuGiziRow {
   waktu: string;
   bahan: BahanGiziRow[];
 }
+interface MikroRow { kalsium: number; besi: number; vit_a: number; vit_c: number; zinc: number }
 interface SasaranGiziData {
   menus: MenuGiziRow[];
-  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number };
+  total: { energi: number; protein: number; lemak: number; karbo: number; serat: number; mikro?: MikroRow };
 }
 
 /** Bulatkan 1 desimal, buang trailing nol → "12.5" / "40". */
@@ -424,6 +425,55 @@ export function TabelGizi({
           })}
         </tbody>
       </table>
+
+      {/* Rekap Vitamin & Mineral (mikronutrien) — item tambahan di laporan gizi.
+          Target = 30% AKG per waktu makan; total dari sumber pangan terjadwal
+          yang punya data mikro di TKPI. */}
+      {akg && (
+        <table className="mt-2 w-full border-collapse text-[10px]">
+          <thead>
+            <tr style={{ backgroundColor: "#E2EFDA" }}>
+              <th className={th + " text-left"} colSpan={5}>
+                Rekap Vitamin &amp; Mineral
+              </th>
+              {MIKRO_KEYS.map((k) => (
+                <th key={k} className={th}>
+                  {MIKRO_META[k].label} ({MIKRO_META[k].sat})
+                </th>
+              ))}
+              <th className="no-print border border-black px-1 text-center">·</th>
+            </tr>
+          </thead>
+          <tbody>
+            {REKAP.map((label) => {
+              const mikro = data?.total?.mikro;
+              const kebM = (k: (typeof MIKRO_KEYS)[number]) => (akg[k] as number) * MEAL_FRACTION;
+              let vals: (string | undefined)[];
+              if (label.startsWith("Total")) {
+                vals = MIKRO_KEYS.map((k) => (adaData && mikro ? f1(mikro[k]) : undefined));
+              } else if (label.startsWith("Kebutuhan")) {
+                vals = MIKRO_KEYS.map((k) => f1(kebM(k)));
+              } else {
+                vals = MIKRO_KEYS.map((k) => (adaData && mikro ? pct(mikro[k], kebM(k)) : undefined));
+              }
+              return (
+                <tr key={`${dataKey}:mikro:${label}`} style={{ backgroundColor: "#F2F2F2" }}>
+                  <td className={th + " text-left"} colSpan={5}>
+                    {label}
+                  </td>
+                  {vals.map((v, c) => (
+                    <td key={c} className={cell + " text-center font-semibold"}>
+                      <Ed block>{v}</Ed>
+                    </td>
+                  ))}
+                  <td className="no-print border border-black" />
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
       <div className="no-print mt-1 flex items-center gap-3">
         <button
           type="button"
