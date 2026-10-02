@@ -26,6 +26,7 @@ const SERVICES: Service[] = [
   { href: "/dapur/sop", label: "SOP", icon: "book", tone: "navy" },
   { href: "/dapur/izin", label: "Izin", icon: "docPen", tone: "sky" },
   { href: "/dapur/pengaduan", label: "Aspirasi", icon: "megaphone", tone: "gold" },
+  { href: "/dapur/people", label: "People & Culture", icon: "users", tone: "sky" },
   { href: "/dapur/finansial", label: "Finansial", icon: "wallet", tone: "navy" },
   { href: "/dapur/riwayat", label: "Riwayat", icon: "history", tone: "sky" },
   { href: "/dapur/profil", label: "Kartu Saya", icon: "idCard", tone: "gold" },

@@ -15,7 +15,7 @@ interface SurveyRow {
 }
 interface Pegawai { id: number; nama: string; divisi_nama: string | null }
 
-export default function PeoplePanel() {
+export function SurveiPanel() {
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
   const [pegawai, setPegawai] = useState<Pegawai[]>([]);
   const [loading, setLoading] = useState(true);

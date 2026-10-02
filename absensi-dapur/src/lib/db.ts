@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-02a.people-culture";
+const SCHEMA_VERSION = "2026-10-02b.people-culture-full";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -1005,6 +1005,129 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_jawaban_survey ON pc_jawaban (survey_id)`);
+
+    // ---- People & Culture lanjutan: peer/leadership, apresiasi, insiden, action plan, 1-on-1 ----
+    // Penunjukan pimpinan/koordinator (untuk Feedback Pimpinan). Tak mengubah tabel users.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_leader (
+        sppg_id INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL,
+        PRIMARY KEY (sppg_id, user_id)
+      );
+    `);
+    // Siklus feedback rekan (peer) / pimpinan (leadership). raters & subjek = array user id (JSONB).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_peer_cycle (
+        id            SERIAL PRIMARY KEY,
+        sppg_id       INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        judul         TEXT NOT NULL,
+        tipe          TEXT NOT NULL DEFAULT 'peer',
+        pertanyaan    JSONB NOT NULL DEFAULT '[]'::jsonb,
+        raters        JSONB NOT NULL DEFAULT '[]'::jsonb,
+        subjek        JSONB NOT NULL DEFAULT '[]'::jsonb,
+        min_responden INTEGER NOT NULL DEFAULT 3,
+        status        TEXT NOT NULL DEFAULT 'aktif',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+        closed_at     TIMESTAMPTZ
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_peer_cycle_sppg ON pc_peer_cycle (sppg_id, status)`);
+    // Jawaban peer: 1 baris per (siklus, penilai, subjek). na=true bila "tidak cukup menilai".
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_peer_resp (
+        id          SERIAL PRIMARY KEY,
+        cycle_id    INTEGER NOT NULL REFERENCES pc_peer_cycle(id) ON DELETE CASCADE,
+        reviewer_id INTEGER NOT NULL,
+        subjek_id   INTEGER NOT NULL,
+        jawaban     JSONB NOT NULL DEFAULT '{}'::jsonb,
+        na          BOOLEAN NOT NULL DEFAULT FALSE,
+        catatan     TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (cycle_id, reviewer_id, subjek_id)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_peer_resp ON pc_peer_resp (cycle_id, subjek_id)`);
+    // Apresiasi antarkaryawan (perilaku, bukan kompetisi).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_recognition (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        dari_id    INTEGER NOT NULL,
+        ke_id      INTEGER NOT NULL,
+        kategori   TEXT NOT NULL,
+        catatan    TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_recognition_sppg ON pc_recognition (sppg_id, created_at)`);
+    // Lapor masalah / insiden & keluhan (laporan ≠ pelanggaran terbukti).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_incident (
+        id         SERIAL PRIMARY KEY,
+        sppg_id    INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        pelapor_id INTEGER,
+        kategori   TEXT NOT NULL,
+        deskripsi  TEXT NOT NULL,
+        tanggal    DATE,
+        lokasi     TEXT NOT NULL DEFAULT '',
+        pihak      TEXT NOT NULL DEFAULT '',
+        saksi      TEXT NOT NULL DEFAULT '',
+        berulang   BOOLEAN NOT NULL DEFAULT FALSE,
+        dampak     TEXT NOT NULL DEFAULT '',
+        urgensi    TEXT NOT NULL DEFAULT 'sedang',
+        rahasia    BOOLEAN NOT NULL DEFAULT FALSE,
+        status     TEXT NOT NULL DEFAULT 'SUBMITTED',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_incident_sppg ON pc_incident (sppg_id, status)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_incident_update (
+        id          SERIAL PRIMARY KEY,
+        incident_id INTEGER NOT NULL REFERENCES pc_incident(id) ON DELETE CASCADE,
+        status      TEXT NOT NULL,
+        catatan     TEXT NOT NULL DEFAULT '',
+        oleh        TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    // Action plan (dari masalah → PIC → deadline → review).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_action (
+        id             SERIAL PRIMARY KEY,
+        sppg_id        INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        judul          TEXT NOT NULL,
+        sumber         TEXT NOT NULL DEFAULT '',
+        masalah        TEXT NOT NULL DEFAULT '',
+        akar           TEXT NOT NULL DEFAULT '',
+        tindakan       TEXT NOT NULL DEFAULT '',
+        pic_user_id    INTEGER,
+        prioritas      TEXT NOT NULL DEFAULT 'sedang',
+        deadline       DATE,
+        status         TEXT NOT NULL DEFAULT 'OPEN',
+        hasil          TEXT NOT NULL DEFAULT '',
+        review_date    DATE,
+        expected_outcome TEXT NOT NULL DEFAULT '',
+        created_by     TEXT NOT NULL DEFAULT '',
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_action_sppg ON pc_action (sppg_id, status)`);
+    // Catatan 1-on-1 (akses khusus HR).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_oneonone (
+        id           SERIAL PRIMARY KEY,
+        sppg_id      INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        user_id      INTEGER NOT NULL,
+        tanggal      DATE NOT NULL,
+        catatan      TEXT NOT NULL DEFAULT '',
+        tindak_lanjut TEXT NOT NULL DEFAULT '',
+        oleh         TEXT NOT NULL DEFAULT '',
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_oneonone ON pc_oneonone (sppg_id, user_id)`);
 
     // INFO GIZI PUBLIK: satu baris per (dapur, tanggal) berisi "poster" harian
     // yang dibuka publik tanpa login lewat scan QR (/info-gizi/<id-dapur>).
