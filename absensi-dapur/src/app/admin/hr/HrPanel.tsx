@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Slip, StatusHari, HariSlip } from "@/lib/slip";
 import SlipGaji from "@/components/SlipGaji";
+import PeoplePanel from "./PeoplePanel";
 
 function rupiah(n: number): string {
   return "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(n));
@@ -40,7 +41,7 @@ interface Config {
 }
 
 export default function HrPanel() {
-  const [tab, setTab] = useState<"slip" | "gaji" | "cetak" | "kalender">("slip");
+  const [tab, setTab] = useState<"slip" | "gaji" | "cetak" | "kalender" | "people">("slip");
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">HR — Gaji & Slip</h1>
@@ -52,6 +53,7 @@ export default function HrPanel() {
           ["slip", "Pengaturan Slip"],
           ["gaji", "Data Gaji"],
           ["kalender", "Hari Khusus"],
+          ["people", "People & Culture"],
           ["cetak", "Pratinjau / Cetak"],
         ].map(([v, label]) => (
           <button
@@ -69,6 +71,7 @@ export default function HrPanel() {
       {tab === "slip" && <PengaturanSlip />}
       {tab === "gaji" && <DataGaji />}
       {tab === "kalender" && <HariKhususPanel />}
+      {tab === "people" && <PeoplePanel />}
       {tab === "cetak" && <CetakSlip />}
     </div>
   );

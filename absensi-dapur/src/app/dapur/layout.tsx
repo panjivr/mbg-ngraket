@@ -8,6 +8,7 @@ import LogoutButton from "@/components/LogoutButton";
 import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
+import PeopleCultureSurvey from "@/components/PeopleCultureSurvey";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ export default async function DapurLayout({
         </nav>
       </header>
       <BirthdayGreeting />
+      <PeopleCultureSurvey />
       {children}
       <DapurBottomNav
         isDriver={isDriver}

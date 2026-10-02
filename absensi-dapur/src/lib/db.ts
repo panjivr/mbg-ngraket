@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-09-24a.game-blok-gizi";
+const SCHEMA_VERSION = "2026-10-02a.people-culture";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -959,6 +959,52 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_resep_custom_sppg ON resep_custom (sppg_id)`);
+
+    // PEOPLE & CULTURE — survey penilaian kerja/employee voice. HR membuat survey,
+    // mencentang karyawan sasaran, lalu "Tampilkan" → status aktif → muncul sbagai
+    // popup WAJIB di laman karyawan terpilih; karyawan hanya bisa lanjut setelah
+    // semua pertanyaan wajib terisi. `pertanyaan` = JSONB [{code,kategori,teks,tipe,wajib}].
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_survey (
+        id          SERIAL PRIMARY KEY,
+        sppg_id     INTEGER REFERENCES sppg(id) ON DELETE CASCADE,
+        judul       TEXT NOT NULL,
+        deskripsi   TEXT NOT NULL DEFAULT '',
+        pertanyaan  JSONB NOT NULL DEFAULT '[]'::jsonb,
+        anonim      BOOLEAN NOT NULL DEFAULT TRUE,
+        min_responden INTEGER NOT NULL DEFAULT 5,
+        status      TEXT NOT NULL DEFAULT 'aktif',
+        dibuat_oleh TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        closed_at   TIMESTAMPTZ
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_survey_sppg ON pc_survey (sppg_id, status)`);
+    // Sasaran karyawan (checklist HR) + status pengisian.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_target (
+        id         SERIAL PRIMARY KEY,
+        survey_id  INTEGER NOT NULL REFERENCES pc_survey(id) ON DELETE CASCADE,
+        user_id    INTEGER NOT NULL,
+        status     TEXT NOT NULL DEFAULT 'pending',
+        selesai_at TIMESTAMPTZ,
+        UNIQUE (survey_id, user_id)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_target_user ON pc_target (user_id, status)`);
+    // Jawaban (1 per karyawan per survey). Identitas tetap disimpan untuk melacak
+    // penyelesaian, tetapi tampilan HR hanya agregat (lihat API hasil) bila anonim.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pc_jawaban (
+        id         SERIAL PRIMARY KEY,
+        survey_id  INTEGER NOT NULL REFERENCES pc_survey(id) ON DELETE CASCADE,
+        user_id    INTEGER NOT NULL,
+        jawaban    JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (survey_id, user_id)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_pc_jawaban_survey ON pc_jawaban (survey_id)`);
 
     // INFO GIZI PUBLIK: satu baris per (dapur, tanggal) berisi "poster" harian
     // yang dibuka publik tanpa login lewat scan QR (/info-gizi/<id-dapur>).
