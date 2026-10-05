@@ -67,6 +67,10 @@ try {
   assert.equal((xml.match(/<loc>/g) || []).length, PUBLIC_PATHS.length);
   const robots = await (await fetch(base + '/robots.txt')).text();
   assert.match(robots, /User-Agent: OAI-SearchBot/i); assert.match(robots, /Disallow: \/admin/);
+  const ownership = await fetch(base + '/indexnow-key.txt');
+  assert.equal(ownership.status, 200);
+  assert.match((await ownership.text()).trim(), /^[a-f0-9]{32}$/);
+  assert.match(ownership.headers.get('x-robots-tag'), /noindex/);
   const login = await fetch(base + '/login');
   assert.match(login.headers.get('x-robots-tag'), /noindex/);
   assert.match(await login.text(), /name="robots" content="noindex, nofollow"/);

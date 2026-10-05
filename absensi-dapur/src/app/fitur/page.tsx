@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MarketingShell from "@/components/marketing/MarketingShell";
 import ContactCTA from "@/components/marketing/ContactCTA";
+import { FeatureIcon } from "@/components/marketing/ProductPreview";
 import StructuredData from "@/components/marketing/StructuredData";
 import { publicMetadata } from "@/lib/marketing";
 const title = "Fitur Aplikasi SPPG: Absensi, Gaji, Distribusi, Menu & Audit";
@@ -21,5 +22,10 @@ const groups = [
   { title: 'Sistem dan keluaran', items: ['Akses browser/PWA, tema gelap/terang, serta kontrol bahasa sebagian.', 'Pencarian halaman, navigasi staf, dan notifikasi.', 'Halaman cetak, serta ekspor Excel/CSV/PDF/gambar pada modul terkait.'] },
 ];
 export default function Page() {
-  return <MarketingShell><StructuredData path="/fitur" title={title} description={description}/><h1 className="max-w-4xl text-3xl font-bold sm:text-4xl">Fitur untuk pekerjaan harian tim SPPG</h1><p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-300">Mulai dari absensi dan rekap, kemudian gunakan modul tambahan sesuai kebutuhan. Ketersediaan fitur mengikuti paket, hak akses, serta pengaturan dapur.</p><div className="mt-8 grid gap-5 md:grid-cols-2">{groups.map(g => <section key={g.title} className="card p-5"><h2 className="text-xl font-bold">{g.title}</h2><ul className="mt-4 list-disc space-y-2 pl-5 leading-7 text-slate-300">{g.items.map(i => <li key={i}>{i}</li>)}</ul>{g.href && <Link href={g.href} className="mt-4 inline-block font-semibold text-gold-400 underline underline-offset-4">Pelajari alur penggunaan</Link>}</section>)}</div><section className="card mt-8 p-6"><h2 className="text-xl font-bold">Tinjau modul yang paling dibutuhkan</h2><p className="my-4 leading-7 text-slate-300">Saat meminta demo, sebutkan peran Anda dan alur yang ingin dicoba: absensi, rekap/slip, distribusi, atau modul lain.</p><ContactCTA placement="features-bottom"/></section></MarketingShell>;
+  return <MarketingShell><StructuredData path="/fitur" title={title} description={description}/>
+    <div className="mk-feature-heading"><div><span className="mk-section-label">MODUL SISTEM DAPUR MBG</span><h1>Pekerjaan harian tim.<br/>Satu tempat untuk mengelolanya.</h1><p className="mt-5 text-lg leading-relaxed text-slate-300">Dari absensi hingga distribusi, pilih alur yang paling dibutuhkan dapur Anda. Pelajari setiap modul sebelum mulai bersama tim.</p></div><div className="mk-feature-intro"><span className="mk-icon"><FeatureIcon index={7}/></span><h2 className="mt-5 text-xl font-bold">Mulai kecil. Siapkan alurnya.</h2><p>Mulai dari absensi dan rekap, kemudian gunakan modul tambahan sesuai kebutuhan. Ketersediaan fitur mengikuti paket, hak akses, serta pengaturan dapur.</p></div></div>
+    <nav className="mk-module-nav" aria-label="Daftar modul">{groups.map((g,i) => <a key={g.title} href={`#modul-${i+1}`}>{g.title}</a>)}</nav>
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{groups.map((g,i) => <section id={`modul-${i+1}`} key={g.title} className="card mk-feature-card"><div className="mk-feature-card-top"><span className="mk-icon"><FeatureIcon index={i}/></span><span className="mk-feature-index">{String(i+1).padStart(2,'0')} / 12</span></div><h2 className="text-xl font-bold">{g.title}</h2><ul className="mk-feature-list mt-4 space-y-3">{g.items.map(item => <li key={item}>{item}</li>)}</ul>{g.href && <Link href={g.href} className="mk-feature-link">Pelajari alur <span aria-hidden="true">→</span></Link>}</section>)}</div>
+    <section className="card mk-demo-band mt-10"><span className="mk-section-label" style={{color:'#f0ca71'}}>COBA ALUR YANG RELEVAN</span><h2 className="text-2xl font-bold">Tinjau modul yang paling dibutuhkan.</h2><p className="my-4 max-w-3xl leading-7">Saat meminta demo, sebutkan peran Anda dan alur yang ingin dicoba: absensi, rekap/slip, distribusi, atau modul lain.</p><ContactCTA placement="features-bottom"/></section>
+  </MarketingShell>;
 }
