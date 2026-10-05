@@ -36,3 +36,11 @@ Pemilik menyatakan domain belum terverifikasi/tidak mengetahui status verifikasi
 - https://developers.google.com/search/docs/monitor-debug/search-operators/all-search-site
 - https://help.ahrefs.com/en/articles/3275938-verifying-ownership-of-your-project-or-website
 - https://ahrefs.com/free
+
+## Notifikasi perubahan melalui IndexNow
+
+File ownership IndexNow tersedia di `/indexnow-key.txt`, dengan header noindex dan tetap boleh diambil crawler. `node scripts/submit-indexnow.mjs` melakukan dry-run; tambahkan `--submit` untuk mengirim sembilan URL publik yang berubah. Script memeriksa HTTPS produksi, isi file ownership, URL sitemap satu domain, dan respons API. Tidak ada pengiriman data operasional atau akun. Jangan memasukkan file ini dalam PRIVATE_PATHS robots karena mesin perlu memverifikasi isinya.
+
+IndexNow memberi tahu mesin peserta tentang perubahan URL; respons 200 berarti diterima, dan 202 berarti diterima dengan validasi ownership masih menunggu. Ini bukan bukti bahwa halaman telah diindeks atau masuk hasil Google.
+
+Referensi: https://www.bing.com/indexnow/getstarted dan https://www.indexnow.org/documentation
