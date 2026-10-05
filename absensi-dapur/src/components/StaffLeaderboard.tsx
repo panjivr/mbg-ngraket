@@ -148,7 +148,7 @@ export default function StaffLeaderboard({ compact = false }: { compact?: boolea
         </div>
         {myIndex >= 0 && (
           <span className="rounded-lg bg-gold-500/15 px-2.5 py-1 text-xs font-semibold text-gold-400">
-            Peringkat kamu: #{myIndex + 1} · skor {full[myIndex].skor.toFixed(1)}
+            Peringkat Anda: #{myIndex + 1} · skor {full[myIndex].skor.toFixed(1)}
           </span>
         )}
       </div>
@@ -263,7 +263,7 @@ function MyScoreCard({ r, rank, total }: { r: BoardRow; rank: number; total: num
     <div className="card space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-slate-400">Kinerja kamu periode ini</p>
+          <p className="text-xs text-slate-400">Kinerja Anda periode ini</p>
           <p className="text-sm font-semibold text-slate-100">
             Peringkat <span className={skorColor(r.skor)}>#{rank}</span>
             <span className="text-slate-500"> dari {total}</span>
@@ -349,7 +349,7 @@ function BoardTr({
           <div className="flex items-center gap-1.5 font-medium">
             <span className="text-[10px] text-slate-500">{isOpen ? "▾" : "▸"}</span>
             {r.nama}
-            {isMe && <span className="text-xs text-gold-400">(kamu)</span>}
+            {isMe && <span className="text-xs text-gold-400">(Anda)</span>}
           </div>
           <div className="pl-3.5 text-xs text-slate-400">{r.divisi_nama || "Tanpa divisi"}</div>
         </td>

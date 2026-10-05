@@ -11,7 +11,7 @@ const PREFS_BOOTSTRAP = `(function(){try{var t=localStorage.getItem("mbg-theme")
 export const metadata: Metadata = {
   title: "Absensi Dapur MBG",
   description:
-    "Sistem absensi digital dapur MBG — clock in/out dengan verifikasi selfie & lokasi GPS, rekap dan ekspor untuk admin.",
+    "Sistem absensi digital dapur MBG — pencatatan masuk dan pulang dengan foto wajah serta verifikasi lokasi GPS, rekap dan ekspor untuk admin.",
   applicationName: "Absensi Dapur MBG",
   robots: { index: false, follow: false },
   appleWebApp: {
@@ -30,7 +30,7 @@ export const viewport: Viewport = {
   themeColor: "#070f29",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

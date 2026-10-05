@@ -33,7 +33,8 @@ function LoginForm() {
         return;
       }
       const role = data.user?.role;
-      const dest = next || (role === "admin" ? "/admin" : "/dapur");
+      const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
+      const dest = safeNext || (role === "admin" ? "/admin" : "/dapur");
       router.replace(dest);
       router.refresh();
     } catch {
@@ -54,9 +55,9 @@ function LoginForm() {
         <div className="relative flex items-center gap-3">
           <BgnLogo size={52} />
           <div className="leading-tight">
-            <p className="text-sm font-bold tracking-wide">BADAN GIZI NASIONAL</p>
+            <p className="text-sm font-bold tracking-wide">SISTEM DAPUR MBG</p>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-              Republik Indonesia
+              Sistem operasional dapur MBG
             </p>
           </div>
         </div>
@@ -66,7 +67,7 @@ function LoginForm() {
             <span className="bg-gradient-to-r from-gold-400 to-ember-400 bg-clip-text text-transparent">
               Operasional
             </span>{" "}
-            Absensi Dapur
+            Dapur MBG
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-300">
             Platform terintegrasi untuk mendukung operasional dapur Program Makan
@@ -74,7 +75,7 @@ function LoginForm() {
           </p>
         </div>
         <p className="text-[11px] text-slate-500">
-          © {new Date().getFullYear()} Badan Gizi Nasional
+          © {new Date().getFullYear()} Sistem Dapur MBG
         </p>
       </div>
 
@@ -83,18 +84,18 @@ function LoginForm() {
         <div className="mb-6 flex flex-col items-center text-center md:hidden">
           <BgnLogo size={64} />
           <p className="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-            Badan Gizi Nasional
+            Sistem Dapur MBG
           </p>
         </div>
-        <h1 className="text-center text-2xl font-bold md:text-left">Silakan Login</h1>
+        <h1 className="text-center text-2xl font-bold md:text-left">Masuk ke akun Anda</h1>
         <p className="mt-1 text-center text-sm text-slate-400 md:text-left">
           Masuk menggunakan akun yang diberikan admin.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <form aria-busy={loading} onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
             <label className="label" htmlFor="username">
-              Nama Akun
+              Nama pengguna
             </label>
             <input
               id="username"
@@ -102,13 +103,15 @@ function LoginForm() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="mis. siti"
+              placeholder="Contoh: siti"
+              autoCapitalize="none"
+              spellCheck={false}
               required
             />
           </div>
           <div>
             <label className="label" htmlFor="password">
-              Kata Sandi
+              Kata sandi
             </label>
             <div className="relative">
               <input
@@ -124,6 +127,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
+                aria-pressed={showPw}
                 aria-label={showPw ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                 className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 transition-colors hover:text-slate-200"
               >
@@ -166,7 +170,7 @@ function LoginForm() {
                 Memproses…
               </>
             ) : (
-              "Sign In"
+              "Masuk"
             )}
           </button>
         </form>

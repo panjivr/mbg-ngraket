@@ -7,7 +7,7 @@ import { DashboardPanel, PeerPanel, IncidentPanel, ActionPanel, OneOnOnePanel } 
 
 type Tab = "dash" | "survei" | "peer" | "lapor" | "action" | "oneonone";
 const TABS: [Tab, string][] = [
-  ["dash", "Dashboard"],
+  ["dash", "Dasbor"],
   ["survei", "Suara & Pulse"],
   ["peer", "Feedback Rekan/Pimpinan"],
   ["lapor", "Lapor Masalah"],

@@ -329,7 +329,7 @@ function DetailTemuan({
             <Field label="Standar / SOP" value={temuan.standar_sop} />
             <Field label="Gap" value={temuan.gap} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Angka label="Kemungkinan" value={temuan.kemungkinan} />
             <Angka label="Dampak" value={temuan.dampak} />
             <Angka label="Risk Score" value={temuan.risk_score} />

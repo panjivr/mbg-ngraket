@@ -17,10 +17,12 @@ export default function KartuPegawai({ data }: { data: Kartu }) {
   const posY = data.foto_pos_y ?? 50;
 
   return (
-    <div className="relative w-[340px] rounded-2xl bg-gradient-to-br from-emas-400 via-gold-400 to-emas-500 p-[3px] shadow-[0_18px_50px_-12px_rgba(224,169,46,0.5)]">
+    <div className="relative w-full max-w-[340px] rounded-2xl bg-gradient-to-br from-emas-400 via-gold-400 to-emas-500 p-[3px] shadow-[0_18px_50px_-12px_rgba(224,169,46,0.5)]">
       <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-b from-ink-800 to-ink-950">
         {/* Header instansi */}
         <div className="flex items-center gap-2 border-b border-white/10 bg-black/20 px-3 py-2">
+          {/* Native image supports cross-origin canvas export for employee cards. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/bgn-logo.webp"
             alt=""
@@ -63,7 +65,7 @@ export default function KartuPegawai({ data }: { data: Kartu }) {
 
           {/* Nama & jabatan */}
           <div className="mt-3 text-center">
-            <p className="truncate text-lg font-extrabold leading-tight text-white">
+            <p className="break-words text-lg font-extrabold leading-tight text-slate-100">
               {data.nama}
             </p>
             <p className="text-[12px] font-medium text-emas-300">
@@ -89,7 +91,7 @@ export default function KartuPegawai({ data }: { data: Kartu }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-white/10 bg-black/20 px-3 py-1.5 text-[9px] text-slate-400">
-          <span>Kartu resmi pegawai</span>
+          <span>Identitas pegawai dapur</span>
           <span className="font-semibold tracking-wide text-emas-300/80">
             ABSENSI DAPUR · BGN
           </span>

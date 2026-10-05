@@ -98,7 +98,8 @@ function Gauge({
   const val = Math.max(0, Math.min(100, value));
   const style = {
     width: size,
-    height: size,
+    maxWidth: "100%",
+    aspectRatio: "1",
     "--val": val,
     "--c1": c1,
     "--c2": c2,
@@ -730,7 +731,7 @@ export default function AdminDashboard() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="border-l-2 border-gold-500/70 pl-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-400">Panel Operasional</p>
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Dashboard Operasional</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Dasbor Operasional</h1>
           <p className="mt-0.5 text-sm text-slate-400">
             {tanggalTampil || "Memuat tanggal…"} ·{" "}
             <span className="font-mono tabular-nums text-slate-300">{jam} WIB</span>

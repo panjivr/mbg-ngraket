@@ -43,17 +43,17 @@ export default function SettingsMenu() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("settings.open")}
-        aria-haspopup="menu"
+        aria-controls="pengaturan-tampilan"
         aria-expanded={open}
-        className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-base transition-colors hover:bg-white/10"
+        className="grid h-11 w-11 place-items-center rounded-lg border border-white/10 bg-white/5 text-base transition-colors hover:bg-white/10"
       >
         {theme === "light" ? "☀️" : "🌙"}
       </button>
 
       {open && (
         <div
-          role="menu"
-          className="absolute right-0 z-30 mt-2 w-52 rounded-xl border border-white/10 bg-ink-850 p-3 shadow-soft"
+          id="pengaturan-tampilan"
+          className="absolute right-0 z-30 max-w-[calc(100vw-2rem)] mt-2 w-52 rounded-xl border border-white/10 bg-ink-850 p-3 shadow-soft"
         >
           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             {t("settings.theme")}

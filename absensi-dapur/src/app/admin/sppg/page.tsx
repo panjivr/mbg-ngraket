@@ -248,7 +248,7 @@ export default function SppgPage() {
                   onChange={(e) => setForm({ ...form, alamat: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div>
                   <label className="label">Jam Masuk</label>
                   <input

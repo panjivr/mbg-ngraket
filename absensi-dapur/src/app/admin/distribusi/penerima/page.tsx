@@ -263,12 +263,12 @@ export default function PenerimaPage() {
               )}
               {form.jenis === "b3" ? (
                 // B3 (posyandu): hanya porsi B3 yang relevan.
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div><label className="label">B3</label><input type="number" min={0} className="input" value={form.b3} onChange={(e) => setForm({ ...form, b3: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
                 </div>
               ) : (
                 // SERDIK (sekolah): porsi Besar/Kecil + PJ (guru).
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <div><label className="label">Besar</label><input type="number" min={0} className="input" value={form.besar} onChange={(e) => setForm({ ...form, besar: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
                   <div><label className="label">Kecil</label><input type="number" min={0} className="input" value={form.kecil} onChange={(e) => setForm({ ...form, kecil: Math.max(0, parseInt(e.target.value) || 0) })} /></div>
                   <div><label className="label">PJ</label><input type="number" min={0} className="input" value={form.pj} onChange={(e) => setForm({ ...form, pj: Math.max(0, parseInt(e.target.value) || 0) })} /></div>

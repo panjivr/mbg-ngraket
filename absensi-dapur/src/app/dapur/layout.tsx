@@ -30,8 +30,9 @@ export default async function DapurLayout({
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-28 md:pb-12">
+      <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <BgnLogo size={34} />
             <p className="text-sm font-bold tracking-tight">Absensi Dapur</p>
@@ -75,7 +76,7 @@ export default async function DapurLayout({
       </header>
       <BirthdayGreeting />
       <PeopleCultureSurvey />
-      {children}
+      <main id="konten-utama" tabIndex={-1} className="min-w-0">{children}</main>
       <DapurBottomNav
         isDriver={isDriver}
         gudangKeluar={gudangKeluar}

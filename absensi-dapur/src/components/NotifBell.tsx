@@ -75,8 +75,13 @@ export default function NotifBell() {
     const onDown = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const badge = perluAksi > 0 ? perluAksi : items.length;
@@ -85,9 +90,11 @@ export default function NotifBell() {
     <div className="relative" ref={boxRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300 hover:bg-white/5"
+        className="relative grid h-11 w-11 place-items-center rounded-lg border border-white/10 text-slate-300 hover:bg-white/5"
         title="Notifikasi & pengingat"
         aria-label="Notifikasi"
+        aria-expanded={open}
+        aria-controls="panel-notifikasi"
       >
         <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -101,7 +108,7 @@ export default function NotifBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-ink-900 shadow-2xl">
+        <div id="panel-notifikasi" className="fixed inset-x-4 top-32 z-30 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/10 bg-ink-900 shadow-2xl">
           <div className="flex items-center justify-between border-b border-white/5 px-3 py-2.5">
             <p className="text-sm font-semibold">Notifikasi</p>
             <button onClick={load} className="text-xs text-slate-400 hover:text-slate-200">Segarkan</button>

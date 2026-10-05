@@ -120,7 +120,7 @@ export default function PengaduanPage() {
         </div>
         <textarea
           className="input min-h-[120px]"
-          placeholder="Tulis laporan / aspirasi kamu di sini…"
+          placeholder="Tulis laporan / aspirasi Anda di sini…"
           value={isi}
           onChange={(e) => setIsi(e.target.value)}
           maxLength={4000}
