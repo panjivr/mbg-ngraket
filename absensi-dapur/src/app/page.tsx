@@ -1,6 +1,7 @@
 import Link from "next/link";
 import MarketingShell, { ProductMark } from "@/components/marketing/MarketingShell";
 import ContactCTA from "@/components/marketing/ContactCTA";
+import ProductPreview, { FeatureIcon } from "@/components/marketing/ProductPreview";
 import StructuredData from "@/components/marketing/StructuredData";
 import { GUIDES, SOLUTIONS, publicMetadata } from "@/lib/marketing";
 
@@ -29,23 +30,24 @@ const packages = [
 export default function Home() {
   return <MarketingShell>
     <StructuredData path="/" title={title} description={description}/>
-    <section className="max-w-4xl">
-      <ProductMark large/>
-      <p className="mt-5 text-sm font-semibold text-gold-400">Untuk staf, kepala, dan admin SPPG</p>
-      <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">Aplikasi SPPG untuk absensi, rekap, dan operasional dapur MBG.</h1>
-      <p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-300">Catat kehadiran staf, tinjau rekap, kelola distribusi porsi, dan siapkan laporan dalam satu alur. Mulai dari pekerjaan yang paling sering diulang oleh tim dapur Anda.</p>
-      <div className="mt-7 flex flex-wrap gap-3"><ContactCTA placement="home-hero"/><Link href="/fitur" className="btn-ghost">Lihat seluruh fitur</Link></div>
-      <p className="mt-4 text-sm text-slate-400">Berbasis browser · Shift lintas tanggal · Akses sesuai peran</p>
+    <section className="mk-hero">
+      <div><div className="mk-hero-brand"><ProductMark large/><div><p>SISTEM DAPUR MBG</p><span className="text-sm text-slate-400">Untuk staf, admin, dan kepala SPPG</span></div></div>
+      <h1>Operasional SPPG <em>lebih tertata.</em><br/>Tim lebih terarah.</h1>
+      <p className="mk-hero-copy">Aplikasi SPPG untuk absensi, rekap gaji, distribusi porsi, dan laporan dapur MBG. Satukan pekerjaan harian tim dalam alur yang mudah diperiksa.</p>
+      <div className="mk-hero-actions"><ContactCTA placement="home-hero">Lihat demo aplikasi <span aria-hidden="true">→</span></ContactCTA><Link href="/fitur" className="btn-ghost">Jelajahi fitur</Link></div>
+      <p className="mk-hero-note">Berbasis browser · Shift lintas tanggal · Akses sesuai peran</p></div>
+      <ProductPreview/>
     </section>
-    <section className="mt-14"><h2 className="text-2xl font-bold">Satu aplikasi, kebutuhan setiap peran</h2><div className="mt-6 grid gap-4 md:grid-cols-3">{roles.map(r => <div key={r.name} className="card p-5"><h3 className="text-lg font-bold">{r.name}</h3><p className="mt-3 leading-7 text-slate-300">{r.text}</p></div>)}</div></section>
-    <section className="mt-14"><h2 className="text-2xl font-bold">Pilih masalah yang ingin diselesaikan</h2><p className="mt-3 text-slate-400">Pelajari alurnya sebelum meminta demo untuk dapur Anda.</p><div className="mt-6 grid gap-4 md:grid-cols-3">{SOLUTIONS.map(a => <Link key={a.slug} href={`/solusi/${a.slug}`} className="card-interactive p-5"><h3 className="text-lg font-bold">{a.title}</h3><p className="mt-3 leading-7 text-slate-300">{a.summary}</p><span className="mt-4 block font-semibold text-gold-400">Pelajari solusi →</span></Link>)}</div></section>
-    <section className="card mt-14 p-6 sm:p-8"><h2 className="text-2xl font-bold">Mulai dari demo alur dapur Anda</h2><ol className="mt-5 grid gap-5 md:grid-cols-3">{[
+    <div className="mk-proof-strip">{[["Catat dengan jelas","Absensi, jadwal, dan riwayat staf"],["Periksa dalam satu alur","Rekap, gaji, dan dokumentasi"],["Pantau pekerjaan tim","Distribusi dan laporan operasional"]].map(([heading,text],i) => <div key={heading}><span className="mk-icon"><FeatureIcon index={i === 2 ? 7 : i}/></span><div><strong>{heading}</strong><p>{text}</p></div></div>)}</div>
+    <section className="mt-14"><span className="mk-section-label">DIRANCANG UNTUK TIM DAPUR</span><h2 className="mk-section-title">Satu alur. Setiap peran terbantu.</h2><div className="mt-6 grid gap-4 md:grid-cols-3">{roles.map((r,i) => <div key={r.name} className="card mk-role-card"><span className="mk-role-number" aria-hidden="true">0{i+1}</span><span className="mk-icon"><FeatureIcon index={i+1}/></span><h3 className="text-lg font-bold">{r.name}</h3><p className="mt-3 leading-7 text-slate-300">{r.text}</p></div>)}</div></section>
+    <section className="mt-14"><h2 className="text-2xl font-bold">Pilih masalah yang ingin diselesaikan</h2><p className="mt-3 text-slate-400">Pelajari alurnya sebelum meminta demo untuk dapur Anda.</p><div className="mt-6 grid gap-4 md:grid-cols-3">{SOLUTIONS.map((a,i) => <Link key={a.slug} href={`/solusi/${a.slug}`} className="card-interactive p-6"><span className="mk-icon mb-5"><FeatureIcon index={i}/></span><h3 className="text-lg font-bold">{a.title}</h3><p className="mt-3 leading-7 text-slate-300">{a.summary}</p><span className="mt-4 block font-semibold text-gold-400">Pelajari solusi →</span></Link>)}</div></section>
+    <section className="card mk-demo-band mt-14"><h2 className="text-2xl font-bold">Mulai dari demo alur dapur Anda</h2><ol className="mt-5 grid gap-5 md:grid-cols-3">{[
       ["1. Pilih kebutuhan", "Ceritakan peran Anda dan pekerjaan yang masih memakai rekap manual."],
       ["2. Lihat alur", "Tinjau contoh absensi, rekap, atau distribusi memakai data demo."],
       ["3. Siapkan penerapan", "Bahas paket, akun, jadwal divisi, dan pendampingan sebelum dipakai tim."],
     ].map(([h,p]) => <li key={h}><h3 className="font-bold">{h}</h3><p className="mt-2 leading-7 text-slate-300">{p}</p></li>)}</ol><div className="mt-6"><ContactCTA placement="home-workflow"/></div></section>
     <section id="paket" className="mt-14 scroll-mt-40"><h2 className="text-2xl font-bold">Paket sesuai kebutuhan operasional</h2><p className="mt-3 max-w-3xl leading-7 text-slate-400">Mulai dari absensi dan kepegawaian, lalu tambahkan modul sesuai kebutuhan. Harga dan pendampingan dijelaskan melalui penawaran.</p><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{packages.map(p => <div key={p.name} className="card flex flex-col p-5"><h3 className="text-xl font-bold">{p.name}</h3><p className="mt-2 text-sm text-slate-400">{p.text}</p><ul className="my-5 flex-1 list-disc space-y-2 pl-5 text-sm text-slate-300">{p.items.map(i => <li key={i}>{i}</li>)}</ul><ContactCTA topic={`paket ${p.name}`} placement={`package-${p.name.toLowerCase()}`} className="btn-ghost">Tanyakan paket</ContactCTA></div>)}</div></section>
-    <section className="mt-14"><h2 className="text-2xl font-bold">Panduan untuk admin dan tim SPPG</h2><div className="mt-6 grid gap-4 md:grid-cols-2">{GUIDES.map(a => <Link key={a.slug} href={`/panduan/${a.slug}`} className="card-interactive p-5"><h3 className="text-lg font-bold">{a.title}</h3><p className="mt-3 leading-7 text-slate-300">{a.summary}</p><span className="mt-4 block font-semibold text-gold-400">Baca panduan →</span></Link>)}</div></section>
+    <section className="mt-14"><h2 className="text-2xl font-bold">Panduan untuk admin dan tim SPPG</h2><div className="mt-6 grid gap-4 md:grid-cols-2">{GUIDES.map((a,i) => <Link key={a.slug} href={`/panduan/${a.slug}`} className="card-interactive p-6"><span className="mk-icon mb-5"><FeatureIcon index={i}/></span><h3 className="text-lg font-bold">{a.title}</h3><p className="mt-3 leading-7 text-slate-300">{a.summary}</p><span className="mt-4 block font-semibold text-gold-400">Baca panduan →</span></Link>)}</div></section>
     <section className="mx-auto mt-14 max-w-3xl"><h2 className="text-2xl font-bold">Pertanyaan sebelum mulai</h2><div className="mt-5 divide-y divide-white/10">{faqs.map(f => <details key={f.q} className="py-4"><summary className="cursor-pointer font-semibold">{f.q}</summary><p className="mt-3 leading-7 text-slate-300">{f.a}</p></details>)}</div></section>
   </MarketingShell>;
 }

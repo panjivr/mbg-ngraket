@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SITE_URL } from "@/lib/marketing";
-import MusicPlayer from "@/components/MusicPlayer";
+import MusicPlayer from "@/components/marketing/ContextualMusicPlayer";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import ThemeLangProvider from "@/components/ThemeLangProvider";
 
@@ -11,7 +11,13 @@ const PREFS_BOOTSTRAP = `(function(){try{var t=localStorage.getItem("mbg-theme")
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    other: {
+      ...(process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : {}),
+      ...(process.env.AHREFS_SITE_VERIFICATION ? { "ahrefs-site-verification": process.env.AHREFS_SITE_VERIFICATION } : {}),
+    },
+  },
   title: "Absensi Dapur MBG",
   description:
     "Sistem absensi digital dapur MBG — pencatatan masuk dan pulang dengan foto wajah serta verifikasi lokasi GPS, rekap dan ekspor untuk admin.",
