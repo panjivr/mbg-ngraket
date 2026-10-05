@@ -455,7 +455,7 @@ export default function ShioFengshuiLengkap({
       <section className="sf-block sf-pad">
         <h3 className="sf-h3"><span className="sf-no">07</span>Peruntungan Tahun {tb.tahun}</h3>
         <p className="sf-cap">
-          Relasi shio kamu dengan tahun berjalan:{" "}
+          Relasi shio Anda dengan tahun berjalan:{" "}
           <b style={{ color: "var(--gold-lite)" }}>{tb.shio.nama} {tb.elemen.nama}</b> {tb.shio.han}.
         </p>
         <div className="sf-cards">

@@ -141,8 +141,8 @@ const paket = [
 const statistik = [
   { angka: "6", label: "Modul Terintegrasi" },
   { angka: "20+", label: "Fitur Siap Pakai" },
-  { angka: "∞", label: "Dapur & Cabang" },
-  { angka: "24/7", label: "Akses Cloud" },
+  { angka: "Multi", label: "Dapur & Cabang" },
+  { angka: "Web", label: "Akses Lintas Perangkat" },
 ];
 
 const keunggulan = [
@@ -169,11 +169,11 @@ const keunggulan = [
   {
     icon: "🔒",
     judul: "Aman & Andal",
-    teks: "Data terenkripsi, sesi JWT, hak akses per peran, berjalan di infrastruktur cloud modern.",
+    teks: "Akses akun menggunakan sesi terautentikasi dan hak akses sesuai peran pengguna.",
   },
   {
     icon: "🤝",
-    judul: "Tanpa Ribet Setup",
+    judul: "Pendampingan Implementasi",
     teks: "Kami bantu pasang, migrasi data, dan latih tim. Anda tinggal pakai dan fokus ke dapur.",
   },
 ];
@@ -186,31 +186,31 @@ const langkah = [
   },
   {
     no: "2",
-    judul: "Setup & Migrasi Data",
+    judul: "Penyiapan & Migrasi Data",
     teks: "Kami siapkan akun, sesuaikan data penerima & menu, lalu selaraskan dengan alur kerja dapur Anda.",
   },
   {
     no: "3",
-    judul: "Latih Tim & Jalan",
+    judul: "Pelatihan & Penggunaan",
     teks: "Pelatihan singkat untuk staf dan admin. Dapur Anda langsung beroperasi secara digital.",
   },
 ];
 
-const testimoni = [
+const contohManfaat = [
   {
-    isi: "Rekap absensi yang dulu makan waktu seharian sekarang beres dalam hitungan menit. Dokumen BAST & Surat Jalan tinggal cetak — rapi dan resmi.",
+    isi: "Pantau rekap kehadiran serta siapkan dokumen BAST dan surat jalan dalam satu alur kerja.",
     nama: "Kepala SPPG",
     peran: "Dapur MBG Kabupaten",
     inisial: "KS",
   },
   {
-    isi: "Absensi wajah + GPS bikin kehadiran tim jadi jujur dan tercatat. Laporan harian lengkap dengan foto sangat membantu saat audit.",
+    isi: "Catat kehadiran dengan foto wajah dan lokasi GPS. Lengkapi laporan harian dengan dokumentasi untuk mendukung pemeriksaan.",
     nama: "Admin Dapur",
     peran: "Operasional Harian",
     inisial: "AD",
   },
   {
-    isi: "Menu, resep, dan daftar belanja otomatis dari porsi. HPP per porsi langsung kelihatan, jadi belanja lebih terkontrol.",
+    isi: "Susun menu, resep, dan kebutuhan bahan sesuai jumlah porsi. Tinjau biaya per porsi untuk membantu perencanaan belanja.",
     nama: "Ahli Gizi",
     peran: "Perencanaan Menu",
     inisial: "AG",
@@ -226,7 +226,7 @@ const faq = [
   {
     tanya: "Apakah data kami aman?",
     jawab:
-      "Aman. Data terenkripsi, sesi login memakai JWT, hak akses dipisah per peran (admin, HR, staf), dan seluruh sistem berjalan di infrastruktur cloud modern.",
+      "Sistem menggunakan sesi login terautentikasi dan pembatasan akses berdasarkan peran (admin, HR, staf). Pengelola perlu menjaga kredensial akun serta melakukan pencadangan data.",
   },
   {
     tanya: "Kami tidak paham teknologi, apakah repot memasangnya?",
@@ -334,17 +334,17 @@ export default function Home() {
 
       {/* Navigasi atas — sticky, kaca, profesional */}
       <header className="sticky top-0 z-30 border-b border-white/5 bg-ink-950/70 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-5">
           <a href="#atas" className="flex items-center gap-2.5">
             <BgnLogo size={40} />
             <span className="leading-tight">
               <span className="block text-sm font-bold tracking-wide">SISTEM DAPUR MBG</span>
               <span className="block text-[10px] uppercase tracking-[0.18em] text-slate-400">
-                Badan Gizi Nasional
+                Operasional dapur SPPG
               </span>
             </span>
           </a>
-          <div className="hidden items-center gap-0.5 text-sm md:flex">
+          <div className="hidden items-center gap-0.5 text-sm xl:flex">
             <a href="#fitur" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Fitur</a>
             <a href="#keunggulan" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Keunggulan</a>
             <a href="#cara" className="rounded-lg px-3 py-2 text-slate-300 transition hover:bg-white/5 hover:text-white">Cara Mulai</a>
@@ -355,6 +355,13 @@ export default function Home() {
           <Link href="/login" className="btn-gold px-5">
             Masuk
           </Link>
+        </nav>
+        <nav aria-label="Bagian halaman" className="scroll-x mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 xl:hidden">
+          <a href="#fitur" className="btn-ghost shrink-0">Fitur</a>
+          <a href="#keunggulan" className="btn-ghost shrink-0">Keunggulan</a>
+          <a href="#cara" className="btn-ghost shrink-0">Cara mulai</a>
+          <a href="#paket" className="btn-ghost shrink-0">Paket</a>
+          <a href="#faq" className="btn-ghost shrink-0">Pertanyaan umum</a>
         </nav>
       </header>
 
@@ -387,7 +394,7 @@ export default function Home() {
             💬 Pesan untuk Dapur Anda
           </a>
           <Link href="/login" className="btn-ghost px-6 py-3 text-base">
-            Coba Masuk Demo →
+            Masuk ke Aplikasi →
           </Link>
         </div>
 
@@ -517,28 +524,24 @@ export default function Home() {
       <section id="testimoni" className="mt-20 scroll-mt-24">
         <div className="text-center">
           <span className="badge border border-emas-500/30 bg-emas-500/10 text-emas-400">
-            💬 Kata Mereka
+            Manfaat per Peran
           </span>
           <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
-            Dipercaya Tim Dapur MBG
+            Mendukung Setiap Peran di Dapur
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm text-slate-400">
-            Pengalaman nyata dari peran-peran yang setiap hari menjalankan
-            operasional dapur.
+            Contoh penggunaan sistem untuk mendukung tugas harian tim dapur.
           </p>
         </div>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {testimoni.map((t) => (
+          {contohManfaat.map((t) => (
             <figure
               key={t.nama}
               className="card flex flex-col justify-between p-6"
             >
-              <blockquote className="text-sm leading-relaxed text-slate-200">
-                <span className="mb-2 block text-3xl leading-none text-emas-400/60">
-                  &ldquo;
-                </span>
+              <p className="text-sm leading-relaxed text-slate-200">
                 {t.isi}
-              </blockquote>
+              </p>
               <figcaption className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold-300 to-ember-400 text-sm font-bold text-ink-950">
                   {t.inisial}
@@ -586,7 +589,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="btn-gold px-7 py-3 text-base"
               >
-                💬 Chat via WhatsApp
+                💬 Hubungi via WhatsApp
               </a>
               <a href="#paket" className="btn-ghost px-7 py-3 text-base">
                 Lihat Paket &amp; Harga
@@ -696,9 +699,8 @@ export default function Home() {
             Paket Berjenjang, Sesuai Skala Dapur Anda
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-            Dari Bronze sampai Pro — makin tinggi paket, makin banyak fitur
-            terbuka. Pilih paket, klik tombolnya, dan langsung terhubung ke
-            WhatsApp kami untuk penawaran resmi.
+            Pilih paket sesuai kebutuhan operasional dapur. Hubungi tim kami
+            untuk informasi fitur, biaya, dan pendampingan implementasi.
           </p>
         </div>
 
@@ -715,7 +717,7 @@ export default function Home() {
             >
               {p.unggulan && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-gold-400 to-ember-400 px-4 py-1 text-xs font-bold text-ink-950 shadow-lg">
-                  ★ Paling Populer
+                  Paket Pilihan
                 </span>
               )}
               <div className="flex items-center gap-3">
@@ -770,7 +772,7 @@ export default function Home() {
             rel="noopener noreferrer"
             className="font-semibold text-gold-400 underline underline-offset-2 hover:text-gold-300"
           >
-            Chat langsung untuk paket custom →
+            Konsultasikan kebutuhan untuk paket khusus →
           </a>
         </p>
       </section>
@@ -788,8 +790,8 @@ export default function Home() {
           </a>
         </p>
         <p className="mt-3">
-          © {new Date().getFullYear()} Sistem Manajemen Dapur MBG · Mendukung
-          Program Makan Bergizi Gratis.
+          © {new Date().getFullYear()} Sistem Manajemen Dapur MBG · Aplikasi
+          pengelolaan operasional dapur.
         </p>
       </footer>
       </main>

@@ -51,11 +51,11 @@ const TIPE_ACCENT: Record<TipeMutasi, { ring: string; text: string; bg: string; 
 
 // Ikon SVG (stroke seragam 1.75) — pengganti emoji/simbol teks agar tampil profesional.
 type IconProps = { className?: string };
-const Ic = (d: string) => ({ className = "h-4 w-4" }: IconProps) => (
+const Ic = (d: string) => function WarehouseIcon({ className = "h-4 w-4" }: IconProps) { return (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
     <path d={d} />
   </svg>
-);
+); };
 const IconPlus = Ic("M12 5v14M5 12h14");
 const IconMinus = Ic("M5 12h14");
 const IconClipboardCheck = ({ className = "h-4 w-4" }: IconProps) => (
@@ -272,7 +272,7 @@ export default function GudangPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">Gudang</h1>
-          <p className="text-sm text-slate-400">Dashboard nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
+          <p className="text-sm text-slate-400">Ringkasan nilai persediaan, kelola stok (masuk/keluar/opname), &amp; kartu stok bertanggal.</p>
         </div>
         {tab === "kelola" && (
           <div className="flex flex-wrap items-center gap-2">
@@ -290,7 +290,7 @@ export default function GudangPage() {
       </div>
 
       <div className="scroll-x flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-ink-900/50 p-1">
-        {([["dashboard", "Dashboard"], ["kelola", "Kelola Stok"], ["kartu", "Kartu Stok"]] as const).map(([k, l]) => (
+        {([["dashboard", "Dasbor"], ["kelola", "Kelola Stok"], ["kartu", "Kartu Stok"]] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)}
             className={"shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition " + (tab === k ? "bg-gold-500/20 text-gold-300" : "text-slate-400 hover:bg-white/5")}>
             {l}

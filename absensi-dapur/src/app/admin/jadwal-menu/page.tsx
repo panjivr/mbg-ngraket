@@ -230,7 +230,7 @@ function HariCard({
       </div>
 
       {/* Porsi per hari */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {(["besar", "kecil", "b3"] as const).map((k) => (
           <label key={k} className="label text-[11px] capitalize">
             {k}

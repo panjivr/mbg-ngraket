@@ -174,7 +174,7 @@ export default function DistribusiPage() {
   // Jaga ref pintasan Ctrl+S selalu menunjuk ke keadaan terbaru.
   simpanShortcutRef.current = () => { if (dirty && !saving) simpan(); };
 
-  const harga = data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" };
+  const harga = useMemo(() => data?.sppg ?? { harga_besar: 10000, harga_kecil: 8000, harga_b3: 8000, nama: "", kepala_sppg: "" }, [data?.sppg]);
   const total = useMemo(() => {
     let besar = 0, kecil = 0, balita = 0, bumil = 0, busui = 0;
     for (const b of baris) {
@@ -904,7 +904,7 @@ export default function DistribusiPage() {
                   <input className="input" value={setel.koordinator} onChange={(e) => setSetel({ ...setel, koordinator: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div><label className="label">Besar</label><input type="number" className="input" value={setel.harga_besar} onChange={(e) => setSetel({ ...setel, harga_besar: parseInt(e.target.value) || 0 })} /></div>
                 <div><label className="label">Kecil</label><input type="number" className="input" value={setel.harga_kecil} onChange={(e) => setSetel({ ...setel, harga_kecil: parseInt(e.target.value) || 0 })} /></div>
                 <div><label className="label">B3</label><input type="number" className="input" value={setel.harga_b3} onChange={(e) => setSetel({ ...setel, harga_b3: parseInt(e.target.value) || 0 })} /></div>

@@ -31,13 +31,13 @@ interface Dest {
 function buildDests(f: Flags): Dest[] {
   const has = (k: string) => f.fitur.includes(k);
   const raw: Dest[] = [
-    { label: "Dashboard", href: "/admin", group: "Utama", keywords: "beranda home ringkasan", show: f.fullAdmin },
+    { label: "Dasbor", href: "/admin", group: "Utama", keywords: "beranda home ringkasan", show: f.fullAdmin },
     { label: "Distribusi", href: "/admin/distribusi", group: "Operasional", keywords: "kirim antar sekolah porsi", show: f.aksesDistribusi && has("distribusi") },
     { label: "Menu", href: "/admin/menu", group: "Operasional", keywords: "makanan resep hidangan", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
     { label: "Jadwal & Belanja", href: "/admin/jadwal-menu", group: "Operasional", keywords: "belanja bahan periode rencana", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
     { label: "Laporan Harian", href: "/admin/laporan", group: "Operasional", keywords: "penerimaan harian catatan", show: f.aksesLaporan && has("distribusi") },
     { label: "Ahli Gizi", href: "/admin/ahli-gizi", group: "Operasional", keywords: "nutrisi kalori gizi", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
-    { label: "Aslap Lapangan", href: "/admin/aslap", group: "Operasional", keywords: "asisten lapangan distribusi serah terima bast sekolah retur", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
+    { label: "Asisten Lapangan", href: "/admin/aslap", group: "Operasional", keywords: "asisten lapangan distribusi serah terima bast sekolah retur", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
     { label: "Chef Produksi", href: "/admin/chef", group: "Operasional", keywords: "chef produksi masak porsi uji rasa pemorsian", show: (f.fullAdmin || f.aksesGizi || f.aksesLaporan) && (has("ahli_gizi") || has("distribusi")) },
     { label: "Kepala Dapur", href: "/admin/kepala-dapur", group: "Operasional", keywords: "kepala sppg operasional briefing insiden inspeksi evaluasi", show: f.fullAdmin || f.aksesAudit },
     { label: "Audit Dapur", href: "/admin/audit-dapur", group: "Operasional", keywords: "audit qc mutu temuan observasi cross-check waste", show: f.fullAdmin || f.aksesAudit },
@@ -58,7 +58,7 @@ function buildDests(f: Flags): Dest[] {
     { label: "Akuntan", href: "/admin/akuntan", group: "Keuangan", keywords: "pembukuan kas jurnal", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
     { label: "Aktivitas", href: "/admin/audit", group: "Sistem", keywords: "log audit riwayat", show: f.fullAdmin },
     { label: "Pengaturan", href: "/admin/pengaturan", group: "Sistem", keywords: "setting konfigurasi profil dapur", show: f.fullAdmin },
-    { label: "Dashboard Dapur", href: "/admin/pusat/dashboard", group: "Semua Dapur", keywords: "pusat monitoring semua", show: f.isSuper },
+    { label: "Dasbor Dapur", href: "/admin/pusat/dashboard", group: "Semua Dapur", keywords: "pusat monitoring semua", show: f.isSuper },
     { label: "Rekap Absensi Pusat", href: "/admin/pusat", group: "Semua Dapur", keywords: "pusat rekap semua dapur", show: f.isSuper },
     { label: "Kelola Dapur", href: "/admin/sppg", group: "Semua Dapur", keywords: "sppg tambah dapur langganan", show: f.isSuper },
   ];
@@ -177,7 +177,7 @@ export default function CommandPalette(flags: Flags) {
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onInputKey}
             placeholder="Cari halaman… (mis. pegawai, rekap, gaji)"
-            className="w-full bg-transparent py-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            className="w-full bg-transparent py-3.5 text-base sm:text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
             aria-label="Ketik untuk mencari halaman"
           />
           <kbd className="hidden shrink-0 rounded border border-white/15 px-1.5 py-0.5 text-[10px] text-slate-400 sm:block">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import DapurIcon, { type IconName } from "@/components/DapurIcons";
 
 /**
@@ -121,6 +121,8 @@ export default function DapurBottomNav({
 }) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
 
   // Tutup sheet tiap pindah halaman.
   useEffect(() => setSheetOpen(false), [pathname]);
@@ -128,10 +130,29 @@ export default function DapurBottomNav({
   // Kunci scroll body saat sheet terbuka.
   useEffect(() => {
     if (!sheetOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const panel = sheetRef.current;
+    panel?.querySelector<HTMLElement>("button, a[href]")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSheetOpen(false);
+      if (e.key !== "Tab" || !panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>("button, a[href]"));
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    };
+    const wide = window.matchMedia("(min-width: 768px)");
+    const onResize = () => { if (wide.matches) setSheetOpen(false); };
+    document.addEventListener("keydown", onKey);
+    wide.addEventListener("change", onResize);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+      wide.removeEventListener("change", onResize);
+      previousFocus?.focus();
     };
   }, [sheetOpen]);
 
@@ -227,6 +248,8 @@ export default function DapurBottomNav({
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
+            ref={menuRef}
+            aria-controls="menu-dapur"
             aria-label="Menu lainnya"
             aria-expanded={sheetOpen}
             className={tabCls(false) + " cursor-pointer"}
@@ -239,7 +262,7 @@ export default function DapurBottomNav({
 
       {/* Bottom sheet: seluruh menu lain */}
       {sheetOpen && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu lainnya">
+        <div id="menu-dapur" className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu lainnya">
           <button
             type="button"
             aria-label="Tutup menu"
@@ -247,10 +270,15 @@ export default function DapurBottomNav({
             className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
           />
           <div
+            ref={sheetRef}
             className="absolute inset-x-0 bottom-0 max-h-[80dvh] overflow-y-auto rounded-t-3xl border-t border-white/10 bg-ink-900 px-5 pt-3 shadow-2xl"
             style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
           >
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/20" />
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold">Menu dapur</h2>
+              <button type="button" className="btn-ghost" onClick={() => setSheetOpen(false)}>Tutup</button>
+            </div>
             <div className="space-y-5">
               {groups.map((g) => (
                 <div key={g.title}>

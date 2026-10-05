@@ -290,7 +290,7 @@ function BarisPeringkat({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-slate-100">
           {row.nama}
-          {mine && <span className="ml-1.5 text-[10px] text-gold-300">(kamu)</span>}
+          {mine && <span className="ml-1.5 text-[10px] text-gold-300">(Anda)</span>}
         </p>
         <p className="truncate text-[11px] text-slate-500">
           @{row.username}

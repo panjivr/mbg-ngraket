@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 /**
  * Lambang resmi Badan Gizi Nasional (BGN). Disajikan dalam bingkai lingkaran
  * putih bertepi emas agar tampil rapi di atas latar navy tema BGN.
@@ -12,7 +14,7 @@ export default function BgnLogo({
   className?: string;
 }) {
   return (
-    <img
+    <Image
       src="/bgn-logo.webp"
       alt="Lambang Badan Gizi Nasional Republik Indonesia"
       width={size}

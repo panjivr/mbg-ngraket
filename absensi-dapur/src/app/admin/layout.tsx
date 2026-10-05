@@ -42,11 +42,12 @@ export default async function AdminLayout({
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-[1920px] px-4 pb-12 sm:px-6 lg:px-8 xl:px-10">
+      <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/10 bg-ink-950/85 px-4 py-3 shadow-appbar backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <BgnLogo size={38} />
-            <div className="leading-tight">
+            <div className="min-w-0 break-words leading-tight">
               <p className="text-sm font-bold tracking-tight">Panel {fullAdmin ? "Admin" : "Sub-Admin"} · {dapurNama}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
                 <span className="font-medium text-slate-300">{session.nama}</span>
@@ -85,7 +86,7 @@ export default async function AdminLayout({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CommandPaletteTrigger />
             <SettingsMenu />
             <NotifBell />
@@ -129,7 +130,7 @@ export default async function AdminLayout({
           <span>Masa aktif langganan dapur ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.</span>
         </div>
       )}
-      {children}
+      <main id="konten-utama" tabIndex={-1} className="min-w-0">{children}</main>
     </div>
   );
 }

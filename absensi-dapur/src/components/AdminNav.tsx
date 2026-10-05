@@ -45,14 +45,14 @@ interface Group {
 function buildGroups(f: Flags): Group[] {
   const has = (k: string) => f.fitur.includes(k);
   return [
-    { key: "dash", label: "Dashboard", icon: "gauge", solo: { label: "Dashboard", href: "/admin", icon: "gauge", exact: true, show: f.fullAdmin } },
+    { key: "dash", label: "Dasbor", icon: "gauge", solo: { label: "Dasbor", href: "/admin", icon: "gauge", exact: true, show: f.fullAdmin } },
     {
       key: "ops",
       label: "Operasional",
       icon: "truck",
       items: [
         { label: "Distribusi", href: "/admin/distribusi", icon: "truck", section: "Distribusi & Laporan", show: f.aksesDistribusi && has("distribusi") },
-        { label: "Aslap Lapangan", href: "/admin/aslap", icon: "truck", section: "Distribusi & Laporan", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
+        { label: "Asisten Lapangan", href: "/admin/aslap", icon: "truck", section: "Distribusi & Laporan", show: (f.fullAdmin || f.aksesDistribusi) && has("distribusi") },
         { label: "Laporan Harian", href: "/admin/laporan", icon: "clipboard", section: "Distribusi & Laporan", show: f.aksesLaporan && has("distribusi") },
         { label: "Menu", href: "/admin/menu", icon: "utensils", section: "Dapur & Menu", show: (f.aksesDistribusi && has("distribusi")) || (f.aksesGizi && has("ahli_gizi")) },
         { label: "Ahli Gizi", href: "/admin/ahli-gizi", icon: "leaf", section: "Dapur & Menu", show: (f.fullAdmin || f.aksesGizi) && has("ahli_gizi") },
@@ -82,7 +82,7 @@ function buildGroups(f: Flags): Group[] {
       items: [
         { label: "Rekap", href: "/admin/rekap", icon: "wallet", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
         { label: "Akuntan", href: "/admin/akuntan", icon: "coins", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
-        { label: "Supplier PO/Invoice", href: "/admin/supplier", icon: "receipt", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+        { label: "Pemasok · PO & Faktur", href: "/admin/supplier", icon: "receipt", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
       ],
     },
     {
@@ -99,7 +99,7 @@ function buildGroups(f: Flags): Group[] {
       label: "Semua Dapur",
       icon: "building",
       items: [
-        { label: "Dashboard Dapur", href: "/admin/pusat/dashboard", icon: "gauge", show: f.isSuper },
+        { label: "Dasbor Dapur", href: "/admin/pusat/dashboard", icon: "gauge", show: f.isSuper },
         { label: "Rekap Absensi", href: "/admin/pusat", icon: "calendar", exact: true, show: f.isSuper },
         { label: "Kelola Dapur", href: "/admin/sppg", icon: "building", show: f.isSuper },
         { label: "Turnamen Game", href: "/admin/pusat/turnamen", icon: "trophy", show: f.isSuper },
@@ -142,24 +142,29 @@ export default function AdminNav(flags: Flags) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(null);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
   useEffect(() => { setOpen(null); }, [pathname]);
 
   const groups = buildGroups(flags);
 
   return (
-    <nav ref={ref} className="mt-3 flex flex-wrap items-center gap-1">
+    <nav ref={ref} aria-label="Navigasi administrasi" className="mt-3 flex flex-wrap items-center gap-1">
       {groups.map((g) => {
         // Grup solo (tautan langsung).
         if (g.solo) {
           if (!g.solo.show) return null;
           return (
-            <Link key={g.key} href={g.solo.href} className={linkCls(isActive(pathname, g.solo)) + " inline-flex items-center gap-1.5"}>
+            <Link key={g.key} href={g.solo.href} aria-current={isActive(pathname, g.solo) ? "page" : undefined} className={linkCls(isActive(pathname, g.solo)) + " inline-flex items-center gap-1.5"}>
               <DapurIcon name={g.solo.icon} className="h-[18px] w-[18px] shrink-0" />
               {g.solo.label}
             </Link>
@@ -171,7 +176,7 @@ export default function AdminNav(flags: Flags) {
         if (vis.length === 1) {
           const it = vis[0];
           return (
-            <Link key={g.key} href={it.href} className={linkCls(isActive(pathname, it)) + " inline-flex items-center gap-1.5"}>
+            <Link key={g.key} href={it.href} aria-current={isActive(pathname, it) ? "page" : undefined} className={linkCls(isActive(pathname, it)) + " inline-flex items-center gap-1.5"}>
               <DapurIcon name={it.icon} className="h-[18px] w-[18px] shrink-0" />
               {it.label}
             </Link>
@@ -180,20 +185,20 @@ export default function AdminNav(flags: Flags) {
         const groupActive = vis.some((it) => isActive(pathname, it));
         const isOpen = open === g.key;
         return (
-          <div key={g.key} className="relative">
+          <div key={g.key} className="static sm:relative">
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : g.key)}
               className={linkCls(groupActive) + " inline-flex items-center gap-1.5"}
               aria-expanded={isOpen}
-              aria-haspopup="menu"
+              aria-controls={`admin-nav-${g.key}`}
             >
               <DapurIcon name={g.icon} className="h-[18px] w-[18px] shrink-0" />
               {g.label}
               <ChevronIcon open={isOpen} />
             </button>
             {isOpen && (
-              <div role="menu" className="absolute left-0 top-full z-20 mt-1 min-w-[210px] rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
+              <div id={`admin-nav-${g.key}`} className="absolute inset-x-4 top-full z-20 mt-1 max-h-[60dvh] overflow-y-auto rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl sm:inset-x-auto sm:left-0 sm:w-64">
                 {vis.map((it, i) => {
                   // Sisipkan header sub-kelompok saat section berganti (rapikan grup panjang).
                   const showHeader = it.section && it.section !== vis[i - 1]?.section;
@@ -204,6 +209,7 @@ export default function AdminNav(flags: Flags) {
                       )}
                       <Link
                         href={it.href}
+                        aria-current={isActive(pathname, it) ? "page" : undefined}
                         onClick={() => setOpen(null)}
                         className={
                           "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition " +
