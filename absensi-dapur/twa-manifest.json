@@ -1,0 +1,30 @@
+{
+  "packageId": "id.web.djati.karyawan",
+  "host": "djati.web.id",
+  "name": "Karyawan Dapur MBG",
+  "launcherName": "Dapur MBG",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#070f29",
+  "themeColorDark": "#070f29",
+  "navigationColor": "#070f29",
+  "navigationColorDark": "#070f29",
+  "backgroundColor": "#070f29",
+  "enableNotifications": false,
+  "startUrl": "/dapur",
+  "iconUrl": "https://djati.web.id/icon-512.png",
+  "maskableIconUrl": "https://djati.web.id/icon-maskable-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    { "name": "Absen", "shortName": "Absen", "url": "/dapur", "chosenIconUrl": "https://djati.web.id/icon-192.png" },
+    { "name": "Jadwal", "shortName": "Jadwal", "url": "/dapur/jadwal", "chosenIconUrl": "https://djati.web.id/icon-192.png" },
+    { "name": "Slip Gaji", "shortName": "Slip", "url": "/dapur/slip", "chosenIconUrl": "https://djati.web.id/icon-192.png" },
+    { "name": "People & Culture", "shortName": "People", "url": "/dapur/people", "chosenIconUrl": "https://djati.web.id/icon-192.png" }
+  ],
+  "signingKey": { "path": "./android.keystore", "alias": "android" },
+  "fallbackType": "customtabs",
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "fullScopeUrl": "https://djati.web.id/"
+}
