@@ -9,6 +9,7 @@ import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 import PeopleCultureSurvey from "@/components/PeopleCultureSurvey";
+import InstallAppButton from "@/components/InstallAppButton";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ export default async function DapurLayout({
         </nav>
       </header>
       <BirthdayGreeting />
+      <InstallAppButton />
       <PeopleCultureSurvey />
       <main id="konten-utama" tabIndex={-1} className="min-w-0">{children}</main>
       <DapurBottomNav

@@ -5,10 +5,10 @@
  *  - Aset statis Next    : cache-first (di-hash & immutable, aman).
  *  - API & lainnya       : selalu network (tidak di-cache).
  */
-const VERSION = "mbg-v1";
+const VERSION = "mbg-v2";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/bgn-logo.webp"];
+const PRECACHE = [OFFLINE_URL, "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
