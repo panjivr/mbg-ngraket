@@ -9,7 +9,7 @@ export const PUBLIC_PATHS = [
   "/", "/fitur", "/solusi/absensi-sppg", "/solusi/rekap-gaji", "/solusi/distribusi",
   "/panduan", "/panduan/memilih-aplikasi-sppg", "/panduan/rekap-absensi-shift-malam", "/tentang",
 ];
-export const PRIVATE_PATHS = ["/admin", "/dapur", "/cetak", "/api", "/login", "/info-gizi", "/game", "/offline.html"];
+export const PRIVATE_PATHS = ["/admin", "/dapur", "/cetak", "/api", "/login", "/info-gizi", "/offline.html"];
 
 export function publicMetadata(path: string, title: string, description: string): Metadata {
   const url = `${SITE_URL}${path === "/" ? "" : path}`;

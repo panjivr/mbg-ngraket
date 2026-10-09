@@ -454,8 +454,6 @@ async function doEnsureSchema(): Promise<void> {
     // Periode papan peringkat yang ditampilkan ke karyawan (2 minggu, Minggu–Sabtu).
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_from DATE`);
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS leaderboard_to DATE`);
-    // Lokasi kab/kota SISKAPERBAPO (Jatim) untuk referensi harga pasar HPP.
-    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS siskaperbapo_kabkota TEXT NOT NULL DEFAULT ''`);
 
     // Master penerima (sekolah/SERDIK & kelompok B3 posyandu).
     await client.query(`
@@ -717,7 +715,7 @@ async function doEnsureSchema(): Promise<void> {
     `);
     // Komponen gizi "Isi Piringku" per bahan (untuk cek kelengkapan gizi oleh ahli gizi).
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS komponen TEXT NOT NULL DEFAULT 'lainnya'`);
-    // HPP / food cost: harga satuan bahan + acuan komoditas pasar (SISKAPERBAPO).
+    // HPP / food cost: harga satuan bahan + referensi harga yang tersimpan.
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS harga NUMERIC NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE menu_bahan ADD COLUMN IF NOT EXISTS pasar_ref TEXT NOT NULL DEFAULT ''`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_menu_bahan_menu ON menu_bahan (menu_id)`);
@@ -1608,56 +1606,6 @@ async function doEnsureSchema(): Promise<void> {
         gap_catatan   TEXT NOT NULL DEFAULT ''
       );
     `);
-
-    // --- Game "Blok Gizi": skor & turnamen online lintas dapur ---
-    // Papan peringkat global (semua akun nyambung). Turnamen dikelola admin pusat.
-    // `game_skor` menyimpan rekor terbaik sepanjang masa per akun (papan global).
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS game_skor (
-        user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        skor_terbaik  INTEGER NOT NULL DEFAULT 0,
-        total_main    INTEGER NOT NULL DEFAULT 0,
-        terakhir_main TIMESTAMPTZ,
-        updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_game_skor_terbaik ON game_skor (skor_terbaik DESC)`,
-    );
-    // Riwayat tiap permainan selesai — dipakai untuk peringkat turnamen
-    // (skor tertinggi per pemain dalam rentang waktu turnamen).
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS game_riwayat (
-        id         BIGSERIAL PRIMARY KEY,
-        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        skor       INTEGER NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_game_riwayat_user ON game_riwayat (user_id)`,
-    );
-    await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_game_riwayat_waktu ON game_riwayat (created_at)`,
-    );
-    // Turnamen: rentang waktu + hadiah juara 1/2/3. Dibuat oleh admin pusat.
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS game_turnamen (
-        id          SERIAL PRIMARY KEY,
-        nama        TEXT NOT NULL,
-        mulai       TIMESTAMPTZ NOT NULL,
-        selesai     TIMESTAMPTZ NOT NULL,
-        hadiah1     TEXT NOT NULL DEFAULT '',
-        hadiah2     TEXT NOT NULL DEFAULT '',
-        hadiah3     TEXT NOT NULL DEFAULT '',
-        catatan     TEXT NOT NULL DEFAULT '',
-        created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_game_turnamen_waktu ON game_turnamen (mulai, selesai)`,
-    );
 
     // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
     await client.query(

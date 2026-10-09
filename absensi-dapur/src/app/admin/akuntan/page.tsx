@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { query } from "@/lib/db";
 import { TEMPLATE_AKUNTAN } from "@/lib/akuntan";
-import HargaPasarPanel from "@/components/HargaPasarPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -185,8 +184,6 @@ export default async function AkuntanHubPage() {
         </div>
       </div>
 
-      {/* Acuan harga pasar (SISKAPERBAPO) — nyambung ke pengisian nominal BA */}
-      <HargaPasarPanel />
 
       {/* Kelompok template */}
       {KELOMPOK.map((grup) => {

@@ -96,7 +96,7 @@ export interface MenuBahan {
   pembulatan: Pembulatan;
   komponen: KomponenGizi;
   harga: number; // harga per satuan bahan (Rp) — untuk HPP/food cost
-  pasar_ref: string; // nama komoditas SISKAPERBAPO yang jadi acuan harga (opsional)
+  pasar_ref: string; // referensi harga lama yang tersimpan (opsional)
   urutan: number;
 }
 

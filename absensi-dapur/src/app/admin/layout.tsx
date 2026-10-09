@@ -9,7 +9,6 @@ import PaketGuard from "@/components/PaketGuard";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
-import NotifBell from "@/components/NotifBell";
 import SettingsMenu from "@/components/SettingsMenu";
 import { paketEfektif, paketExpired, fiturAktif, SEMUA_FITUR, PAKET_LABEL } from "@/lib/paket";
 
@@ -89,7 +88,6 @@ export default async function AdminLayout({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CommandPaletteTrigger />
             <SettingsMenu />
-            <NotifBell />
             <Link href="/dapur" className="btn-ghost px-3 py-1.5 text-xs">
               Mode Absen
             </Link>

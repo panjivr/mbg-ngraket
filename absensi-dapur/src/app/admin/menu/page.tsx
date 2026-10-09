@@ -24,7 +24,6 @@ import {
   type Pembulatan,
 } from "@/lib/menu";
 import { SASARAN, MEAL_FRACTION } from "@/lib/gizi-nutrisi";
-import type { KomoditasPasar } from "@/lib/siskaperbapo";
 import QuoteBanner from "@/components/QuoteBanner";
 
 const rupiah = (n: number) => "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(n));
@@ -43,69 +42,6 @@ interface Pagu {
   kecil: number;
   b3: number;
 }
-interface PasarData {
-  tersedia: boolean;
-  tanggal: string;
-  kabkota: string;
-  label: string;
-  daftarKabkota: { value: string; label: string }[];
-  lokasiDapur: string;
-  sumber: "live" | "cache" | null;
-  komoditas: KomoditasPasar[];
-  catatan: string | null;
-}
-
-/** Cocokkan nama bahan ke komoditas pasar (heuristik token sederhana). */
-function cariKomoditas(namaBahan: string, list: KomoditasPasar[]): KomoditasPasar | null {
-  const n = namaBahan.trim().toLowerCase();
-  if (!n) return null;
-  const exact = list.find((k) => k.nama.toLowerCase() === n);
-  if (exact) return exact;
-  const kata = n.split(/\s+/).filter((w) => w.length >= 3);
-  let best: KomoditasPasar | null = null;
-  let bestScore = 0;
-  for (const k of list) {
-    const kn = k.nama.toLowerCase();
-    let score = 0;
-    for (const w of kata) if (kn.includes(w)) score += w.length;
-    if (kn.includes(n) || n.includes(kn.split(/\s+/)[0])) score += 2;
-    if (score > bestScore) {
-      bestScore = score;
-      best = k;
-    }
-  }
-  return bestScore >= 3 ? best : null;
-}
-
-/**
- * Parser "tempel manual": ubah teks yang disalin dari tabel SISKAPERBAPO
- * (atau daftar harga apa pun) menjadi daftar komoditas. Jaminan agar fitur
- * tetap bisa dipakai walau pengambilan otomatis gagal — tinggal salin-tempel.
- */
-const SATUAN_TEMPEL = /\b(kg|gram|ons|liter|ltr|butir|ikat|buah|ekor|bungkus|sisir|papan|pack|sachet|botol|bh)\b/i;
-function parseTempelKomoditas(text: string): KomoditasPasar[] {
-  const out: KomoditasPasar[] = [];
-  const seen = new Set<string>();
-  for (const raw of text.split(/\n+/)) {
-    const line = raw.replace(/\s+/g, " ").trim();
-    if (!line) continue;
-    const nums = [...line.matchAll(/\d[\d.,]*/g)]
-      .map((m) => ({ v: parseInt(m[0].replace(/[^\d]/g, ""), 10), i: m.index ?? 0 }))
-      .filter((x) => x.v >= 100);
-    if (nums.length === 0) continue;
-    const harga = nums.reduce((a, b) => (b.v > a.v ? b : a));
-    let nama = line.slice(0, harga.i).replace(/^\d+[.)]\s*/, "").replace(/[|:–-]+\s*$/, "").trim();
-    const satuan = (nama.match(SATUAN_TEMPEL)?.[0] || line.match(SATUAN_TEMPEL)?.[0] || "").toLowerCase();
-    nama = nama.replace(SATUAN_TEMPEL, "").replace(/\s+/g, " ").trim();
-    if (nama.length < 2 || /komoditas|harga|satuan|no\.?$/i.test(nama)) continue;
-    const key = nama.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push({ id: String(out.length + 1), nama, satuan, harga: harga.v });
-  }
-  return out;
-}
-
 interface BarangPilih {
   id: number;
   nama: string;
@@ -146,10 +82,6 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // Harga pasar SISKAPERBAPO (untuk isi harga bahan otomatis).
-  const [pasar, setPasar] = useState<PasarData | null>(null);
-  const [pasarBusy, setPasarBusy] = useState(false);
-
   const load = useCallback(async () => {
     setLoading(true);
     setErr("");
@@ -173,41 +105,6 @@ export default function MenuPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const loadPasar = useCallback(async (kabkota?: string) => {
-    setPasarBusy(true);
-    try {
-      const qs = kabkota !== undefined ? `?kabkota=${encodeURIComponent(kabkota)}` : "";
-      const res = await fetch(`/api/admin/harga-pasar${qs}`, { cache: "no-store" });
-      const d = await res.json().catch(() => null);
-      if (res.ok && d) setPasar(d as PasarData);
-    } catch {
-      /* biarkan; fitur ini opsional */
-    } finally {
-      setPasarBusy(false);
-    }
-  }, []);
-  useEffect(() => {
-    loadPasar();
-  }, [loadPasar]);
-
-  // Ganti & simpan lokasi kab/kota, lalu muat ulang harga.
-  const gantiLokasi = useCallback(
-    async (kabkota: string) => {
-      setPasarBusy(true);
-      try {
-        await fetch("/api/admin/harga-pasar", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kabkota }),
-        });
-      } catch {
-        /* abaikan */
-      }
-      await loadPasar(kabkota);
-    },
-    [loadPasar],
-  );
 
   const tambahMenu = async () => {
     const nama = prompt("Nama menu baru:")?.trim();
@@ -302,9 +199,6 @@ export default function MenuPage() {
               menu={selected}
               barang={barang}
               pagu={pagu}
-              pasar={pasar}
-              pasarBusy={pasarBusy}
-              onGantiLokasi={gantiLokasi}
               onSaved={load}
               onDuplikat={() => duplikatMenu(selected)}
               onDeleted={() => {
@@ -323,9 +217,6 @@ function MenuEditor({
   menu,
   barang,
   pagu,
-  pasar,
-  pasarBusy,
-  onGantiLokasi,
   onSaved,
   onDuplikat,
   onDeleted,
@@ -333,9 +224,6 @@ function MenuEditor({
   menu: MenuLengkap;
   barang: BarangPilih[];
   pagu: Pagu;
-  pasar: PasarData | null;
-  pasarBusy: boolean;
-  onGantiLokasi: (kabkota: string) => void;
   onSaved: () => void;
   onDuplikat: () => void;
   onDeleted: () => void;
@@ -351,19 +239,6 @@ function MenuEditor({
   const [porsiTarget, setPorsiTarget] = useState<number>(menu.porsi_dasar);
   // Sasaran AKG untuk kalkulator gizi (default SD 4–6, penerima MBG umum).
   const [sasaranKey, setSasaranKey] = useState<string>("sd46");
-  // Tempel manual harga pasar (fallback bila auto-fetch SISKAPERBAPO gagal).
-  const [manualKom, setManualKom] = useState<KomoditasPasar[]>([]);
-  const [pasteOpen, setPasteOpen] = useState(false);
-  const [pasteVal, setPasteVal] = useState("");
-  const komList = manualKom.length > 0 ? manualKom : pasar?.komoditas || [];
-  const adaHarga = komList.length > 0;
-  const prosesTempel = () => {
-    const parsed = parseTempelKomoditas(pasteVal);
-    setManualKom(parsed);
-    setMsg(parsed.length > 0 ? `${parsed.length} komoditas dibaca dari tempelan.` : "Tidak ada baris harga terbaca. Pastikan menyalin kolom nama & harga.");
-    if (parsed.length > 0) setPasteOpen(false);
-  };
-
   const updBahan = (i: number, patch: Partial<BahanDraft>) =>
     setBahan((prev) => prev.map((b, idx) => (idx === i ? { ...b, ...patch } : b)));
 
@@ -382,33 +257,6 @@ function MenuEditor({
       { barang_id: null, nama: "", satuan: "kg", jumlah_dasar: 0, pembulatan: "desimal", komponen: "lainnya", harga: 0, pasar_ref: "" },
     ]);
   const delBahan = (i: number) => setBahan((prev) => prev.filter((_, idx) => idx !== i));
-
-  // Isi harga satu bahan dari komoditas pasar terpilih.
-  const pakaiKomoditas = (i: number, namaKomoditas: string) => {
-    const k = komList.find((x) => x.nama === namaKomoditas);
-    if (!k) {
-      updBahan(i, { pasar_ref: "" });
-      return;
-    }
-    updBahan(i, { harga: k.harga, pasar_ref: k.nama });
-  };
-
-  // Cocokkan otomatis semua bahan ke komoditas pasar & isi harganya.
-  const cocokkanOtomatis = () => {
-    const list = komList;
-    if (list.length === 0) return;
-    let terisi = 0;
-    setBahan((prev) =>
-      prev.map((b) => {
-        if (!b.nama.trim()) return b;
-        const k = cariKomoditas(b.nama, list);
-        if (!k) return b;
-        terisi += 1;
-        return { ...b, harga: k.harga, pasar_ref: k.nama };
-      }),
-    );
-    setMsg(terisi > 0 ? `${terisi} bahan dicocokkan dengan harga pasar.` : "Tidak ada bahan yang cocok otomatis.");
-  };
 
   const simpan = async () => {
     setSaving(true);
@@ -545,80 +393,6 @@ function MenuEditor({
           </button>
         </div>
 
-        {/* Harga Pasar SISKAPERBAPO (Jatim) — untuk isi harga bahan otomatis */}
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="grid h-6 w-6 place-items-center rounded bg-emerald-500/15 text-emerald-300">🏷️</span>
-              <p className="text-sm font-semibold">Harga Pasar · SISKAPERBAPO Jatim</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="input py-1 text-xs"
-                value={pasar?.kabkota ?? ""}
-                onChange={(e) => onGantiLokasi(e.target.value)}
-                disabled={pasarBusy || !pasar}
-                title="Pilih lokasi kab/kota (disimpan sebagai default dapur)"
-              >
-                {(pasar?.daftarKabkota || []).map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={cocokkanOtomatis}
-                disabled={!adaHarga || pasarBusy}
-                className="btn-ghost px-2.5 py-1 text-xs"
-                title="Cocokkan nama bahan ke komoditas pasar & isi harganya otomatis"
-              >
-                Cocokkan otomatis
-              </button>
-              <button
-                onClick={() => setPasteOpen((v) => !v)}
-                className="btn-ghost px-2.5 py-1 text-xs"
-                title="Tempel harga hasil salin dari situs SISKAPERBAPO"
-              >
-                Tempel manual
-              </button>
-              <a
-                href={`https://siskaperbapo.jatimprov.go.id/harga/tabel/?kabkota=${encodeURIComponent(pasar?.kabkota ?? "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-ghost px-2.5 py-1 text-xs"
-                title="Buka situs resmi SISKAPERBAPO (harga selalu bisa dilihat manual)"
-              >
-                Buka SISKAPERBAPO ↗
-              </a>
-            </div>
-          </div>
-          {pasteOpen && (
-            <div className="mt-2 space-y-2">
-              <textarea
-                value={pasteVal}
-                onChange={(e) => setPasteVal(e.target.value)}
-                rows={5}
-                className="input text-xs"
-                placeholder={"Salin baris komoditas dari situs SISKAPERBAPO lalu tempel di sini.\nContoh:\nBeras Premium   kg   13.500\nTelur Ayam Ras   kg   27.000\nMinyak Goreng Curah   liter   15.700"}
-              />
-              <div className="flex gap-2">
-                <button onClick={prosesTempel} className="btn-gold px-3 py-1 text-xs">Proses tempelan</button>
-                {manualKom.length > 0 && (
-                  <button onClick={() => { setManualKom([]); setPasteVal(""); }} className="btn-ghost px-3 py-1 text-xs">Hapus data tempel</button>
-                )}
-              </div>
-            </div>
-          )}
-          <p className="mt-2 text-[11px] text-slate-400">
-            {pasarBusy
-              ? "Memuat harga pasar…"
-              : manualKom.length > 0
-                ? `${manualKom.length} komoditas dari tempelan manual. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
-                : pasar?.tersedia
-                  ? `Harga per ${pasar.tanggal} · ${pasar.label} · ${pasar.komoditas.length} komoditas${pasar.sumber === "cache" ? " (cache)" : ""}. Pilih di kolom "Acuan pasar" atau klik Cocokkan otomatis.`
-                  : (pasar?.catatan || "Harga pasar otomatis tak tersedia.") + " Gunakan tombol Buka SISKAPERBAPO lalu Tempel manual, atau isi harga manual."}
-          </p>
-        </div>
         {bahan.length === 0 ? (
           <p className="text-xs text-slate-500">Belum ada bahan. Klik <b>+ Bahan</b>.</p>
         ) : (
@@ -633,7 +407,6 @@ function MenuEditor({
                   <th className="px-2 py-2">Satuan</th>
                   <th className="px-2 py-2">Pembulatan</th>
                   <th className="px-2 py-2">Harga/satuan</th>
-                  <th className="px-2 py-2">Acuan pasar</th>
                   <th className="px-2 py-2"></th>
                 </tr>
               </thead>
@@ -711,22 +484,6 @@ function MenuEditor({
                         placeholder="0"
                         title="Harga per satuan bahan (Rp)"
                       />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <select
-                        className="input w-40 py-1"
-                        value={b.pasar_ref}
-                        onChange={(e) => pakaiKomoditas(i, e.target.value)}
-                        disabled={!adaHarga}
-                        title="Ambil harga dari komoditas pasar SISKAPERBAPO"
-                      >
-                        <option value="">— manual —</option>
-                        {komList.map((k) => (
-                          <option key={k.id} value={k.nama}>
-                            {k.nama} ({rupiah(k.harga)}/{k.satuan})
-                          </option>
-                        ))}
-                      </select>
                     </td>
                     <td className="px-2 py-1.5 text-right">
                       <button onClick={() => delBahan(i)} className="btn-ghost px-2 py-1 text-[11px] text-red-400">

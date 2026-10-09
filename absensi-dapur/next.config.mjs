@@ -31,7 +31,7 @@ const nextConfig = {
   // Cache jangka panjang untuk aset statis ber-hash (immutable) → repeat visit instan.
   async headers() {
     return [
-      ...["/admin/:path*", "/dapur/:path*", "/cetak/:path*", "/api/:path*", "/login", "/info-gizi/:path*", "/game/:path*", "/offline.html", "/indexnow-key.txt"].map(source => ({
+      ...["/admin/:path*", "/dapur/:path*", "/cetak/:path*", "/api/:path*", "/login", "/info-gizi/:path*", "/offline.html", "/indexnow-key.txt"].map(source => ({
         source, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),
       {

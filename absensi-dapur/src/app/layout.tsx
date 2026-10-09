@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SITE_URL } from "@/lib/marketing";
-import MusicPlayer from "@/components/marketing/ContextualMusicPlayer";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import ThemeLangProvider from "@/components/ThemeLangProvider";
 
@@ -56,7 +55,6 @@ export default function RootLayout({
       <body>
         <ThemeLangProvider>
           {children}
-          <MusicPlayer src="/audio/musik-latar.mp3" />
           <ServiceWorkerRegistrar />
         </ThemeLangProvider>
       </body>
