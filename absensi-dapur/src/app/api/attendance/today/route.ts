@@ -3,7 +3,8 @@ import { requireSession } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { ok, route } from "@/lib/api";
 import { isOvernight, localDate } from "@/lib/time";
-import type { DivisiShift, EventAbsensi } from "@/lib/types";
+import type { DivisiShift } from "@/lib/types";
+import { attendanceEvent, workSchedule } from "@/lib/attendance-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,14 +46,15 @@ export const GET = route(async () => {
       `SELECT d.id AS divisi_id, d.nama AS divisi_nama, d.jobdesk,
               d.jam_masuk, d.jam_pulang, d.toleransi_menit
          FROM users u
-         LEFT JOIN divisi d ON d.id = u.divisi_id AND d.aktif = TRUE
+         LEFT JOIN divisi d ON d.id = u.divisi_id AND d.aktif = TRUE AND d.sppg_id = u.sppg_id
         WHERE u.id = $1`,
       [session.uid],
     )
   )[0];
 
-  const jam_masuk = shiftRow?.jam_masuk || settings.jam_masuk;
-  const jam_pulang = shiftRow?.jam_pulang || settings.jam_pulang;
+  const schedule = await workSchedule(session.uid,tz);
+  const jam_masuk = schedule?.jam_masuk || shiftRow?.jam_masuk || settings.jam_masuk;
+  const jam_pulang = schedule?.jam_pulang || shiftRow?.jam_pulang || settings.jam_pulang;
 
   // Pilihan sub-shift untuk divisi pegawai (mis. keamanan pagi/siang/malam).
   const shifts = shiftRow?.divisi_id
@@ -65,18 +67,7 @@ export const GET = route(async () => {
     : [];
 
   // Event absensi aktif hari ini untuk dapur pegawai ini (mis. general cleaning).
-  const event =
-    (
-      await query<EventAbsensi>(
-        `SELECT * FROM event_absensi
-          WHERE aktif = TRUE AND tanggal = $1 AND sppg_id = $2
-            AND (NOT EXISTS (SELECT 1 FROM event_peserta ep WHERE ep.event_id = event_absensi.id)
-                 OR EXISTS (SELECT 1 FROM event_peserta ep
-                             WHERE ep.event_id = event_absensi.id AND ep.user_id = $3))
-          ORDER BY id DESC LIMIT 1`,
-        [tanggal, session.sppg_id, session.uid],
-      )
-    )[0] ?? null;
+  const event = await attendanceEvent(session.uid,session.sppg_id!,tz);
 
   // Shift yang sedang terbuka (sudah masuk, belum pulang) — apa pun tanggalnya.
   const current =
@@ -122,6 +113,7 @@ export const GET = route(async () => {
     current,
     last,
     tanggal,
+    schedule,
     emosiHistory,
     shift: {
       divisi_nama: shiftRow?.divisi_nama ?? null,

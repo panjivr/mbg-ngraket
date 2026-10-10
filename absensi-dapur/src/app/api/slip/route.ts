@@ -77,6 +77,8 @@ export const POST = route(async () => {
   if (!sppg) return fail(404, "Data dapur tidak ditemukan.");
   const w = windowInfo(sppg, sppg.tz || "Asia/Jakarta");
   if (!w.visible) return fail(403, "Slip tidak sedang ditampilkan.");
+  const employee = (await query<{slip_show:boolean}>("SELECT slip_show FROM users WHERE id=$1 AND sppg_id=$2", [s.uid,s.sppg_id]))[0];
+  if (!employee?.slip_show) return fail(403, "Slip Anda belum diterbitkan oleh HR.");
   await query(
     `INSERT INTO slip_konfirmasi (user_id, periode_from, periode_to)
      VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,

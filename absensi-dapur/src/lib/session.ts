@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { verifyMobileToken } from "./mobile-auth";
 import { query } from "./db";
-import { getUserAccess } from "./user-access";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -11,8 +11,17 @@ import {
 
 /** Read + verify the session inside a Route Handler / Server Component. */
 export async function getSession(): Promise<SessionData | null> {
+  const authorization = (await headers()).get("authorization");
+  if (authorization) {
+    return authorization.startsWith("Bearer ") ? verifyMobileToken(authorization.slice(7)) : null;
+  }
   const store = await cookies();
-  return verifySession(store.get(SESSION_COOKIE)?.value);
+  const session = await verifySession(store.get(SESSION_COOKIE)?.value);
+  if (!session) return null;
+  const fresh = await query<SessionData>(`SELECT u.id AS uid,u.username,u.nama,u.role,u.sppg_id,
+    u.is_super,u.is_hr,u.akses_distribusi,u.akses_laporan,u.akses_keuangan,u.akses_gizi,u.akses_audit,u.akses_gudang_keluar
+    FROM users u JOIN sppg d ON d.id=u.sppg_id WHERE u.id=$1 AND u.aktif=TRUE AND d.aktif=TRUE`, [session.uid]);
+  return fresh[0] ?? null;
 }
 
 export async function setSessionCookie(data: SessionData): Promise<void> {
@@ -36,15 +45,6 @@ export async function clearSessionCookie(): Promise<void> {
 export async function requireSession(): Promise<SessionData> {
   const s = await getSession();
   if (!s) throw new HttpError(401, "Belum login.");
-  // Backfill sppg_id/is_super untuk token lama (sebelum fitur multi-dapur).
-  if (s.sppg_id == null || s.is_super === undefined) {
-    const r = await query<{ sppg_id: number | null; is_super: boolean }>(
-      `SELECT sppg_id, is_super FROM users WHERE id = $1`,
-      [s.uid],
-    );
-    s.sppg_id = r[0]?.sppg_id ?? 1;
-    s.is_super = !!r[0]?.is_super;
-  }
   return s;
 }
 
@@ -66,20 +66,12 @@ export async function requireAkses(area: AksesArea | AksesArea[]): Promise<Sessi
   const s = await requireSession();
   if (s.role === "admin") return s;
   const areas = Array.isArray(area) ? area : [area];
-  // Flag akses dibaca via cache in-memory pendek (getUserAccess) — hemat 1
-  // round-trip DB tiap request; di-invalidasi saat hak akses pegawai diubah.
-  const acc = await getUserAccess(s.uid);
-  s.akses_distribusi = !!acc?.akses_distribusi;
-  s.akses_laporan = !!acc?.akses_laporan;
-  s.akses_keuangan = !!acc?.akses_keuangan;
-  s.akses_gizi = !!acc?.akses_gizi;
-  s.akses_audit = !!acc?.akses_audit;
   const flags: Record<AksesArea, boolean> = {
-    distribusi: s.akses_distribusi,
-    laporan: s.akses_laporan,
-    keuangan: s.akses_keuangan,
-    gizi: s.akses_gizi,
-    audit: s.akses_audit,
+    distribusi: !!s.akses_distribusi,
+    laporan: !!s.akses_laporan,
+    keuangan: !!s.akses_keuangan,
+    gizi: !!s.akses_gizi,
+    audit: !!s.akses_audit,
   };
   const ok = areas.some((a) => flags[a]);
   if (!ok) throw new HttpError(403, "Tidak punya akses ke fitur ini.");
@@ -94,8 +86,6 @@ export async function requireAkses(area: AksesArea | AksesArea[]): Promise<Sessi
  */
 export async function requireHr(): Promise<SessionData> {
   const s = await requireSession();
-  const acc = await getUserAccess(s.uid);
-  s.is_hr = !!acc?.is_hr;
   if (!s.is_hr) throw new HttpError(403, "Khusus HR.");
   return s;
 }
@@ -108,9 +98,6 @@ export async function requireHr(): Promise<SessionData> {
 export async function requireGudang(mode: "full" | "keluar" | "read"): Promise<SessionData> {
   const s = await requireSession();
   if (s.role === "admin") return s;
-  const acc = await getUserAccess(s.uid);
-  s.akses_laporan = !!acc?.akses_laporan;
-  s.akses_gudang_keluar = !!acc?.akses_gudang_keluar;
   const full = !!s.akses_laporan;
   const keluar = full || !!s.akses_gudang_keluar;
   const ok = mode === "full" ? full : keluar;

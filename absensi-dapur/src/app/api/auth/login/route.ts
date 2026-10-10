@@ -4,6 +4,7 @@ import { verifyPassword } from "@/lib/password";
 import { setSessionCookie } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
 import type { Role } from "@/lib/auth";
+import { loginRateLimited } from "@/lib/mobile-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,12 +27,15 @@ interface UserRow {
 
 export const POST = route(async (req: NextRequest) => {
   const body = await req.json().catch(() => ({}));
+  if (!body || typeof body.username!=="string" || typeof body.password!=="string"
+      || body.username.length>100 || body.password.length>128) return fail(400,"Username/password tidak valid.");
   const username = String(body.username ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
 
   if (!username || !password) {
     return fail(400, "Username dan password wajib diisi.");
   }
+  if (await loginRateLimited(username)) return fail(429,"Terlalu banyak percobaan. Tunggu 15 menit.");
 
   const rows = await query<UserRow>(
     `SELECT id, nama, username, password_hash, role, aktif, sppg_id, is_super, akses_distribusi, akses_laporan, akses_keuangan, akses_gizi, is_hr

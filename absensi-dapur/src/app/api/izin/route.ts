@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
+import { validDate, validImage } from "@/lib/employee-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const JENIS = ["izin", "sakit", "cuti"] as const;
 
 export interface IzinRow {
@@ -40,7 +40,9 @@ export const GET = route(async () => {
 export const POST = route(async (req: NextRequest) => {
   const s = await requireSession();
   const b = await req.json().catch(() => ({}));
-  const jenis = JENIS.includes(b.jenis) ? b.jenis : "izin";
+  if (!b || typeof b!=="object" || Array.isArray(b)) return fail(400,"Permintaan tidak valid.");
+  if (!JENIS.includes(b.jenis)) return fail(400, "Jenis izin tidak valid.");
+  const jenis = b.jenis;
   const mulai = String(b.tanggal_mulai ?? "").trim();
   const selesai = String(b.tanggal_selesai ?? "").trim();
   const alasan = String(b.alasan ?? "").trim();
@@ -49,11 +51,13 @@ export const POST = route(async (req: NextRequest) => {
       ? b.lampiran
       : null;
 
-  if (!DATE_RE.test(mulai) || !DATE_RE.test(selesai))
+  if (!validDate(mulai) || !validDate(selesai))
     return fail(400, "Tanggal tidak valid.");
   if (mulai > selesai)
     return fail(400, "Tanggal mulai melewati tanggal selesai.");
   if (!alasan) return fail(400, "Alasan wajib diisi.");
+  if (alasan.length > 2000) return fail(400, "Alasan maksimal 2000 karakter.");
+  if (b.lampiran && !validImage(b.lampiran, 2_500_000)) return fail(400, "Lampiran JPEG/PNG tidak valid.");
   if (lampiran && lampiran.length > 2_500_000)
     return fail(400, "Ukuran lampiran terlalu besar.");
 
