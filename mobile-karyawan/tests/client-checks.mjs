@@ -53,4 +53,17 @@ vm.runInNewContext(compile("../src/AttendanceScreen.tsx"),attendance);
 assert.equal(attendance.exports.distanceMeters(-7,111,-7,111),0);
 assert.ok(Math.abs(attendance.exports.distanceMeters(0,0,0,1)-111195)<=1);
 assert.ok(Number.isFinite(attendance.exports.distanceMeters(0,0,0,180)));
+for(const month of [new Date(2024,1,1),new Date(2026,9,1)]) {
+  const calendar={exports:{},require:name=>name==="react"?{useState:()=>[month,()=>{}]}:
+    name==="react/jsx-runtime"?{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}:name==="./ui"?{styles:{}}:{}};
+  vm.runInNewContext(compile("../src/HistoryCalendar.tsx"),calendar);
+  const tree=calendar.exports.default({history:[]}),weeks=[];
+  function walk(node) {if(Array.isArray(node)){node.forEach(walk);return;}if(!node?.props)return;
+    if(node.props.style?.flexDirection==="row" && node.props.style?.gap===4)weeks.push(node);
+    walk(node.props.children);
+  }
+  walk(tree);assert.ok(weeks.length>=4 && weeks.length<=6);
+  assert.ok(weeks.every(w=>w.props.children.length===7));
+  assert.equal(weeks.flatMap(w=>w.props.children).filter(day=>day.props.accessible).length,new Date(month.getFullYear(),month.getMonth()+1,0).getDate());
+}
 console.log("Fixed primary origin, upgrade isolation, staff/admin web sessions and WebView navigation checks passed");

@@ -37,6 +37,7 @@ export default function WebFeature({title,path,close}:{title:string;path:string;
         originWhitelist={["*"]} onShouldStartLoadWithRequest={req=>allowedWebUrl(req.url)}
         onNavigationStateChange={state=>{back.current=state.canGoBack;}}
         sharedCookiesEnabled thirdPartyCookiesEnabled={false} mixedContentMode="never"
+        geolocationEnabled
         allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false}
         setSupportMultipleWindows={false} javaScriptCanOpenWindowsAutomatically={false}
         startInLoadingState renderLoading={()=><ActivityIndicator color="#81a9ff"/>}
