@@ -48,7 +48,7 @@ Catatan skema lama: attendance bergantung pada user_id tanpa snapshot SPPG histo
 
 Layar memakai komponen React Native, tanpa WebView. Kamera/GPS hanya diminta saat dipakai; lokasi latar belakang tidak diaktifkan.
 
-## Hasil verifikasi lokal
+## Hasil verifikasi
 
 | Pemeriksaan | Hasil |
 | --- | --- |
@@ -61,15 +61,19 @@ Layar memakai komponen React Native, tanpa WebView. Kamera/GPS hanya diminta saa
 | Bundle Android Hermes | Lulus, 701 modul, sekitar 1,9 MB |
 | Android prebuild/config plugin | Lulus |
 | Diff whitespace dan pola secret pada perubahan | Tidak ditemukan masalah/pola secret pada scan |
-| APK release/signing/perangkat fisik | Belum dijalankan |
+| APK universal release pengujian | Lulus build CI, 83,4 MiB; minimum API 24 dan empat ABI |
+| Signature APK | Verifikasi v2 lulus, satu signer debug template |
+| Emulator Android 15 | Instalasi dan cold launch lulus; tanpa error AndroidRuntime/ReactNativeJS saat launch |
+| Layar kecil | Login 320 × 568 dp, font 140%, scroll vertikal tersedia; tidak melebar horizontal |
+| Signing produksi/perangkat fisik | Belum diuji/dibuat |
 
 Tes integrasi menjalankan server hanya di 127.0.0.1:3119 dan PostgreSQL khusus `mbg_mobile_test` di loopback. Database produksi tidak dipakai. Pemeriksaan mencakup role/tenant, akun nonaktif, token invalid/refresh lama/logout, rotasi refresh bersamaan, reset password yang mencabut sesi mobile, pencabutan izin HR langsung, throttling web/mobile, geofence, GPS stale/mock, foto invalid, checkout shift lintas hari, retry idempotent, koreksi HR, larangan HR tenant lain, jadwal libur, event lama, notifikasi dan profil. Coverage persentase tidak diukur; ini 77 assertion, bukan 77 skenario perangkat.
 
-Workflow GitHub PR ditambahkan untuk menjalankan web lint/build, tes PostgreSQL 17, pemeriksaan tipe/kompatibilitas Expo dan bundle Android. Hasil lokal tidak berarti workflow cloud sudah lulus.
+Workflow GitHub PR menjalankan web lint/build, tes PostgreSQL 17, pemeriksaan tipe/kompatibilitas Expo, tes klien, bundle Android dan APK native. Ketiga job lulus pada [run 38064354806](https://github.com/panjivr/mbg-ngraket/actions/runs/38064354806), commit aplikasi `efc281a`. APK selesai dalam 9 menit 14 detik. Tidak dilakukan login atau absensi uji ke database produksi.
 
 ## Kendala dan batas sebelum rilis
 
-1. APK bertanda tangan belum dibuat. Mesin ini belum memiliki Android SDK; EAS cloud build tidak dijalankan dan membutuhkan konfigurasi akun/signing serta persetujuan layanan.
+1. APK pengujian memakai debug signing template. Signing produksi/Play Store belum dibuat. Build Windows mengalami gangguan cache; APK berhasil dibangun di runner Linux. EAS cloud build tidak dijalankan.
 2. Kamera, GPS/geofence di lokasi nyata, picker, PDF/share, baterai/Doze, notifikasi dan pergantian akun harus diuji pada APK di perangkat fisik.
 3. Notifikasi keputusan/pengumuman belum berupa push remote/FCM; hanya inbox saat aplikasi dibuka. Pengingat lokal perlu disinkronkan ulang setelah jadwal diubah.
 4. Koreksi berlaku untuk baris absensi yang ada; belum membuat catatan hari yang sama sekali kosong.
@@ -79,6 +83,10 @@ Workflow GitHub PR ditambahkan untuk menjalankan web lint/build, tes PostgreSQL 
 8. Isi master plan sebelumnya tidak dapat diverifikasi karena rujukan tidak menyediakan teksnya.
 
 ## PR, produksi dan APK
+
+APK pengujian berhasil diinstal/dibuka pada emulator Android 15. Metadata minimum Android 7/API 24, target API 36, ABI arm64-v8a/armeabi-v7a/x86/x86_64; signature v2 valid. SHA-256 `986dae5d3dc4cf3830ad46570caae4433c321e300c1218f1112c0f2862a31b0a`. Pengujian login dengan akun nyata, kamera/GPS/PDF di Xiaomi 11T fisik belum dilakukan.
+
+Alamat utama terverifikasi dari Chrome: `https://djati.web.id`; endpoint mobile belum aktif (404). APK menyediakan kompatibilitas sesi web pada origin ini saja, menyimpan sesi di SecureStore tanpa password, dan memblokir retry absensi sebelum reload status. Koreksi, inbox keputusan dan pengingat zona waktu memerlukan API PR #102. Penguatan token server di branch ini belum berlaku pada produksi lama. Data mengikuti backend utama setelah deploy; perubahan layar native memerlukan APK baru. Alamat server bisa diganti sesudah logout. Tidak dibuat fork/database baru dan main tetap tidak berubah.
 
 Branch fitur dinonaktifkan untuk auto-deploy Vercel melalui `git.deploymentEnabled` pada root dan root aplikasi. Workflow deploy lama hanya berjalan di main. Tidak dilakukan merge, deploy, perubahan credential, migrasi produksi atau EAS build.
 
