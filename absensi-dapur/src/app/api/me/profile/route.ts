@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { query } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { ok, fail, route } from "@/lib/api";
+import { validImage } from "@/lib/employee-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export const GET = route(async () => {
 export const PUT = route(async (req: NextRequest) => {
   const session = await requireSession();
   const body = await req.json().catch(() => ({}));
+  if (!body || typeof body!=="object" || Array.isArray(body)) return fail(400,"Permintaan tidak valid.");
 
   const hasFoto = body.foto_profil !== undefined;
   const hasBio = body.bio !== undefined;
@@ -61,8 +63,7 @@ export const PUT = route(async (req: NextRequest) => {
     if (body.foto_profil === null || body.foto_profil === "") {
       foto = null;
     } else if (
-      typeof body.foto_profil === "string" &&
-      body.foto_profil.startsWith("data:image")
+      validImage(body.foto_profil, MAX_FOTO_CHARS)
     ) {
       if (body.foto_profil.length > MAX_FOTO_CHARS) {
         return fail(413, "Ukuran foto terlalu besar. Coba foto yang lebih kecil.");

@@ -40,8 +40,8 @@ export const POST = route(async (req: NextRequest) => {
   if (!Number.isFinite(id)) return fail(400, "ID tidak valid.");
   await query(
     `INSERT INTO pengumuman_baca (pengumuman_id, user_id)
-     VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-    [id, s.uid],
+     SELECT id, $2 FROM pengumuman WHERE id=$1 AND sppg_id=$3 AND aktif=TRUE ON CONFLICT DO NOTHING`,
+    [id, s.uid, s.sppg_id],
   );
   return ok({ id });
 });

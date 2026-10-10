@@ -15,15 +15,17 @@
     "db:init": "node scripts/init-db.mjs",
     "db:backup": "node --env-file=.env.local scripts/backup-db.mjs",
     "db:restore": "node scripts/restore-db.mjs",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "test:mobile": "node tests/mobile-checks.mjs",
+    "test:mobile:integration": "node tests/mobile-integration.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "exceljs": "^4.4.0",
     "html-to-image": "^1.11.13",
     "jose": "^5.9.6",
-    "jspdf": "^2.5.2",
-    "jspdf-autotable": "^3.8.4",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "next": "^15.1.6",
     "pg": "^8.13.1",
     "qrcode": "^1.5.4",

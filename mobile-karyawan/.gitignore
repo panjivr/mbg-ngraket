@@ -1,0 +1,11 @@
+node_modules/
+.expo/
+.gradle-local/
+dist/
+android/
+ios/
+.env
+.env*.local
+*.jks
+*.keystore
+credentials.json

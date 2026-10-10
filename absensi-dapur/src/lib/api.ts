@@ -21,9 +21,7 @@ export function route<Args extends unknown[]>(
         return fail(err.status, err.message);
       }
       console.error("[absensi] route error:", err);
-      const msg =
-        err instanceof Error ? err.message : "Terjadi kesalahan server.";
-      return fail(500, msg);
+      return fail(500, "Terjadi kesalahan server. Silakan coba lagi.");
     }
   };
 }

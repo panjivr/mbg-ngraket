@@ -160,6 +160,17 @@ async function main() {
     console.log(`✓ Tabel sudah ada (${rows[0].c} pengguna). Tidak ada seed ulang.`);
   }
 
+  // The runtime initializer owns the full multi-SPPG schema. Only extend an already migrated DB here.
+  const ready = await client.query("SELECT to_regclass('public.sppg') AS table_name");
+  if (ready.rows[0].table_name) {
+    const source = fs.readFileSync(path.join(root, "src/lib/mobile-schema.ts"), "utf8");
+    const sql = source.match(/export const MOBILE_SCHEMA = `([\s\S]*)`;/)?.[1];
+    if (!sql) throw new Error("Mobile schema not found");
+    await client.query(sql);
+    console.log("✓ Skema mobile diinisialisasi.");
+  } else {
+    console.log("Jalankan aplikasi lokal sekali untuk migrasi multi-SPPG sebelum memakai API mobile.");
+  }
   console.log("✓ Inisialisasi database selesai.");
 }
 

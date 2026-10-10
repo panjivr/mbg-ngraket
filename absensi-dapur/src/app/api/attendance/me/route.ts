@@ -22,8 +22,9 @@ interface RiwayatRow {
 
 export const GET = route(async (req: NextRequest) => {
   const session = await requireSession();
+  const parsed = Number(req.nextUrl.searchParams.get("limit") || "30");
   const limit = Math.min(
-    Math.max(parseInt(req.nextUrl.searchParams.get("limit") || "30", 10), 1),
+    Math.max(Number.isFinite(parsed) ? Math.trunc(parsed) : 30, 1),
     180,
   );
 

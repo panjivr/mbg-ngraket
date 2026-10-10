@@ -2,6 +2,7 @@ import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
 import { hashPassword } from "./password";
 import { SOP_SEED } from "./sop-seed";
 import { PENERIMA_SEED } from "./distribusi-seed";
+import { MOBILE_SCHEMA } from "./mobile-schema";
 
 // Kembalikan kolom DATE (OID 1082) sebagai string "YYYY-MM-DD" apa adanya,
 // bukan objek Date (yang akan terserialisasi jadi ISO timestamp dengan TZ).
@@ -10,7 +11,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-02b.people-culture-full";
+const SCHEMA_VERSION = "2026-10-10.mobile-karyawan-v2";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -1607,6 +1608,7 @@ async function doEnsureSchema(): Promise<void> {
       );
     `);
 
+    await client.query(MOBILE_SCHEMA);
     // Tandai skema sudah pada versi terkini agar cold start berikutnya cepat.
     await client.query(
       `INSERT INTO app_meta (k, v) VALUES ('schema_version', $1)

@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "MBG Karyawan",
+    "slug": "mbg-karyawan",
+    "version": "1.1.0",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#080f28",
+    "platforms": [
+      "android"
+    ],
+    "orientation": "portrait",
+    "android": {
+      "package": "id.mbg.ngraket.karyawan",
+      "versionCode": 2,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      "expo-notifications",
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      "expo-font"
+    ]
+  }
+}

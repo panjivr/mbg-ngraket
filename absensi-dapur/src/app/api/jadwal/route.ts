@@ -13,6 +13,7 @@ interface Row {
   jam_pulang: string | null;
   keterangan: string | null;
   libur: boolean;
+  reminder_at: string | null;
 }
 
 // Jadwal kerja karyawan sendiri, dari hari ini ke depan (± 3 minggu).
@@ -21,11 +22,12 @@ export const GET = route(async () => {
   const sppg = await getSppg(s.sppg_id as number);
   const today = localDate(sppg?.tz || "Asia/Jakarta");
   const rows = await query<Row>(
-    `SELECT tanggal, jam_masuk, jam_pulang, keterangan, libur
+    `SELECT tanggal, jam_masuk, jam_pulang, keterangan, libur,
+            (tanggal + jam_masuk::time) AT TIME ZONE $3 AS reminder_at
        FROM jadwal_kerja
       WHERE user_id = $1 AND tanggal >= $2
       ORDER BY tanggal ASC LIMIT 31`,
-    [s.uid, today],
+    [s.uid, today, sppg?.tz || "Asia/Jakarta"],
   );
   return ok({ jadwal: rows, today });
 });

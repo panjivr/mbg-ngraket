@@ -1,0 +1,86 @@
+name: Mobile karyawan checks
+on:
+  pull_request:
+    paths:
+      - "mobile-karyawan/**"
+      - "absensi-dapur/**"
+      - ".github/workflows/mobile-karyawan.yml"
+permissions:
+  contents: read
+jobs:
+  web-api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: mbg_mobile_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 55437:5432
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: absensi-dapur
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: absensi-dapur/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:mobile
+      - run: npm run build
+      - run: npm run test:mobile:integration
+        env:
+          MOBILE_TEST_DATABASE_URL: postgres://postgres@127.0.0.1:55437/mbg_mobile_test
+  android-bundle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile-karyawan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile-karyawan/package-lock.json
+      - run: npm ci
+      - run: npx expo install --check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:bundle
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile-karyawan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile-karyawan/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo prebuild --platform android --no-install
+      - run: chmod +x android/gradlew && cd android && ./gradlew :app:assembleRelease --no-daemon --max-workers=2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MBG-Karyawan-Android-APK
+          path: mobile-karyawan/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
