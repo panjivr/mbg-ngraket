@@ -3,53 +3,54 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
-const storage=new Map();
-const calls=[];
+const storage=new Map(),calls=[];
 const secureStore={getItemAsync:async k=>storage.get(k),setItemAsync:async(k,v)=>storage.set(k,v),deleteItemAsync:async k=>storage.delete(k)};
-const source=ts.transpileModule(fs.readFileSync(new URL("../src/api.ts",import.meta.url),"utf8"),{
-  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+function compile(file) {return ts.transpileModule(fs.readFileSync(new URL(file,import.meta.url),"utf8"),{
+  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;}
 const context={exports:{},require:name=>{assert.equal(name,"expo-secure-store");return secureStore;},URL,AbortController,setTimeout,clearTimeout,
-  process:{env:{}},fetch:async(url,init)=>{calls.push({url,init});return {ok:true,status:200,json:async()=>({access_token:"access",refresh_token:"refresh"})};}};
-vm.runInNewContext(source,context);
+  process:{env:{EXPO_PUBLIC_API_URL:"https://untrusted.example"}},fetch:async(url,init)=>{calls.push({url,init});return {ok:true,status:200,json:async()=>({access_token:"a".repeat(43),refresh_token:"r".repeat(43)})};}};
+vm.runInNewContext(compile("../src/api.ts"),context);
 const client=context.exports;
+storage.set("mbg_server","https://old-staging.example");storage.set("mbg_session",JSON.stringify({cookie:"old-account"}));
 assert.equal(await client.restore(),false);
-for(const url of ["http://example.test","https://example.test/api","https://user:pass@example.test","https://example.test?x=1","https://example.test/#x"])
-  await assert.rejects(()=>client.setServerUrl(url));
-await client.setServerUrl(" https://staging.example.test/ ");
-assert.equal(client.serverUrl(),"https://staging.example.test");
-assert.equal(storage.get("mbg_server"),"https://staging.example.test");
-await client.login("employee","test-only");
-assert.equal(calls[0].url,"https://staging.example.test/api/mobile/auth");
-assert.equal(calls[0].init.credentials,"omit");
-await assert.rejects(()=>client.setServerUrl("https://other.example.test"));
-await client.logout();
 assert.equal(storage.has("mbg_session"),false);
-await client.setServerUrl("https://other.example.test");
-await client.restore();
-assert.equal(client.serverUrl(),"https://other.example.test");
-await client.setServerUrl("https://djati.web.id");
+assert.equal(storage.has("mbg_server"),false);
+assert.equal(client.serverUrl(),"https://djati.web.id");
+assert.equal(client.setServerUrl,undefined);
+for(const value of ["null","{}",JSON.stringify({cookie:"absensi_session=bad; injected=x"}),JSON.stringify({access_token:"invalid",refresh_token:"invalid"})]) {
+  storage.set("mbg_session",value);assert.equal(await client.restore(),false);assert.equal(storage.has("mbg_session"),false);
+}
+await client.login("employee","test-only");
+assert.equal(calls[0].url,"https://djati.web.id/api/mobile/auth");
+assert.equal(calls[0].init.credentials,"omit");
+await client.logout();assert.equal(storage.has("mbg_session"),false);
+let role="staff";
 context.fetch=async(url,init)=>{
   calls.push({url,init});
   return url.endsWith("/api/mobile/auth")?{ok:false,status:404}:{ok:true,status:200,
     headers:{get:()=>"absensi_session=signed-test-session; Path=/; HttpOnly; Secure; SameSite=Lax"},
-    json:async()=>({user:{role:"staff"}})};
+    json:async()=>({user:{role}})};
 };
-await client.login("employee","test-only");
-assert.equal(client.legacyServer(),true);
-await client.api("/api/me/profile");
-assert.equal(calls.at(-1).init.headers.Cookie,"absensi_session=signed-test-session");
-assert.equal(calls.at(-1).init.headers.Authorization,undefined);
-assert.equal(calls.at(-1).init.redirect,"error");
-await client.logout();
-assert.equal(calls.at(-1).url,"https://djati.web.id/api/auth/logout");
-assert.equal(client.legacyServer(),false);
-context.fetch=async url=>url.endsWith("/api/mobile/auth")?{ok:false,status:404}:{ok:true,status:200,json:async()=>({user:{role:"admin"}})};
-await assert.rejects(()=>client.login("admin","test-only"));
-assert.equal(storage.has("mbg_session"),false);
-await client.setServerUrl("https://other.example.test");
-calls.length=0;
-context.fetch=async url=>{calls.push(url);return {ok:false,status:404,json:async()=>({error:"missing"})};};
-await assert.rejects(()=>client.login("employee","test-only"));
-assert.equal(calls.length,1);
-assert.ok(calls[0].endsWith("/api/mobile/auth"));
-console.log("Mobile server configuration and modern/legacy session checks passed");
+for(role of ["staff","admin"]) {
+  await client.login(role,"test-only");assert.equal(client.legacyServer(),true);
+  assert.equal(client.webSessionCookie(),"absensi_session=signed-test-session");
+  await client.api("/api/me/profile");
+  assert.equal(calls.at(-1).init.headers.Cookie,"absensi_session=signed-test-session");
+  assert.equal(calls.at(-1).init.headers.Authorization,undefined);
+  assert.equal(calls.at(-1).init.redirect,"error");
+  await client.logout();assert.equal(calls.at(-1).url,"https://djati.web.id/api/auth/logout");
+  assert.equal(client.legacyServer(),false);assert.equal(client.webSessionCookie(),null);
+}
+role="unknown";await assert.rejects(()=>client.login("unknown","test-only"));assert.equal(storage.has("mbg_session"),false);
+calls.length=0;context.fetch=async(url,init)=>{calls.push({url,init});return {ok:false,status:401,json:async()=>({error:"invalid"})};};
+await assert.rejects(()=>client.login("employee","test-only"));assert.equal(calls.length,1);
+const web={exports:{},URL,require:name=>name==="./api"?client:{}};
+vm.runInNewContext(compile("../src/WebFeature.tsx"),web);
+for(const url of ["https://djati.web.id/dapur/sop","https://djati.web.id/admin","https://djati.web.id/login"])assert.equal(web.exports.allowedWebUrl(url),true);
+for(const url of ["http://djati.web.id/dapur","https://evil.example","https://djati.web.id.evil.example","javascript:alert(1)","file:///etc/passwd","https://x:pass@djati.web.id/"])assert.equal(web.exports.allowedWebUrl(url),false);
+const attendance={exports:{},require:()=>({})};
+vm.runInNewContext(compile("../src/AttendanceScreen.tsx"),attendance);
+assert.equal(attendance.exports.distanceMeters(-7,111,-7,111),0);
+assert.ok(Math.abs(attendance.exports.distanceMeters(0,0,0,1)-111195)<=1);
+assert.ok(Number.isFinite(attendance.exports.distanceMeters(0,0,0,180)));
+console.log("Fixed primary origin, upgrade isolation, staff/admin web sessions and WebView navigation checks passed");

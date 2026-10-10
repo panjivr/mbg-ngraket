@@ -1,12 +1,12 @@
 # MBG Karyawan — Android native
 
-Aplikasi React Native + Expo SDK 55, React 19.2 dan React Native 0.83.10. Tidak memakai WebView. iPhone tetap memakai web Next.js.
+Aplikasi React Native + Expo SDK 55, React 19.2 dan React Native 0.83.10. Layar inti native; modul lengkap yang sudah ada memakai WebView dengan sesi portal utama. iPhone tetap memakai web Next.js.
 
 ## APK pengujian dan hubungan dengan repo utama
 
 Target minimum Android 7 / API 24; Xiaomi 11T didukung secara arsitektur arm64. Versi Android sebelum 7 tidak didukung. APK universal mencakup arm64-v8a, armeabi-v7a, x86 dan x86_64. Ini tidak menjamin semua perangkat/vendor tanpa pengujian fisik.
 
-Alamat default adalah `https://djati.web.id`, ditemukan dari tab aplikasi utama di Chrome. Alamat HTTPS bisa diganti pada layar login setelah logout. Data dan aturan backend mengikuti server yang dipilih; perubahan kode layar native perlu APK baru. Tidak perlu fork/database kedua. Branch fitur dan draft PR tidak mengubah main.
+Alamat tetap `https://djati.web.id`, tanpa input server atau konfigurasi `.env`. Data dan aturan mengikuti portal utama; perubahan kode layar native perlu APK baru. Tidak perlu fork/database kedua. Branch fitur dan draft PR tidak mengubah main. Pengaturan server versi 1.0 dihapus saat upgrade; sesi staging lama dibuang sebelum menghubungi portal utama.
 
 Pada 10 Oktober 2026 server utama belum memiliki `/api/mobile/auth` (HTTP 404). Aplikasi memakai login web lama hanya pada origin terverifikasi `https://djati.web.id`; sesi disimpan terenkripsi di SecureStore dan dikirim sebagai cookie lewat HTTPS. Tidak menyimpan password. Sesi server lama tetap mengikuti keamanan/masa berlaku sistem web lama, tanpa rotasi refresh atau pencabutan token mobile baru. Retry absensi otomatis diblokir: muat ulang status sebelum percobaan baru.
 
@@ -25,12 +25,15 @@ Workflow PR menghasilkan artifact `MBG-Karyawan-Android-APK`. APK release untuk 
 - Pengumuman, gambar, status dibaca; kotak notifikasi keputusan izin/koreksi.
 - Pengingat Android lokal 15 menit sebelum jadwal yang disinkronkan.
 - Profil, bio, foto dan logout yang mencabut sesi server.
+- Beranda navy, menu layanan berkelompok, lima navigasi bawah, kalender riwayat dan pratinjau GPS.
+- Peringkat, SOP, Finansial, Aspirasi, People & Culture, kartu pegawai dan portal lengkap memakai halaman web asli. Sesi web lama staff/admin diteruskan ke cookie native HttpOnly/Secure; URL luar origin diblokir. Hak admin tetap ditentukan server.
+- Koreksi/inbox yang belum aktif menampilkan jalur HR dan pengumuman/status izin yang tersedia. Akun token modern tanpa cookie web mungkin perlu masuk web sekali ketika membuka modul web.
 
 Koreksi ditinjau HR lewat web di `/admin/hr/corrections`. Persetujuan menyimpan data asli, menolak pengajuan yang sudah berubah, lalu memperbarui catatan dan hitungan slip.
 
 ## Backend dan database
 
-Gunakan origin HTTPS aplikasi `absensi-dapur` yang sudah memiliki API mobile dari branch ini. Jangan tambahkan `/api` pada URL dasar. Web dan Android memakai PostgreSQL yang sama melalui API Next.js; aplikasi tidak menyimpan kredensial database.
+Web dan Android memakai PostgreSQL yang sama melalui API Next.js di portal utama; aplikasi tidak menyimpan kredensial database. API mobile baru belum berlaku di produksi sampai backend branch ini diaktifkan.
 
 Backend Rust adalah jalur enterprise terpisah dengan identitas UUID dan skema berbeda; aplikasi ini tidak menghubungkannya ke akun integer `absensi-dapur`.
 
@@ -55,13 +58,6 @@ Node.js 22 direkomendasikan. Dari folder `mobile-karyawan`:
 
 ```powershell
 npm ci
-Copy-Item .env.example .env
-```
-
-Isi `.env` dengan alamat backend HTTPS pengujian yang sudah disetujui:
-
-```dotenv
-EXPO_PUBLIC_API_URL=https://alamat-backend-pengujian-anda
 ```
 
 Lalu:
@@ -72,7 +68,7 @@ npx expo install --check
 npm start
 ```
 
-Gunakan perangkat Android / Expo Go untuk percobaan modul yang didukung, lalu uji APK native. HTTP sengaja ditolak oleh klien. Jangan arahkan uji mutasi ke produksi.
+Gunakan development build atau APK native; cookie manager memerlukan native build sehingga Expo Go tidak cukup. Jangan membuat catatan produksi untuk uji otomatis.
 
 Untuk migrasi database pengujian, jalankan backend dengan DATABASE_URL pengujian dan AUTH_SECRET tersendiri. Runtime `ensureSchema()` memakai transaksi dan advisory lock untuk membuat skema lengkap serta tabel tambahan. `npm run db:init` juga menambahkan tabel mobile jika skema multi-SPPG sudah tersedia; pada DB baru initializer lama harus dilanjutkan dengan runtime aplikasi.
 
@@ -83,7 +79,6 @@ Langkah ini belum dijalankan. Pembuatan project/build cloud memerlukan akun Expo
 ```powershell
 npx eas-cli login
 npx eas-cli init
-npx eas-cli env:set --name EXPO_PUBLIC_API_URL --value https://alamat-backend-pengujian-anda --environment preview --visibility plaintext
 npx eas-cli build --platform android --profile preview
 ```
 
@@ -107,7 +102,7 @@ Set-Location android
 .\gradlew.bat assembleRelease
 ```
 
-Hasil biasanya berada di `android/app/build/outputs/apk/release/`. Periksa signing sebelum distribusi; template lokal dapat memakai debug key. Folder native hasil prebuild dan signing artifacts diabaikan Git. Mesin sesi ini belum memiliki Android SDK sehingga APK lokal belum dihasilkan.
+Hasil biasanya berada di `android/app/build/outputs/apk/release/`. Periksa signing sebelum distribusi; template lokal dapat memakai debug key. Folder native hasil prebuild dan signing artifacts diabaikan Git. APK dibangun di GitHub Actions; SDK lokal digunakan untuk verifikasi instalasi emulator.
 
 ## Tes backend
 

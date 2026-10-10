@@ -1,8 +1,8 @@
 import React,{useCallback,useEffect,useState} from "react";
-import {ActivityIndicator,Alert,AppState,Image,KeyboardAvoidingView,RefreshControl,ScrollView,Text,View} from "react-native";
+import {ActivityIndicator,Alert,AppState,BackHandler,Image,KeyboardAvoidingView,Pressable,RefreshControl,ScrollView,Text,View} from "react-native";
 import {SafeAreaProvider,SafeAreaView} from "react-native-safe-area-context";
 import {StatusBar} from "expo-status-bar";
-import {api,login,logout,restore,setExpiryHandler,serverUrl,setServerUrl,legacyServer} from "./src/api";
+import {api,login,logout,restore,setExpiryHandler,legacyServer} from "./src/api";
 import {Today,Attendance,Schedule,Leave,Correction,Announcement,Notice,Profile,SlipResponse} from "./src/types";
 import {Button,Card,Copy,Field,Label,styles,stamp,rupiah} from "./src/ui";
 import AttendanceScreen from "./src/AttendanceScreen";
@@ -10,16 +10,20 @@ import DateField from "./src/DateField";
 import {pickImage} from "./src/media";
 import {setReminders,clearReminders} from "./src/reminders";
 import {shareSlip} from "./src/slip-pdf";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import {BottomNav,MenuSheet,ServiceTile,services,nav} from "./src/navigation";
+import WebFeature,{clearWebSession} from "./src/WebFeature";
+import HistoryCalendar from "./src/HistoryCalendar";
 
-const tabs=["Absensi","Jadwal","Riwayat","Izin","Koreksi","Slip gaji","Pengumuman","Notifikasi","Profil"] as const;
+const tabs=["Beranda","Absensi","Jadwal","Riwayat","Izin","Koreksi","Slip gaji","Pengumuman","Notifikasi","Profil"] as const;
 type Tab=typeof tabs[number];
 const localDate=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 function EmployeeApp() {
   const [ready,setReady]=useState(false),[signedIn,setSignedIn]=useState(false);
   const [username,setUsername]=useState(""),[password,setPassword]=useState("");
-  const [server,setServer]=useState(serverUrl());
-  const [tab,setTab]=useState<Tab>("Absensi"),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const [menu,setMenu]=useState(false),[web,setWeb]=useState<{title:string;path:string}|null>(null),[admin,setAdmin]=useState(false);
+  const [tab,setTab]=useState<Tab>("Beranda"),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const [today,setToday]=useState<Today|null>(null),[schedule,setSchedule]=useState<Schedule[]>([]);
   const [history,setHistory]=useState<Attendance[]>([]),[leaves,setLeaves]=useState<Leave[]>([]),[corrections,setCorrections]=useState<Correction[]>([]);
   const [announcements,setAnnouncements]=useState<Announcement[]>([]),[notices,setNotices]=useState<Notice[]>([]);
@@ -32,13 +36,14 @@ function EmployeeApp() {
   const tz=today?.settings?.tz || "Asia/Jakarta";
 
   const clearData=useCallback(()=>{
-    setSignedIn(false);setTab("Absensi");setToday(null);setSchedule([]);setHistory([]);setLeaves([]);setCorrections([]);
+    setSignedIn(false);setTab("Beranda");setMenu(false);setWeb(null);setAdmin(false);setToday(null);setSchedule([]);setHistory([]);setLeaves([]);setCorrections([]);
     setAnnouncements([]);setNotices([]);setProfile(null);setSlip(null);setBio("");setReason("");setAttachment(null);setAttendanceId(null);
     void clearReminders().catch(()=>{});
+    void clearWebSession().catch(()=>{});
   },[]);
   useEffect(()=>{
     setExpiryHandler(clearData);
-    void restore().then(value=>{setServer(serverUrl());setSignedIn(value);}).catch(e=>setError(String(e))).finally(()=>setReady(true));
+    void restore().then(setSignedIn).catch(e=>setError(String(e))).finally(()=>setReady(true));
     return ()=>setExpiryHandler(()=>{});
   },[clearData]);
   const load=useCallback(async ()=>{
@@ -46,23 +51,42 @@ function EmployeeApp() {
     setError("");
     try {
       switch(tab) {
+        case "Beranda": {
+          const [t,p,u]=await Promise.all([api<Today>("/api/attendance/today"),api<{profil:Profile}>("/api/me/profile"),api<{user:{role:string}}>("/api/auth/me")]);
+          setToday(t);setProfile(p.profil);setAdmin(u.user?.role==="admin");break;
+        }
         case "Absensi": setToday(await api<Today>("/api/attendance/today"));break;
         case "Jadwal": setSchedule((await api<{jadwal:Schedule[]}>("/api/jadwal")).jadwal);break;
         case "Riwayat": setHistory((await api<{riwayat:Attendance[]}>("/api/attendance/me?limit=180")).riwayat);break;
         case "Izin": setLeaves((await api<{izin:Leave[]}>("/api/izin")).izin);break;
         case "Koreksi": {
+          if(legacyServer())break;
           const [c,h]=await Promise.all([api<{corrections:Correction[]}>("/api/me/corrections"),api<{riwayat:Attendance[]}>("/api/attendance/me?limit=180")]);
           setCorrections(c.corrections);setHistory(h.riwayat);break;
         }
         case "Slip gaji": setSlip(await api<SlipResponse>("/api/slip"));break;
         case "Pengumuman": setAnnouncements((await api<{pengumuman:Announcement[]}>("/api/pengumuman")).pengumuman);break;
-        case "Notifikasi": setNotices((await api<{notifications:Notice[]}>("/api/me/notifications")).notifications);break;
+        case "Notifikasi": if(!legacyServer())setNotices((await api<{notifications:Notice[]}>("/api/me/notifications")).notifications);break;
         case "Profil": {const p=(await api<{profil:Profile}>("/api/me/profile")).profil;setProfile(p);setBio(p.bio||"");break;}
       }
     } catch(e) {setError(e instanceof Error?e.message:"Gagal memuat data.");throw e;}
   },[signedIn,tab]);
   useEffect(()=>{setBusy(true);void load().catch(()=>{}).finally(()=>setBusy(false));},[load]);
   useEffect(()=>{const sub=AppState.addEventListener("change",s=>{if(s==="active" && tab!=="Profil")void load().catch(()=>{});});return ()=>sub.remove();},[load,tab]);
+  useEffect(()=>{const sub=BackHandler.addEventListener("hardwareBackPress",()=>{
+    if(menu){setMenu(false);return true;}if(!web && signedIn && tab!=="Beranda"){setTab("Beranda");return true;}return false;
+  });return ()=>sub.remove();},[menu,web,signedIn,tab]);
+  function select(title:string,path?:string) {
+    setMenu(false);setError("");setAttachment(null);setReason("");
+    const service=services.find(s=>s.title===title);
+    if(path || service?.path)setWeb({title,path:path || service!.path!});
+    else if(tabs.includes(title as Tab))setTab(title as Tab);
+  }
+  function signOut() {
+    setMenu(false);setBusy(true);
+    void logout().then(async()=>{await clearWebSession();clearData();await clearReminders();})
+      .catch(e=>setError(e instanceof Error?e.message:"Logout gagal.")).finally(()=>setBusy(false));
+  }
   async function perform(task:()=>Promise<unknown>,message?:string) {
     if(busy)return;
     setBusy(true);setError("");
@@ -72,7 +96,7 @@ function EmployeeApp() {
   }
   async function signIn() {
     setBusy(true);setError("");
-    try {await setServerUrl(server);await login(username,password);setPassword("");setSignedIn(true);}
+    try {await clearWebSession();await login(username,password);setPassword("");setSignedIn(true);}
     catch(e){setError(e instanceof Error?e.message:"Login gagal.");}
     finally{setBusy(false);}
   }
@@ -91,22 +115,34 @@ function EmployeeApp() {
     <StatusBar style="light"/>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}
       refreshControl={signedIn?<RefreshControl refreshing={busy} tintColor="#efc56b" onRefresh={()=>{void perform(load);}}/>:undefined}>
-      <Text accessibilityRole="header" style={styles.title}>MBG Karyawan</Text>
-      <Copy>{signedIn?today?.settings?.nama_dapur || "Portal karyawan":"Masuk dengan akun karyawan dapur Anda."}</Copy>
+      <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
+        <Image source={require("./assets/bgn-logo.webp")} style={{width:44,height:44}} accessibilityLabel="Badan Gizi Nasional"/>
+        <Pressable accessibilityRole="button" accessibilityLabel="Beranda MBG Karyawan" disabled={!signedIn} onPress={()=>select("Beranda")} style={{flex:1,minHeight:48,justifyContent:"center"}}>
+          <Text style={[styles.label,{fontSize:20}]}>MBG Karyawan</Text><Text style={{color:"#8bcfff",fontSize:12,marginTop:4}}>PROGRAM MAKAN BERGIZI GRATIS</Text>
+        </Pressable>
+        {signedIn && <Pressable accessibilityLabel="Buka pengumuman" accessibilityRole="button" onPress={()=>select("Pengumuman")} style={{minWidth:48,minHeight:48,alignItems:"center",justifyContent:"center"}}><Ionicons name="notifications-outline" color="#b9c6de" size={24}/></Pressable>}
+      </View>
       {!!error && <Text accessibilityRole="alert" style={{color:"#ffb4b4",fontSize:16}}>{error}</Text>}
-      {!signedIn?<Card>
-        <Field label="Alamat server HTTPS" value={server} onChange={setServer}/>
-        <Copy>Masukkan alamat staging yang diberikan admin. Akun dan data mengikuti server ini.</Copy>
+      {!signedIn?<>
+        <View style={{paddingVertical:24,gap:12}}><View style={{width:64,height:64,borderRadius:20,backgroundColor:"#142752",alignItems:"center",justifyContent:"center"}}><Ionicons name="shield-checkmark-outline" color="#83caff" size={32}/></View>
+          <Text accessibilityRole="header" style={[styles.title,{fontSize:34}]}>Hari baik dimulai{"\n"}dari sini.</Text><Copy>Absensi, jadwal, dan layanan karyawan dalam satu aplikasi.</Copy></View>
+        <Card><Label>Selamat datang kembali</Label><Copy>Gunakan akun yang sama dengan portal dapur.</Copy>
         <Field label="Username" value={username} onChange={setUsername}/>
         <Field label="Password" value={password} onChange={setPassword} secure/>
-        <Button title={busy?"Memproses…":"Masuk"} disabled={busy} onPress={()=>{void signIn();}}/>
-      </Card>:<>
-        {legacyServer() && <Copy>Terhubung ke sistem utama. Koreksi dan inbox keputusan memerlukan API mobile baru; fitur lain memakai API web yang sudah ada.</Copy>}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          {tabs.map(t=><Button key={t} title={tab===t?"● "+t:t} disabled={busy} onPress={()=>{setTab(t);setAttachment(null);setReason("");}}/>)}
-        </ScrollView>
+        <Button title={busy?"Memproses…":"Masuk ke akun"} disabled={busy || !username.trim() || !password} onPress={()=>{void signIn();}}/>
+      </Card><Copy>Terhubung ke portal resmi djati.web.id. Jika lupa password, hubungi admin dapur Anda.</Copy></>:<>
         <Text accessibilityRole="header" style={styles.title}>{tab}</Text>
-        {busy && <ActivityIndicator color="#efc56b"/>}
+        {busy && <ActivityIndicator color="#81a9ff"/>}
+        {tab==="Beranda" && <>
+          <Card><Copy>Selamat datang,</Copy><Text style={styles.title}>{profile?.nama || "Karyawan"}</Text>
+            <Copy>{today?.settings?.nama_dapur || "Memuat dapur…"}</Copy><Copy>{new Date().toLocaleDateString("id-ID",{timeZone:tz,weekday:"long",day:"numeric",month:"long",year:"numeric"})}</Copy>
+            <View style={styles.row}><Ionicons name="checkmark-circle" size={20} color="#65dab7"/><Text style={{color:"#65dab7",fontSize:16}}>Sesi aktif</Text></View>
+          </Card>
+          <Card><View style={styles.row}><Ionicons name="shield-checkmark-outline" size={24} color="#65dab7"/><Label>Siap bekerja dengan aman</Label></View><Copy>Gunakan masker, penutup kepala, celemek, dan sarung tangan sesuai SOP dapur.</Copy></Card>
+          <Card><Copy>JADWAL BERLAKU</Copy><Label>{today?.shift?`${today.shift.jam_masuk} – ${today.shift.jam_pulang}`:"Lihat jadwal dapur"}{today?.shift?.lintas_hari?" · lintas hari":""}</Label>
+            <Copy>{today?.shift?.divisi_nama || "Jadwal umum dapur"}</Copy><Button title={today?.current?"Lanjutkan · absen pulang":"Mulai · absen masuk"} onPress={()=>select("Absensi")}/></Card>
+          <Label>Layanan karyawan</Label><View style={nav.grid}>{services.filter(s=>["Peringkat","Slip gaji","Jadwal","Izin","SOP","Aspirasi","People & Culture","Kartu saya"].includes(s.title)).map(s=><ServiceTile key={s.title} {...s} onPress={()=>select(s.title,s.path)}/>)}</View>
+        </>}
         {tab==="Absensi" && today && <AttendanceScreen today={today} reload={load}/>}
         {tab==="Jadwal" && <>
           <Card><Copy>{legacyServer()?"Pengingat jadwal memerlukan API mobile baru agar zona waktu dapur tepat.":"Pengingat muncul 15 menit sebelum shift terjadwal. Jadwal yang berubah perlu disinkronkan lagi."}</Copy>
@@ -114,9 +150,9 @@ function EmployeeApp() {
           {!schedule.length && <Copy>Belum ada jadwal khusus. Lihat jadwal divisi di Absensi.</Copy>}
           {schedule.map(s=><Card key={s.tanggal}><Label>{s.tanggal} · {s.libur?"Libur":`${s.jam_masuk} – ${s.jam_pulang}`}</Label><Copy>{s.keterangan}</Copy></Card>)}
         </>}
-        {tab==="Riwayat" && <>{!history.length && <Copy>Belum ada absensi.</Copy>}{history.map(a=><Card key={a.id}>
+        {tab==="Riwayat" && <><HistoryCalendar history={history}/>{!history.length && <Copy>Belum ada absensi.</Copy>}{history.map(a=><Card key={a.id}>
           <Label>{a.tanggal} · {a.status_masuk}</Label><Copy>Masuk: {stamp(a.check_in,tz)}{"\n"}Pulang: {stamp(a.check_out,tz)}</Copy>
-          <Button title="Ajukan koreksi" disabled={busy} onPress={()=>{selectCorrection(a);setTab("Koreksi");}}/></Card>)}</>}
+          {!legacyServer() && <Button title="Ajukan koreksi" disabled={busy} onPress={()=>{selectCorrection(a);setTab("Koreksi");}}/>}</Card>)}</>}
         {tab==="Izin" && <>
           <Card><Label>Ajukan izin, sakit, atau cuti</Label><View style={styles.row}>
             {["izin","sakit","cuti"].map(j=><Button key={j} title={jenis===j?"✓ "+j:j} onPress={()=>setJenis(j)}/>)}</View>
@@ -133,7 +169,8 @@ function EmployeeApp() {
             {l.status==="pending" && <Button title="Batalkan pengajuan" disabled={busy} onPress={()=>Alert.alert("Batalkan izin?","Pengajuan pending akan dihapus.",[
               {text:"Kembali",style:"cancel"},{text:"Batalkan izin",style:"destructive",onPress:()=>{void perform(()=>api("/api/izin?id="+l.id,"DELETE"));}}])}/>}</Card>)}
         </>}
-        {tab==="Koreksi" && <>
+        {tab==="Koreksi" && legacyServer() && <Card><Label>Koreksi melalui HR</Label><Copy>Hubungi HR dapur untuk koreksi absensi. Pengajuan langsung dari aplikasi tersedia setelah layanan koreksi diaktifkan.</Copy><Button title="Buka aspirasi untuk menghubungi HR" onPress={()=>select("Aspirasi")}/></Card>}
+        {tab==="Koreksi" && !legacyServer() && <>
           <Card><Label>Koreksi waktu absensi</Label><Copy>Waktu mengikuti zona perangkat Android. Pastikan sesuai zona dapur: {tz}. Koreksi harus disetujui HR.</Copy>
             <ScrollView horizontal contentContainerStyle={styles.tabs}>{history.map(a=><Button key={a.id} title={`${attendanceId===a.id?"✓ ":""}${a.tanggal} (#${a.id})`} onPress={()=>selectCorrection(a)}/>)}</ScrollView>
             <DateField label="Masuk" value={start} onChange={setStart} time/>
@@ -161,7 +198,8 @@ function EmployeeApp() {
           {announcements.map(p=><Card key={p.id}><Label>{p.judul}</Label><Copy>{p.isi}</Copy>
             {p.gambar && <Image source={{uri:p.gambar}} style={styles.image} accessibilityLabel={p.judul}/>}
             {!p.dibaca && <Button title="Tandai sudah dibaca" disabled={busy} onPress={()=>{void perform(()=>api("/api/pengumuman","POST",{id:p.id}));}}/>}</Card>)}</>}
-        {tab==="Notifikasi" && <><Copy>Status izin, koreksi, dan pengumuman diperbarui saat aplikasi dibuka. Pengingat jadwal tetap berjalan dari Android.</Copy>
+        {tab==="Notifikasi" && legacyServer() && <Card><Label>Informasi terbaru</Label><Copy>Pengumuman dan status izin dapat dilihat langsung dari layanan berikut.</Copy><Button title="Buka pengumuman" onPress={()=>select("Pengumuman")}/><Button title="Lihat status izin" onPress={()=>select("Izin")}/></Card>}
+        {tab==="Notifikasi" && !legacyServer() && <><Copy>Status izin, koreksi, dan pengumuman diperbarui saat aplikasi dibuka. Pengingat jadwal tetap berjalan dari Android.</Copy>
           {!notices.length && <Copy>Belum ada notifikasi.</Copy>}{notices.map(n=><Card key={n.key}><Label>{n.read?"":"● "}{n.title}</Label>
           <Copy>{n.body}{"\n"}{stamp(n.at,tz)}</Copy>{!n.read && <Button title="Tandai sudah dibaca" disabled={busy} onPress={()=>{void perform(()=>api("/api/me/notifications","POST",{key:n.key}));}}/>}</Card>)}</>}
         {tab==="Profil" && profile && <Card><Label>{profile.nama}</Label><Copy>@{profile.username} · {profile.jabatan}</Copy>
@@ -169,11 +207,13 @@ function EmployeeApp() {
           <Field label="Bio (maksimal 200 karakter)" value={bio} onChange={v=>setBio(v.slice(0,200))} multiline/>
           <Button title="Ganti foto profil" disabled={busy} onPress={()=>{void chooseImage();}}/>
           <Button title="Simpan profil" disabled={busy} onPress={()=>{void perform(async()=>{await api("/api/me/profile","PUT",{bio,...(attachment?{foto_profil:attachment}:{})});setAttachment(null);},"Profil tersimpan.");}}/>
-          <Button title="Keluar" disabled={busy} onPress={()=>{setBusy(true);void logout().then(async()=>{clearData();await clearReminders();})
-            .catch(e=>setError(e instanceof Error?e.message:"Logout gagal.")).finally(()=>setBusy(false));}}/>
+          <Button title="Keluar" disabled={busy} onPress={signOut}/>
         </Card>}
       </>}
     </ScrollView>
+    {signedIn && <BottomNav active={web?.title || tab} onSelect={select} onMenu={()=>setMenu(true)}/>}
+    <MenuSheet visible={menu} close={()=>setMenu(false)} select={select} admin={admin} logout={signOut}/>
+    {web && <WebFeature title={web.title} path={web.path} close={()=>setWeb(null)}/>}
   </KeyboardAvoidingView>;
 }
 export default function App() {return <SafeAreaProvider><SafeAreaView style={styles.page}><EmployeeApp/></SafeAreaView></SafeAreaProvider>;}

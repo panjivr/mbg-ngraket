@@ -6,7 +6,7 @@ export type Today = {
   shifts:Shift[];
   schedule?:{libur:boolean;keterangan:string|null}|null;
   event:{id:number;nama:string;lat:number|null;lng:number|null;jam_masuk:string;jam_pulang:string}|null;
-  settings:{nama_dapur:string;alamat:string;selfie_wajib:boolean;geofence_aktif:boolean;radius_m:number;tz:string}|null;
+  settings:{nama_dapur:string;alamat:string;lat:number|null;lng:number|null;selfie_wajib:boolean;geofence_aktif:boolean;radius_m:number;tz:string}|null;
 };
 export type Schedule = {tanggal:string;jam_masuk:string|null;jam_pulang:string|null;keterangan:string|null;libur:boolean;reminder_at:string|null};
 export type Leave = {id:number;jenis:string;tanggal_mulai:string;tanggal_selesai:string;alasan:string;status:string;catatan_admin:string|null};

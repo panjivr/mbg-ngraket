@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
 type Tokens = { access_token:string; refresh_token:string } | {cookie:string};
-let base = (process.env.EXPO_PUBLIC_API_URL || "https://djati.web.id").replace(/\/$/, "");
+const base = "https://djati.web.id";
 let tokens: Tokens | null = null;
 let refreshing: Promise<void> | null = null;
 let generation = 0;
@@ -10,16 +10,7 @@ let onExpired = () => {};
 export function setExpiryHandler(handler: () => void) { onExpired = handler; }
 export function serverUrl() { return base; }
 export function legacyServer() { return !!tokens && "cookie" in tokens; }
-export async function setServerUrl(value:string) {
-  let url:URL;
-  try {url=new URL(value.trim());}catch {throw new Error("Alamat server tidak valid. Gunakan HTTPS.");}
-  if(url.protocol!=="https:" || url.username || url.password || url.pathname!=="/" || url.search || url.hash)
-    throw new Error("Gunakan alamat HTTPS server tanpa /api, password, atau parameter.");
-  if(tokens)throw new Error("Keluar sebelum mengganti server.");
-  await SecureStore.setItemAsync("mbg_server",url.origin);
-  base=url.origin;
-  generation++;
-}
+export function webSessionCookie() {return tokens && "cookie" in tokens ? tokens.cookie : null;}
 function checkBase() {
   if (!/^https:\/\/[^/]+/.test(base)) throw new Error("Alamat API HTTPS belum dikonfigurasi.");
 }
@@ -52,10 +43,18 @@ async function renew() {
 }
 export async function restore() {
   const server=await SecureStore.getItemAsync("mbg_server");
-  if(server)base=server;
+  // A saved staging session must never be sent to the primary server after upgrading.
+  if(server && server!==base)await save(null);
+  await SecureStore.deleteItemAsync("mbg_server");
   const stored = await SecureStore.getItemAsync("mbg_session");
   if (!stored) return false;
-  try { tokens=JSON.parse(stored) as Tokens; } catch { await save(null); return false; }
+  try {
+    const value=JSON.parse(stored);
+    if(!value || typeof value!=="object" || !("cookie" in value
+      ?typeof value.cookie==="string" && /^absensi_session=[A-Za-z0-9._~-]+$/.test(value.cookie)
+      :typeof value.access_token==="string" && typeof value.refresh_token==="string" && /^[A-Za-z0-9_-]{43}$/.test(value.access_token) && /^[A-Za-z0-9_-]{43}$/.test(value.refresh_token)))throw new Error("Sesi tidak valid.");
+    tokens=value as Tokens;
+  } catch { await save(null); return false; }
   return true;
 }
 export async function login(username:string,password:string) {
@@ -65,7 +64,7 @@ export async function login(username:string,password:string) {
     response=await request("/api/auth/login",{method:"POST",body:JSON.stringify({username,password})});
     const data=await response.json() as {error?:string;user?:{role:string}};
     if(!response.ok)throw new Error(data.error || "Login gagal.");
-    if(data.user?.role!=="staff")throw new Error("Gunakan akun karyawan, bukan akun admin.");
+    if(!["staff","admin"].includes(data.user?.role || ""))throw new Error("Akun tidak memiliki akses portal dapur.");
     const cookie=response.headers.get("set-cookie")?.match(/(?:^|[,;]\s*)absensi_session=([^;,\s]+)/)?.[1];
     if(!cookie)throw new Error("Server belum memberikan sesi Android. Hubungi admin untuk API mobile.");
     await save({cookie:"absensi_session="+cookie});return;
