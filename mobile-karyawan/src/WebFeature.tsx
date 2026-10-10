@@ -12,10 +12,18 @@ export function allowedWebUrl(value:string) {
 export async function clearWebSession() {await CookieManager.clearAll();}
 
 // Existing web modules keep their server-side rules and follow updates to the primary site.
-export default function WebFeature({title,path,close}:{title:string;path:string;close:()=>void}) {
+export default function WebFeature({title,path,close,sessionEnded}:{title:string;path:string;close:()=>void;sessionEnded:()=>void}) {
   const web=useRef<WebView>(null),back=useRef(false);
+  const ended=useRef(false);
   const reduced=useReducedMotion();
   const [ready,setReady]=useState(false),[error,setError]=useState("");
+  function navigate(url:string) {
+    if(!allowedWebUrl(url))return false;
+    if(webSessionCookie() && new URL(url).pathname==="/login") {
+      if(!ended.current){ended.current=true;sessionEnded();}return false;
+    }
+    return true;
+  }
   useEffect(()=>{
     let alive=true;
     void (async()=>{
@@ -34,8 +42,8 @@ export default function WebFeature({title,path,close}:{title:string;path:string;
         {!!error && <><Copy>{error}</Copy>{ready && <Button title="Coba muat ulang" onPress={()=>{setError("");web.current?.reload();}}/>}</>}
       </View>
       {ready?<WebView ref={web} source={{uri:serverUrl()+path}} style={{flex:1,backgroundColor:"#080f28"}}
-        originWhitelist={["*"]} onShouldStartLoadWithRequest={req=>allowedWebUrl(req.url)}
-        onNavigationStateChange={state=>{back.current=state.canGoBack;}}
+        originWhitelist={["*"]} onShouldStartLoadWithRequest={req=>navigate(req.url)}
+        onNavigationStateChange={state=>{back.current=state.canGoBack;navigate(state.url);}}
         sharedCookiesEnabled thirdPartyCookiesEnabled={false} mixedContentMode="never"
         geolocationEnabled
         allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false}

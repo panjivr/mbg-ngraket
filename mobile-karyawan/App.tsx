@@ -213,7 +213,7 @@ function EmployeeApp() {
     </ScrollView>
     {signedIn && <BottomNav active={web?.title || tab} onSelect={select} onMenu={()=>setMenu(true)}/>}
     <MenuSheet visible={menu} close={()=>setMenu(false)} select={select} admin={admin} logout={signOut}/>
-    {web && <WebFeature title={web.title} path={web.path} close={()=>setWeb(null)}/>}
+    {web && <WebFeature title={web.title} path={web.path} close={()=>setWeb(null)} sessionEnded={signOut}/>}
   </KeyboardAvoidingView>;
 }
 export default function App() {return <SafeAreaProvider><SafeAreaView style={styles.page}><EmployeeApp/></SafeAreaView></SafeAreaProvider>;}
