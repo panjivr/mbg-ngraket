@@ -7,14 +7,15 @@ import {Card,Copy,Label,styles} from "./ui";
 export default function HistoryCalendar({history}:{history:Attendance[]}) {
   const [month,setMonth]=useState(()=>new Date(new Date().getFullYear(),new Date().getMonth(),1));
   const key=`${month.getFullYear()}-${String(month.getMonth()+1).padStart(2,"0")}`;
-  const rows=history.filter(a=>a.tanggal.startsWith(key));
-  const late=rows.filter(a=>a.status_masuk==="telat").length;
+  const rows=history.filter(a=>a.check_in && a.tanggal.startsWith(key));
+  const present=new Set(rows.map(a=>a.tanggal)).size;
+  const late=new Set(rows.filter(a=>a.status_masuk==="telat").map(a=>a.tanggal)).size;
   const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
   const weeks=Array.from({length:Math.ceil((month.getDay()+days)/7)},(_,week)=>Array.from({length:7},(_,index)=>{
     const day=week*7+index-month.getDay()+1;return day>0 && day<=days?day:null;
   }));
   return <Card>
-    <View style={styles.row}><Label>Hadir {rows.length} hari</Label><Copy>· Terlambat {late}</Copy></View>
+    <View style={styles.row}><Label>Hadir {present} hari</Label><Copy>· Terlambat {late}</Copy></View>
     <View style={{flexDirection:"row",alignItems:"center",gap:8}}>
       {[-1,0,1].map(direction=>direction===0?<Text key="title" style={[styles.label,{flex:1,textAlign:"center"}]}>{month.toLocaleDateString("id-ID",{month:"long",year:"numeric"})}</Text>:
         <Pressable key={direction} accessibilityRole="button" accessibilityLabel={direction<0?"Bulan sebelumnya":"Bulan berikutnya"}

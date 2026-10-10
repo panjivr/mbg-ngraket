@@ -65,5 +65,10 @@ for(const month of [new Date(2024,1,1),new Date(2026,9,1)]) {
   walk(tree);assert.ok(weeks.length>=4 && weeks.length<=6);
   assert.ok(weeks.every(w=>w.props.children.length===7));
   assert.equal(weeks.flatMap(w=>w.props.children).filter(day=>day.props.accessible).length,new Date(month.getFullYear(),month.getMonth()+1,0).getDate());
+  const tanggal=`${month.getFullYear()}-${String(month.getMonth()+1).padStart(2,"0")}-01`;
+  const text=node=>Array.isArray(node)?node.map(text).join(""):node?.props?text(node.props.children):typeof node==="string" || typeof node==="number"?String(node):"";
+  assert.ok(text(calendar.exports.default({history:[{id:1,tanggal,check_in:null,status_masuk:null}]})).includes("Hadir 0 hari"));
+  assert.ok(text(calendar.exports.default({history:[1,2].map(id=>({id,tanggal,check_in:tanggal+"T07:00:00Z",status_masuk:"telat"}))})).includes("Hadir 1 hari"));
+  assert.ok(text(calendar.exports.default({history:[1,2].map(id=>({id,tanggal,check_in:tanggal+"T07:00:00Z",status_masuk:"telat"}))})).includes("Terlambat 1"));
 }
 console.log("Fixed primary origin, upgrade isolation, staff/admin web sessions and WebView navigation checks passed");
