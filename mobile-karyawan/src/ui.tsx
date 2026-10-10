@@ -3,15 +3,16 @@ import { Pressable, Text, TextInput, View, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:"#0b1522"},
-  content:{padding:20,paddingBottom:40,gap:16},
+  content:{padding:16,paddingBottom:40,gap:16,width:"100%",maxWidth:680,alignSelf:"center"},
   card:{backgroundColor:"#172639",padding:18,borderRadius:18,gap:10,borderWidth:1,borderColor:"#2a3a4d"},
   title:{color:"#f7f9fc",fontSize:26,fontWeight:"700"},
   subtitle:{color:"#b6c5d6",fontSize:15,lineHeight:23},
   label:{color:"#f7f9fc",fontSize:17,fontWeight:"600"},
-  button:{minHeight:48,borderRadius:12,backgroundColor:"#efc56b",padding:12,justifyContent:"center",alignItems:"center"},
-  buttonText:{color:"#152033",fontSize:16,fontWeight:"700"},
+  button:{minHeight:48,maxWidth:"100%",borderRadius:12,backgroundColor:"#efc56b",padding:12,justifyContent:"center",alignItems:"center"},
+  buttonText:{color:"#152033",fontSize:16,fontWeight:"700",textAlign:"center",flexShrink:1},
   input:{color:"#fff",backgroundColor:"#0b1522",borderColor:"#53657a",borderWidth:1,borderRadius:12,minHeight:48,padding:12,fontSize:16},
   row:{flexDirection:"row",flexWrap:"wrap",gap:10},
+  tabs:{flexDirection:"row",gap:10,alignItems:"center"},
   image:{width:"100%",height:240,borderRadius:12},
 });
 export function Card({children}:{children:React.ReactNode}) {return <View style={styles.card}>{children}</View>;}

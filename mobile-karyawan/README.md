@@ -2,6 +2,18 @@
 
 Aplikasi React Native + Expo SDK 55, React 19.2 dan React Native 0.83.10. Tidak memakai WebView. iPhone tetap memakai web Next.js.
 
+## APK pengujian dan hubungan dengan repo utama
+
+Target minimum Android 7 / API 24; Xiaomi 11T didukung secara arsitektur arm64. Versi Android sebelum 7 tidak didukung. APK universal mencakup arm64-v8a, armeabi-v7a, x86 dan x86_64. Ini tidak menjamin semua perangkat/vendor tanpa pengujian fisik.
+
+Alamat default adalah `https://djati.web.id`, ditemukan dari tab aplikasi utama di Chrome. Alamat HTTPS bisa diganti pada layar login setelah logout. Data dan aturan backend mengikuti server yang dipilih; perubahan kode layar native perlu APK baru. Tidak perlu fork/database kedua. Branch fitur dan draft PR tidak mengubah main.
+
+Pada 10 Oktober 2026 server utama belum memiliki `/api/mobile/auth` (HTTP 404). Aplikasi memakai login web lama hanya pada origin terverifikasi `https://djati.web.id`; sesi disimpan terenkripsi di SecureStore dan dikirim sebagai cookie lewat HTTPS. Tidak menyimpan password. Sesi server lama tetap mengikuti keamanan/masa berlaku sistem web lama, tanpa rotasi refresh atau pencabutan token mobile baru. Retry absensi otomatis diblokir: muat ulang status sebelum percobaan baru.
+
+Koreksi, inbox keputusan dan pengingat zona waktu belum aktif di server utama sampai API PR #102 dideploy. Fitur tersebut tidak berpura-pura tersedia. Login berikutnya memakai token mobile baru jika endpoint sudah tersedia. Penguatan server di branch ini belum berlaku pada produksi lama.
+
+Workflow PR menghasilkan artifact `MBG-Karyawan-Android-APK`. APK release untuk pengujian ditandatangani debug key template agar dapat diinstal langsung tanpa Metro/Expo Go; bukan signing produksi/Play Store. Jangan membagikannya sebagai rilis publik. Signing produksi tetap harus memakai keystore privat.
+
 ## Fitur
 
 - Absensi masuk/pulang, kamera depan, GPS, geofence, mood, sub-shift dan lokasi event.

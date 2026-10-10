@@ -7,6 +7,7 @@
     "start": "expo start",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
+    "test": "node tests/client-checks.mjs",
     "build:bundle": "expo export --platform android",
     "apk": "npx eas-cli build --platform android --profile preview"
   },

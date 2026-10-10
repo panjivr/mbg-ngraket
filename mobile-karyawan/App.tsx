@@ -2,7 +2,7 @@ import React,{useCallback,useEffect,useState} from "react";
 import {ActivityIndicator,Alert,AppState,Image,KeyboardAvoidingView,RefreshControl,ScrollView,Text,View} from "react-native";
 import {SafeAreaProvider,SafeAreaView} from "react-native-safe-area-context";
 import {StatusBar} from "expo-status-bar";
-import {api,login,logout,restore,setExpiryHandler} from "./src/api";
+import {api,login,logout,restore,setExpiryHandler,serverUrl,setServerUrl,legacyServer} from "./src/api";
 import {Today,Attendance,Schedule,Leave,Correction,Announcement,Notice,Profile,SlipResponse} from "./src/types";
 import {Button,Card,Copy,Field,Label,styles,stamp,rupiah} from "./src/ui";
 import AttendanceScreen from "./src/AttendanceScreen";
@@ -18,6 +18,7 @@ const localDate=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(
 function EmployeeApp() {
   const [ready,setReady]=useState(false),[signedIn,setSignedIn]=useState(false);
   const [username,setUsername]=useState(""),[password,setPassword]=useState("");
+  const [server,setServer]=useState(serverUrl());
   const [tab,setTab]=useState<Tab>("Absensi"),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const [today,setToday]=useState<Today|null>(null),[schedule,setSchedule]=useState<Schedule[]>([]);
   const [history,setHistory]=useState<Attendance[]>([]),[leaves,setLeaves]=useState<Leave[]>([]),[corrections,setCorrections]=useState<Correction[]>([]);
@@ -37,7 +38,7 @@ function EmployeeApp() {
   },[]);
   useEffect(()=>{
     setExpiryHandler(clearData);
-    void restore().then(setSignedIn).catch(e=>setError(String(e))).finally(()=>setReady(true));
+    void restore().then(value=>{setServer(serverUrl());setSignedIn(value);}).catch(e=>setError(String(e))).finally(()=>setReady(true));
     return ()=>setExpiryHandler(()=>{});
   },[clearData]);
   const load=useCallback(async ()=>{
@@ -71,7 +72,7 @@ function EmployeeApp() {
   }
   async function signIn() {
     setBusy(true);setError("");
-    try {await login(username,password);setPassword("");setSignedIn(true);}
+    try {await setServerUrl(server);await login(username,password);setPassword("");setSignedIn(true);}
     catch(e){setError(e instanceof Error?e.message:"Login gagal.");}
     finally{setBusy(false);}
   }
@@ -94,19 +95,22 @@ function EmployeeApp() {
       <Copy>{signedIn?today?.settings?.nama_dapur || "Portal karyawan":"Masuk dengan akun karyawan dapur Anda."}</Copy>
       {!!error && <Text accessibilityRole="alert" style={{color:"#ffb4b4",fontSize:16}}>{error}</Text>}
       {!signedIn?<Card>
+        <Field label="Alamat server HTTPS" value={server} onChange={setServer}/>
+        <Copy>Masukkan alamat staging yang diberikan admin. Akun dan data mengikuti server ini.</Copy>
         <Field label="Username" value={username} onChange={setUsername}/>
         <Field label="Password" value={password} onChange={setPassword} secure/>
         <Button title={busy?"Memproses…":"Masuk"} disabled={busy} onPress={()=>{void signIn();}}/>
       </Card>:<>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        {legacyServer() && <Copy>Terhubung ke sistem utama. Koreksi dan inbox keputusan memerlukan API mobile baru; fitur lain memakai API web yang sudah ada.</Copy>}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
           {tabs.map(t=><Button key={t} title={tab===t?"● "+t:t} disabled={busy} onPress={()=>{setTab(t);setAttachment(null);setReason("");}}/>)}
         </ScrollView>
         <Text accessibilityRole="header" style={styles.title}>{tab}</Text>
         {busy && <ActivityIndicator color="#efc56b"/>}
         {tab==="Absensi" && today && <AttendanceScreen today={today} reload={load}/>}
         {tab==="Jadwal" && <>
-          <Card><Copy>Pengingat muncul 15 menit sebelum shift terjadwal. Jadwal yang berubah perlu disinkronkan lagi.</Copy>
-            <Button title="Aktifkan / sinkronkan pengingat" disabled={busy} onPress={()=>{void perform(async()=>{const n=await setReminders(schedule);Alert.alert("Pengingat",`${n} pengingat tersimpan di Android.`);});}}/></Card>
+          <Card><Copy>{legacyServer()?"Pengingat jadwal memerlukan API mobile baru agar zona waktu dapur tepat.":"Pengingat muncul 15 menit sebelum shift terjadwal. Jadwal yang berubah perlu disinkronkan lagi."}</Copy>
+            <Button title="Aktifkan / sinkronkan pengingat" disabled={busy || legacyServer()} onPress={()=>{void perform(async()=>{const n=await setReminders(schedule);Alert.alert("Pengingat",`${n} pengingat tersimpan di Android.`);});}}/></Card>
           {!schedule.length && <Copy>Belum ada jadwal khusus. Lihat jadwal divisi di Absensi.</Copy>}
           {schedule.map(s=><Card key={s.tanggal}><Label>{s.tanggal} · {s.libur?"Libur":`${s.jam_masuk} – ${s.jam_pulang}`}</Label><Copy>{s.keterangan}</Copy></Card>)}
         </>}
@@ -131,7 +135,7 @@ function EmployeeApp() {
         </>}
         {tab==="Koreksi" && <>
           <Card><Label>Koreksi waktu absensi</Label><Copy>Waktu mengikuti zona perangkat Android. Pastikan sesuai zona dapur: {tz}. Koreksi harus disetujui HR.</Copy>
-            <ScrollView horizontal contentContainerStyle={styles.row}>{history.map(a=><Button key={a.id} title={`${attendanceId===a.id?"✓ ":""}${a.tanggal} (#${a.id})`} onPress={()=>selectCorrection(a)}/>)}</ScrollView>
+            <ScrollView horizontal contentContainerStyle={styles.tabs}>{history.map(a=><Button key={a.id} title={`${attendanceId===a.id?"✓ ":""}${a.tanggal} (#${a.id})`} onPress={()=>selectCorrection(a)}/>)}</ScrollView>
             <DateField label="Masuk" value={start} onChange={setStart} time/>
             <Button title={includeOut?"Pulang diisi (ubah menjadi belum pulang)":"Belum pulang (isi jam pulang)"} onPress={()=>setIncludeOut(!includeOut)}/>
             {includeOut && <DateField label="Pulang" value={end} onChange={setEnd} time/>}

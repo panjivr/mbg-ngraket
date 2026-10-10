@@ -3,7 +3,7 @@ import {Alert,Image,View} from "react-native";
 import {CameraView,useCameraPermissions} from "expo-camera";
 import * as Location from "expo-location";
 import * as Crypto from "expo-crypto";
-import {api} from "./api";
+import {api,legacyServer} from "./api";
 import {Today} from "./types";
 import {Button,Card,Copy,Label,styles,stamp} from "./ui";
 
@@ -73,7 +73,7 @@ export default function AttendanceScreen({today,reload}:{today:Today;reload:()=>
       {cameraOn?<><CameraView ref={camera} facing="front" style={{height:340}}/><Button title="Ambil foto" onPress={()=>{void takePhoto();}}/></>
         :<>{photo && <Image accessibilityLabel="Selfie sebelum absen" source={{uri:photo.data}} style={styles.image}/>}
           <Button title={photo?"Ulangi selfie":"Buka kamera depan"} disabled={busy || !!pending.current} onPress={()=>{void openCamera();}}/></>}
-      <Button title={busy?"Memproses…":pending.current?"Kirim ulang permintaan yang sama":today.current?"Absen pulang":"Absen masuk"} disabled={busy || cameraOn || !today.settings || (!today.current && !!today.schedule?.libur && !today.event)} onPress={()=>{void submit();}}/>
+      <Button title={busy?"Memproses…":pending.current?"Kirim ulang permintaan yang sama":today.current?"Absen pulang":"Absen masuk"} disabled={busy || cameraOn || (legacyServer() && !!pending.current) || !today.settings || (!today.current && !!today.schedule?.libur && !today.event)} onPress={()=>{void submit();}}/>
       {!!pending.current && <Button title="Muat status sebelum membuat permintaan baru" disabled={busy} onPress={()=>{void reload().then(()=>{pending.current=null;setPhoto(null);}).catch(e=>Alert.alert("Status",String(e)));}}/>}
     </Card>
   </>;
