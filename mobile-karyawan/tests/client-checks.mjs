@@ -3,6 +3,11 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
+// npm can auto-install a newer expo-font peer that compiles but crashes at native startup.
+const sdkModules=JSON.parse(fs.readFileSync(new URL("../node_modules/expo/bundledNativeModules.json",import.meta.url),"utf8"));
+const fontVersion=JSON.parse(fs.readFileSync(new URL("../node_modules/expo-font/package.json",import.meta.url),"utf8")).version;
+assert.equal(fontVersion.split(".")[0],sdkModules["expo-font"].match(/\d+/)[0],"expo-font must match the installed Expo SDK");
+
 const storage=new Map(),calls=[];
 const secureStore={getItemAsync:async k=>storage.get(k),setItemAsync:async(k,v)=>storage.set(k,v),deleteItemAsync:async k=>storage.delete(k)};
 function compile(file) {return ts.transpileModule(fs.readFileSync(new URL(file,import.meta.url),"utf8"),{
