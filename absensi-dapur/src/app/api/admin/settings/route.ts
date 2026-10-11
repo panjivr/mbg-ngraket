@@ -23,8 +23,13 @@ function asSettings(s: Sppg) {
     jam_masuk: s.jam_masuk,
     jam_pulang: s.jam_pulang,
     tz: s.tz,
+    jenis: s.jenis,
+    logo_url: s.logo_url,
   };
 }
+
+// Batas aman panjang logo (data URL ~ ratusan KB max) agar tak membebani DB.
+const MAX_LOGO_LEN = 500_000;
 
 export const GET = route(async () => {
   const admin = await requireAdmin();
@@ -51,8 +56,13 @@ export const PUT = route(async (req: NextRequest) => {
   const jam_masuk = b.jam_masuk !== undefined ? String(b.jam_masuk) : cur.jam_masuk;
   const jam_pulang = b.jam_pulang !== undefined ? String(b.jam_pulang) : cur.jam_pulang;
   const tz = b.tz !== undefined ? String(b.tz).trim() : cur.tz;
+  const logo_url = b.logo_url !== undefined ? String(b.logo_url).trim() : cur.logo_url;
+  if (logo_url && !/^(data:image\/|https?:\/\/)/i.test(logo_url)) {
+    return fail(400, "Logo harus berupa gambar (unggahan) atau URL http(s).");
+  }
+  if (logo_url.length > MAX_LOGO_LEN) return fail(400, "Ukuran logo terlalu besar.");
 
-  if (!nama) return fail(400, "Nama dapur wajib diisi.");
+  if (!nama) return fail(400, cur.jenis === "perusahaan" ? "Nama perusahaan wajib diisi." : "Nama dapur wajib diisi.");
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
     return fail(400, "Latitude tidak valid (-90..90).");
   }
@@ -69,9 +79,9 @@ export const PUT = route(async (req: NextRequest) => {
   const rows = await query<Sppg>(
     `UPDATE sppg SET
         nama=$1, alamat=$2, lat=$3, lng=$4, radius_m=$5,
-        geofence_aktif=$6, selfie_wajib=$7, jam_masuk=$8, jam_pulang=$9, tz=$10
-     WHERE id = $11 RETURNING *`,
-    [nama, alamat, lat, lng, radius_m, geofence_aktif, selfie_wajib, jam_masuk, jam_pulang, tz, cur.id],
+        geofence_aktif=$6, selfie_wajib=$7, jam_masuk=$8, jam_pulang=$9, tz=$10, logo_url=$11
+     WHERE id = $12 RETURNING *`,
+    [nama, alamat, lat, lng, radius_m, geofence_aktif, selfie_wajib, jam_masuk, jam_pulang, tz, logo_url, cur.id],
   );
   invalidateSppg(cur.id);
   return ok({ settings: asSettings(rows[0]) });

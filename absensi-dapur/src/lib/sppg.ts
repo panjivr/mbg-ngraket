@@ -16,6 +16,8 @@ export interface Sppg {
   aktif: boolean;
   /** 'dapur' (SPPG, fitur penuh) atau 'perusahaan' (kantor/usaha, fitur dapur disembunyikan). */
   jenis: string;
+  /** Logo unit (data URL / URL). "" = lambang default sesuai jenis. */
+  logo_url: string;
   created_at: string;
   // Distribusi & dokumen
   kepala_sppg: string;

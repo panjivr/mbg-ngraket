@@ -85,8 +85,8 @@ function buildGroups(f: Flags): Group[] {
       icon: "coins",
       items: [
         { label: "Rekap", href: "/admin/rekap", icon: "wallet", also: ["/admin/gaji", "/admin/slip"], show: f.fullAdmin },
-        { label: "Akuntan", href: "/admin/akuntan", icon: "coins", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
-        { label: "Pemasok · PO & Faktur", href: "/admin/supplier", icon: "receipt", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+        { label: "Akuntan", href: "/admin/akuntan", icon: "coins", show: !office && (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+        { label: "Pemasok · PO & Faktur", href: "/admin/supplier", icon: "receipt", show: !office && (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
       ],
     },
     {

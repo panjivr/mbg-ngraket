@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePerusahaan } from "@/lib/use-jenis";
 
 interface Sop {
   id: number;
@@ -39,6 +40,7 @@ export default function SopPage() {
   const [query, setQuery] = useState("");
   const [kategori, setKategori] = useState<string>(SEMUA);
   const [openId, setOpenId] = useState<number | null>(null);
+  const perusahaan = usePerusahaan();
 
   useEffect(() => {
     fetch("/api/sop", { cache: "no-store" })
@@ -77,9 +79,9 @@ export default function SopPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold">📋 SOP Dapur</h1>
+        <h1 className="text-lg font-bold">📋 {perusahaan ? "SOP & Panduan Kerja" : "SOP Dapur"}</h1>
         <p className="text-sm text-slate-400">
-          Standar Operasional Prosedur untuk dapurmu. Ketuk salah satu SOP untuk membaca isinya.
+          Standar Operasional Prosedur untuk {perusahaan ? "unitmu" : "dapurmu"}. Ketuk salah satu SOP untuk membaca isinya.
         </p>
       </div>
 
@@ -123,7 +125,7 @@ export default function SopPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-6 text-center text-slate-400">
           {items.length === 0
-            ? "Belum ada SOP untuk dapur ini."
+            ? `Belum ada SOP untuk ${perusahaan ? "unit" : "dapur"} ini.`
             : "Tidak ada SOP yang cocok dengan pencarianmu."}
         </div>
       ) : (

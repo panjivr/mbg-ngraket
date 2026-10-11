@@ -56,7 +56,7 @@ function buildDests(f: Flags): Dest[] {
     { label: "Rekap", href: "/admin/rekap", group: "Keuangan", keywords: "laporan absensi ekspor", show: f.fullAdmin },
     { label: "Gaji", href: "/admin/gaji", group: "Keuangan", keywords: "payroll upah bayar", show: f.fullAdmin },
     { label: "Slip", href: "/admin/slip", group: "Keuangan", keywords: "slip gaji cetak", show: f.fullAdmin },
-    { label: "Akuntan", href: "/admin/akuntan", group: "Keuangan", keywords: "pembukuan kas jurnal", show: (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
+    { label: "Akuntan", href: "/admin/akuntan", group: "Keuangan", keywords: "pembukuan kas jurnal", show: f.jenis !== "perusahaan" && (f.fullAdmin || f.aksesKeuangan) && has("akuntan") },
     { label: "Aktivitas", href: "/admin/audit", group: "Sistem", keywords: "log audit riwayat", show: f.fullAdmin },
     { label: "Pengaturan", href: "/admin/pengaturan", group: "Sistem", keywords: "setting konfigurasi profil dapur", show: f.fullAdmin },
     { label: "Dasbor Dapur", href: "/admin/pusat/dashboard", group: "Semua Dapur", keywords: "pusat monitoring semua", show: f.isSuper },
