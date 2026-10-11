@@ -10,6 +10,7 @@ import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 import PeopleCultureSurvey from "@/components/PeopleCultureSurvey";
 import InstallAppButton from "@/components/InstallAppButton";
+import JenisThemeSetter from "@/components/JenisThemeSetter";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,19 @@ export default async function DapurLayout({
   const aksesKeuangan = !!me?.akses_keuangan;
   const aksesGizi = !!me?.akses_gizi;
   const gudangKeluar = !!me?.akses_gudang_keluar;
+  const jenis = me?.sppg_jenis || "dapur";
+  const perusahaan = jenis === "perusahaan";
+  const headerLabel = perusahaan ? (me?.sppg_nama || "Absensi Kantor") : "Absensi Dapur";
 
   return (
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-28 md:pb-12">
+      <JenisThemeSetter jenis={jenis} />
       <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <BgnLogo size={34} />
-            <p className="text-sm font-bold tracking-tight">Absensi Dapur</p>
+            <p className="text-sm font-bold tracking-tight">{headerLabel}</p>
           </div>
           <div className="flex items-center gap-2">
             <SettingsMenu />

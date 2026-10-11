@@ -283,6 +283,12 @@ export default function AdminDashboard() {
   const [now, setNow] = useState<Date | null>(null);
   const [cari, setCari] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("semua");
+  // Unit perusahaan/kantor: sembunyikan ringkasan khas dapur (menu, distribusi,
+  // stok gudang) & sesuaikan istilah. Dibaca dari atribut tema <html>.
+  const [perusahaan, setPerusahaan] = useState(false);
+  useEffect(() => {
+    setPerusahaan(document.documentElement.dataset.jenis === "perusahaan");
+  }, []);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -730,8 +736,8 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="border-l-2 border-gold-500/70 pl-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-400">Panel Operasional</p>
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Dasbor Operasional</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-400">{perusahaan ? "Panel Kehadiran" : "Panel Operasional"}</p>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{perusahaan ? "Dasbor Kehadiran" : "Dasbor Operasional"}</h1>
           <p className="mt-0.5 text-sm text-slate-400">
             {tanggalTampil || "Memuat tanggal…"} ·{" "}
             <span className="font-mono tabular-nums text-slate-300">{jam} WIB</span>
@@ -811,7 +817,7 @@ export default function AdminDashboard() {
               <div className="text-xl font-bold tabular-nums neon-magenta sm:text-2xl">
                 <AnimatedNumber value={derived.bekerja.length} />
               </div>
-              <div className="text-[9px] uppercase tracking-wide text-slate-400">di dapur</div>
+              <div className="text-[9px] uppercase tracking-wide text-slate-400">{perusahaan ? "aktif" : "di dapur"}</div>
             </Gauge>
             <p className="text-center text-[11px] font-medium text-slate-300">Bertugas</p>
           </div>
@@ -849,7 +855,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Ringkasan operasional: distribusi (porsi & pagu) + stok gudang */}
-      {ring && (
+      {ring && !perusahaan && (
         <div className="space-y-3">
           {ring.menu && (
             <p className="flex items-center gap-2 text-sm text-slate-400">
@@ -1060,7 +1066,7 @@ export default function AdminDashboard() {
           </div>
           <p className="mt-1 text-3xl font-bold text-emerald-300">
             <AnimatedNumber value={derived.bekerja.length} />
-            <span className="ml-1 text-sm font-normal text-slate-400">orang di dapur</span>
+            <span className="ml-1 text-sm font-normal text-slate-400">{perusahaan ? "orang aktif" : "orang di dapur"}</span>
           </p>
           <div className="scroll-x mt-3 max-h-32 space-y-2 overflow-y-auto pr-1">
             {derived.bekerja.length === 0 ? (

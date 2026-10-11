@@ -10,6 +10,7 @@ import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
 import BgnLogo from "@/components/BgnLogo";
 import SettingsMenu from "@/components/SettingsMenu";
+import JenisThemeSetter from "@/components/JenisThemeSetter";
 import { paketEfektif, paketExpired, fiturAktif, SEMUA_FITUR, PAKET_LABEL } from "@/lib/paket";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,9 @@ export default async function AdminLayout({
   // Sub-admin/HR scoped harus punya minimal satu akses; selain itu tolak.
   if (!fullAdmin && !aksesDistribusi && !aksesLaporan && !aksesKeuangan && !aksesGizi && !aksesAudit && !isHr) redirect("/dapur");
   const isSuper = fullAdmin && !!me?.is_super;
-  const dapurNama = me?.sppg_nama || "Dapur";
+  const jenis = me?.sppg_jenis || "dapur";
+  const perusahaan = jenis === "perusahaan";
+  const dapurNama = me?.sppg_nama || (perusahaan ? "Perusahaan" : "Dapur");
   // Paket langganan → fitur aktif. Super admin (pemilik) selalu penuh.
   const paket = paketEfektif(me?.paket, me?.paket_until);
   const paketExp = paketExpired(me?.paket_until);
@@ -41,6 +44,7 @@ export default async function AdminLayout({
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-[1920px] px-4 pb-12 sm:px-6 lg:px-8 xl:px-10">
+      <JenisThemeSetter jenis={jenis} />
       <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/10 bg-ink-950/85 px-4 py-3 shadow-appbar backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -103,6 +107,7 @@ export default async function AdminLayout({
           aksesAudit={aksesAudit}
           isHr={isHr}
           isSuper={isSuper}
+          jenis={jenis}
           fitur={fitur}
         />
       </header>
@@ -115,6 +120,7 @@ export default async function AdminLayout({
         aksesAudit={aksesAudit}
         isHr={isHr}
         isSuper={isSuper}
+        jenis={jenis}
         fitur={fitur}
       />
       <BirthdayGreeting />

@@ -18,6 +18,7 @@ interface Flags {
   aksesAudit: boolean;
   isHr: boolean;
   isSuper: boolean;
+  jenis: string;
   fitur: string[];
 }
 interface Dest {
@@ -62,7 +63,9 @@ function buildDests(f: Flags): Dest[] {
     { label: "Rekap Absensi Pusat", href: "/admin/pusat", group: "Semua Dapur", keywords: "pusat rekap semua dapur", show: f.isSuper },
     { label: "Kelola Dapur", href: "/admin/sppg", group: "Semua Dapur", keywords: "sppg tambah dapur langganan", show: f.isSuper },
   ];
-  return raw.filter((d) => d.show);
+  // Unit perusahaan/kantor: sembunyikan tujuan operasional (fitur dapur).
+  const office = f.jenis === "perusahaan";
+  return raw.filter((d) => d.show && !(office && d.group === "Operasional"));
 }
 
 function norm(s: string): string {
