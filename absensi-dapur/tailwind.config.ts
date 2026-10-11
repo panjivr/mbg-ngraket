@@ -24,11 +24,14 @@ const config: Config = {
           700: "rgb(var(--ink-700) / <alpha-value>)",
           600: "rgb(var(--ink-600) / <alpha-value>)",
         },
-        // Aksen biru utama BGN (tombol, tautan, sorotan)
+        // Aksen biru utama BGN (tombol, tautan, sorotan). Kini berbasis CSS
+        // variable (kanal RGB) agar unit "perusahaan" bisa menimpa aksen ke
+        // indigo korporat lewat [data-jenis="perusahaan"] tanpa menyentuh ratusan
+        // kelas. Default = biru royal BGN (#5b8bff / #3464e6 / #2450c8).
         gold: {
-          400: "#5b8bff",
-          500: "#3464e6",
-          600: "#2450c8",
+          400: "rgb(var(--gold-400) / <alpha-value>)",
+          500: "rgb(var(--gold-500) / <alpha-value>)",
+          600: "rgb(var(--gold-600) / <alpha-value>)",
         },
         // Biru langit / info
         ember: {

@@ -17,6 +17,8 @@ export interface UserAccess {
   akses_audit: boolean;
   akses_gudang_keluar: boolean;
   sppg_nama: string | null;
+  /** Jenis unit dapur pengguna: 'dapur' | 'perusahaan' (null bila tanpa sppg). */
+  sppg_jenis: string | null;
   paket: string | null;
   paket_until: string | null;
 }
@@ -33,7 +35,7 @@ export async function getUserAccess(uid: number): Promise<UserAccess | null> {
         `SELECT u.is_super, u.is_driver, u.is_hr,
                 u.akses_distribusi, u.akses_laporan, u.akses_keuangan, u.akses_gizi,
                 u.akses_audit, u.akses_gudang_keluar,
-                s.nama AS sppg_nama, s.paket, s.paket_until
+                s.nama AS sppg_nama, s.jenis AS sppg_jenis, s.paket, s.paket_until
            FROM users u
            LEFT JOIN sppg s ON s.id = u.sppg_id
           WHERE u.id = $1`,

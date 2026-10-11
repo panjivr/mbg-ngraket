@@ -14,6 +14,8 @@ export interface Sppg {
   jam_pulang: string;
   tz: string;
   aktif: boolean;
+  /** 'dapur' (SPPG, fitur penuh) atau 'perusahaan' (kantor/usaha, fitur dapur disembunyikan). */
+  jenis: string;
   created_at: string;
   // Distribusi & dokumen
   kepala_sppg: string;

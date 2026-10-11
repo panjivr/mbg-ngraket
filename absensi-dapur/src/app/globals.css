@@ -14,7 +14,44 @@
   --ink-800: 22 48 110;
   --ink-700: 31 63 138;
   --ink-600: 43 83 171;
+
+  /* Aksen biru royal BGN (kanal RGB) — dipakai palet `gold` di Tailwind. */
+  --gold-400: 91 139 255;  /* #5b8bff */
+  --gold-500: 52 100 230;  /* #3464e6 */
+  --gold-600: 36 80 200;   /* #2450c8 */
 }
+
+/*
+ * UNIT "PERUSAHAAN" (kantor/usaha) — tampilan sengaja dibuat berbeda jauh dari
+ * dapur: latar grafit/charcoal netral (bukan navy) + aksen indigo korporat,
+ * memberi kesan profesional & "kantoran". Satu database; pembeda hanya tema ini
+ * (data-jenis di <html>) + kolom `jenis` pada sppg. Menimpa SEMUA kelas ink/gold
+ * sekaligus lewat CSS variable, tanpa menyentuh komponen satu per satu. */
+
+/* Aksen indigo korporat — berlaku di tema gelap & terang (var dipakai oleh
+   bg-gold/btn-gold/border-gold di kedua tema). */
+:root[data-jenis="perusahaan"] {
+  --gold-400: 129 140 248; /* indigo-400 #818cf8 */
+  --gold-500: 99 102 241;  /* indigo-500 #6366f1 */
+  --gold-600: 79 70 229;   /* indigo-600 #4f46e5 */
+}
+
+/* Latar grafit HANYA untuk tema gelap perusahaan — jangan bocor ke tema terang
+   (yang punya palet permukaan putih tersendiri; specificity :root[attr] lebih
+   tinggi dari html[data-theme], jadi wajib dikecualikan). */
+:root[data-jenis="perusahaan"]:not([data-theme="light"]) {
+  --ink-950: 15 17 23;   /* #0f1117 — latar grafit nyaris hitam */
+  --ink-900: 22 25 33;   /* #161921 — permukaan dalam */
+  --ink-850: 28 32 42;   /* #1c202a — kartu */
+  --ink-800: 38 43 56;   /* #262b38 */
+  --ink-700: 51 58 74;   /* #333a4a */
+  --ink-600: 71 80 100;  /* #475064 */
+}
+
+/* Teks aksen perusahaan di tema terang: indigo pekat (menimpa biru #2450c8). */
+html[data-theme="light"][data-jenis="perusahaan"] .text-gold-400,
+html[data-theme="light"][data-jenis="perusahaan"] .text-gold-500,
+html[data-theme="light"][data-jenis="perusahaan"] .text-gold-300 { color: #4338ca; }
 
 /*
  * TEMA TERANG — hanya menimpa token permukaan + segelintir utilitas teks/tepi

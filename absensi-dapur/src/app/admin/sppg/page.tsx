@@ -11,6 +11,7 @@ interface SppgRow {
   jam_masuk: string;
   jam_pulang: string;
   aktif: boolean;
+  jenis?: string;
   paket?: string;
   paket_until?: string | null;
   jumlah_staf?: number;
@@ -23,6 +24,7 @@ const emptyForm = {
   jam_masuk: "07:00",
   jam_pulang: "15:00",
   tz: "Asia/Jakarta",
+  jenis: "dapur",
   admin_nama: "",
   admin_username: "",
   admin_password: "",
@@ -33,6 +35,7 @@ export default function SppgPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ ...emptyForm });
   const [open, setOpen] = useState(false);
+  const [addMenu, setAddMenu] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -59,6 +62,15 @@ export default function SppgPage() {
     load();
   }, []);
 
+  const isPerusahaan = form.jenis === "perusahaan";
+
+  function openForm(jenis: string) {
+    setForm({ ...emptyForm, jenis });
+    setError(null);
+    setAddMenu(false);
+    setOpen(true);
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -75,7 +87,7 @@ export default function SppgPage() {
         return;
       }
       setMsg(
-        `Dapur "${data.sppg.nama}" dibuat. Admin "${form.admin_username}" bisa langsung login & mengelola dapurnya.`,
+        `${isPerusahaan ? "Perusahaan" : "Dapur"} "${data.sppg.nama}" dibuat. Admin "${form.admin_username}" bisa langsung login & mengelola unitnya.`,
       );
       setForm({ ...emptyForm });
       setOpen(false);
@@ -90,7 +102,7 @@ export default function SppgPage() {
   async function remove(s: SppgRow) {
     if (
       !confirm(
-        `Hapus dapur "${s.nama}" beserta SEMUA akun & absensinya? Tindakan ini permanen.`,
+        `Hapus ${s.jenis === "perusahaan" ? "perusahaan" : "dapur"} "${s.nama}" beserta SEMUA akun & absensinya? Tindakan ini permanen.`,
       )
     )
       return;
@@ -136,15 +148,44 @@ export default function SppgPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold">Kelola Dapur (SPPG)</h1>
+          <h1 className="text-xl font-bold">Kelola Unit (Dapur &amp; Perusahaan)</h1>
           <p className="text-sm text-slate-400">
-            Tiap dapur punya data, pegawai, divisi, event, & dashboard terpisah. Buat dapur
-            baru lengkap dengan akun adminnya.
+            Tiap unit punya data, pegawai, divisi, &amp; dashboard terpisah. Buat dapur (SPPG)
+            atau perusahaan/kantor baru lengkap dengan akun adminnya.
           </p>
         </div>
-        <button onClick={() => setOpen(true)} className="btn-gold">
-          + Tambah Dapur
-        </button>
+        <div className="relative">
+          <button onClick={() => setAddMenu((v) => !v)} className="btn-gold">
+            + Tambah Unit
+          </button>
+          {addMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setAddMenu(false)} />
+              <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-xl border border-white/10 bg-ink-900 p-1 shadow-xl">
+                <button
+                  onClick={() => openForm("dapur")}
+                  className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-left hover:bg-white/5"
+                >
+                  <span className="mt-0.5 text-lg leading-none">🍳</span>
+                  <span>
+                    <span className="block text-sm font-semibold">Tambah Dapur Baru</span>
+                    <span className="block text-[11px] text-slate-500">SPPG/katering — fitur dapur lengkap</span>
+                  </span>
+                </button>
+                <button
+                  onClick={() => openForm("perusahaan")}
+                  className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-left hover:bg-white/5"
+                >
+                  <span className="mt-0.5 text-lg leading-none">🏢</span>
+                  <span>
+                    <span className="block text-sm font-semibold">Tambah Perusahaan Baru</span>
+                    <span className="block text-[11px] text-slate-500">Kantor/usaha — absensi &amp; kepegawaian</span>
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {msg && (
@@ -157,14 +198,14 @@ export default function SppgPage() {
         {loading ? (
           <p className="p-6 text-center text-slate-400">Memuat…</p>
         ) : list.length === 0 ? (
-          <p className="p-6 text-center text-slate-400">Belum ada dapur.</p>
+          <p className="p-6 text-center text-slate-400">Belum ada unit.</p>
         ) : (
           <div className="scroll-x overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">
                 <tr className="border-b border-white/5">
                   <th className="px-4 py-2.5">#</th>
-                  <th className="px-4 py-2.5">Dapur</th>
+                  <th className="px-4 py-2.5">Unit</th>
                   <th className="px-4 py-2.5">Zona Waktu</th>
                   <th className="px-4 py-2.5">Admin</th>
                   <th className="px-4 py-2.5">Staf</th>
@@ -177,7 +218,18 @@ export default function SppgPage() {
                   <tr key={s.id}>
                     <td className="px-4 py-2.5 text-slate-400">{s.id}</td>
                     <td className="px-4 py-2.5">
-                      <p className="font-medium">{s.nama}</p>
+                      <p className="flex items-center gap-1.5 font-medium">
+                        {s.nama}
+                        {s.jenis === "perusahaan" ? (
+                          <span className="rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300 ring-1 ring-inset ring-indigo-500/25">
+                            🏢 Perusahaan
+                          </span>
+                        ) : (
+                          <span className="rounded-md bg-emas-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emas-300 ring-1 ring-inset ring-emas-500/25">
+                            🍳 Dapur
+                          </span>
+                        )}
+                      </p>
                       {s.alamat && (
                         <p className="text-xs text-slate-500">{s.alamat}</p>
                       )}
@@ -229,14 +281,21 @@ export default function SppgPage() {
           onClick={() => setOpen(false)}
         >
           <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">Tambah Dapur Baru</h2>
+            <h2 className="text-lg font-bold">
+              {isPerusahaan ? "🏢 Tambah Perusahaan Baru" : "🍳 Tambah Dapur Baru"}
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              {isPerusahaan
+                ? "Unit kantor/usaha — fitur absensi & kepegawaian. Fitur khusus dapur (distribusi, menu, gudang, gizi) otomatis disembunyikan."
+                : "Unit dapur/SPPG — fitur lengkap termasuk distribusi, menu, gudang & gizi."}
+            </p>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="label">Nama Dapur / SPPG</label>
+                <label className="label">{isPerusahaan ? "Nama Perusahaan / Kantor" : "Nama Dapur / SPPG"}</label>
                 <input
                   className="input"
                   value={form.nama}
-                  placeholder="mis. SPPG Ngraket 2"
+                  placeholder={isPerusahaan ? "mis. PT Djati Karya Nusantara" : "mis. SPPG Ngraket 2"}
                   onChange={(e) => setForm({ ...form, nama: e.target.value })}
                 />
               </div>
@@ -282,7 +341,7 @@ export default function SppgPage() {
               </div>
 
               <div className="rounded-xl border border-white/10 p-3">
-                <p className="mb-2 text-sm font-semibold">Akun Admin Dapur Ini</p>
+                <p className="mb-2 text-sm font-semibold">{isPerusahaan ? "Akun Admin Perusahaan Ini" : "Akun Admin Dapur Ini"}</p>
                 <div className="space-y-2">
                   <input
                     className="input"
@@ -305,8 +364,8 @@ export default function SppgPage() {
                   />
                 </div>
                 <p className="mt-1.5 text-[11px] text-slate-500">
-                  Admin ini hanya dapat melihat & mengelola dapur barunya. GPS/geofence dapur
-                  dapat diatur admin tersebut lewat menu Pengaturan.
+                  Admin ini hanya dapat melihat &amp; mengelola unit barunya. GPS/geofence &amp; jam
+                  kerja dapat diatur admin tersebut lewat menu Pengaturan.
                 </p>
               </div>
 
@@ -321,7 +380,7 @@ export default function SppgPage() {
                   Batal
                 </button>
                 <button onClick={save} disabled={saving} className="btn-gold flex-1">
-                  {saving ? "Menyimpan…" : "Buat Dapur"}
+                  {saving ? "Menyimpan…" : isPerusahaan ? "Buat Perusahaan" : "Buat Dapur"}
                 </button>
               </div>
             </div>

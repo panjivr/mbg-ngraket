@@ -19,6 +19,8 @@ interface Flags {
   aksesAudit: boolean;
   isHr: boolean;
   isSuper: boolean;
+  /** Jenis unit: 'dapur' | 'perusahaan'. Perusahaan menyembunyikan grup Operasional (fitur dapur). */
+  jenis: string;
   /** Fitur yang dibuka paket langganan dapur ini. */
   fitur: string[];
 }
@@ -44,7 +46,9 @@ interface Group {
 
 function buildGroups(f: Flags): Group[] {
   const has = (k: string) => f.fitur.includes(k);
-  return [
+  // Unit "perusahaan" (kantor): fitur khas dapur (operasional) disembunyikan.
+  const office = f.jenis === "perusahaan";
+  const groups: Group[] = [
     { key: "dash", label: "Dasbor", icon: "gauge", solo: { label: "Dasbor", href: "/admin", icon: "gauge", exact: true, show: f.fullAdmin } },
     {
       key: "ops",
@@ -101,10 +105,12 @@ function buildGroups(f: Flags): Group[] {
       items: [
         { label: "Dasbor Dapur", href: "/admin/pusat/dashboard", icon: "gauge", show: f.isSuper },
         { label: "Rekap Absensi", href: "/admin/pusat", icon: "calendar", exact: true, show: f.isSuper },
-        { label: "Kelola Dapur", href: "/admin/sppg", icon: "building", show: f.isSuper },
+        { label: "Kelola Unit", href: "/admin/sppg", icon: "building", show: f.isSuper },
       ],
     },
   ];
+  // Sembunyikan grup Operasional (fitur dapur) untuk unit perusahaan/kantor.
+  return office ? groups.filter((g) => g.key !== "ops") : groups;
 }
 
 function isActive(pathname: string, it: Item): boolean {

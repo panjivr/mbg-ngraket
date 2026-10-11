@@ -40,12 +40,15 @@ export const POST = route(async (req: NextRequest) => {
   const jam_masuk = b.jam_masuk ? String(b.jam_masuk) : "07:00";
   const jam_pulang = b.jam_pulang ? String(b.jam_pulang) : "15:00";
   const tz = b.tz ? String(b.tz).trim() : "Asia/Jakarta";
+  // Jenis unit: 'perusahaan' (kantor/usaha) atau default 'dapur' (SPPG).
+  const jenis = String(b.jenis ?? "dapur").trim() === "perusahaan" ? "perusahaan" : "dapur";
+  const isPerusahaan = jenis === "perusahaan";
 
   const adminNama = String(b.admin_nama ?? "").trim();
   const adminUser = String(b.admin_username ?? "").trim().toLowerCase();
   const adminPass = String(b.admin_password ?? "");
 
-  if (!nama) return fail(400, "Nama dapur wajib diisi.");
+  if (!nama) return fail(400, isPerusahaan ? "Nama perusahaan wajib diisi." : "Nama dapur wajib diisi.");
   if (!TIME_RE.test(jam_masuk) || !TIME_RE.test(jam_pulang)) {
     return fail(400, "Format jam harus HH:mm.");
   }
@@ -72,16 +75,16 @@ export const POST = route(async (req: NextRequest) => {
       const sppg = (
         await client.query<Sppg>(
           `INSERT INTO sppg (nama, alamat, lat, lng, radius_m, geofence_aktif,
-                             selfie_wajib, jam_masuk, jam_pulang, tz)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-          [nama, alamat, lat, lng, radius_m, geofence_aktif, selfie_wajib, jam_masuk, jam_pulang, tz],
+                             selfie_wajib, jam_masuk, jam_pulang, tz, jenis)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+          [nama, alamat, lat, lng, radius_m, geofence_aktif, selfie_wajib, jam_masuk, jam_pulang, tz, jenis],
         )
       ).rows[0];
       const hash = await hashPassword(adminPass);
       await client.query(
         `INSERT INTO users (nama, username, password_hash, role, jabatan, sppg_id, is_super)
-         VALUES ($1,$2,$3,'admin','Kepala Dapur',$4,FALSE)`,
-        [adminNama, adminUser, hash, sppg.id],
+         VALUES ($1,$2,$3,'admin',$4,$5,FALSE)`,
+        [adminNama, adminUser, hash, isPerusahaan ? "Pimpinan" : "Kepala Dapur", sppg.id],
       );
       await client.query("COMMIT");
       return sppg;
