@@ -115,6 +115,16 @@ export default function SppgPage() {
     await load();
   }
 
+  async function copyLoginLink(s: SppgRow) {
+    const url = `${window.location.origin}/masuk/${s.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setMsg(`Link login ${s.jenis === "perusahaan" ? "perusahaan" : "dapur"} "${s.nama}" disalin: ${url}`);
+    } catch {
+      setMsg(`Link login unit "${s.nama}": ${url}`);
+    }
+  }
+
   function openPaket(s: SppgRow) {
     setEditS(s);
     setEp(normalizePaket(s.paket));
@@ -253,6 +263,13 @@ export default function SppgPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => copyLoginLink(s)}
+                          className="btn-ghost px-2.5 py-1 text-xs"
+                          title="Salin link login khusus unit ini"
+                        >
+                          Link Login
+                        </button>
                         <button
                           onClick={() => openPaket(s)}
                           className="btn-ghost px-2.5 py-1 text-xs"

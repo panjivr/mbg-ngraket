@@ -6,6 +6,7 @@ import FotoAbsen from "@/components/FotoAbsen";
 import RingkasanHarian from "@/components/RingkasanHarian";
 import AlertAbsensi from "@/components/AlertAbsensi";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import { usePerusahaan } from "@/lib/use-jenis";
 
 function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -284,11 +285,8 @@ export default function AdminDashboard() {
   const [cari, setCari] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("semua");
   // Unit perusahaan/kantor: sembunyikan ringkasan khas dapur (menu, distribusi,
-  // stok gudang) & sesuaikan istilah. Dibaca dari atribut tema <html>.
-  const [perusahaan, setPerusahaan] = useState(false);
-  useEffect(() => {
-    setPerusahaan(document.documentElement.dataset.jenis === "perusahaan");
-  }, []);
+  // stok gudang) & sesuaikan istilah.
+  const perusahaan = usePerusahaan();
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -1001,7 +999,7 @@ export default function AdminDashboard() {
           <p className="stat-value !text-2xl text-amber-300">
             {insight.avgJarak != null ? <AnimatedNumber value={insight.avgJarak} format={(n) => `${Math.round(n)} m`} /> : "—"}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">jarak absen dari titik dapur</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">jarak absen dari titik {perusahaan ? "kantor" : "dapur"}</p>
         </div>
 
         <div className="stat-card min-w-[46%] shrink-0 sm:min-w-0">

@@ -7,10 +7,10 @@ import DapurBottomNav from "@/components/DapurBottomNav";
 import LogoutButton from "@/components/LogoutButton";
 import SettingsMenu from "@/components/SettingsMenu";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
-import BgnLogo from "@/components/BgnLogo";
+import UnitLogo from "@/components/UnitLogo";
 import PeopleCultureSurvey from "@/components/PeopleCultureSurvey";
 import InstallAppButton from "@/components/InstallAppButton";
-import JenisThemeSetter from "@/components/JenisThemeSetter";
+import { JenisProvider } from "@/lib/use-jenis";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +34,13 @@ export default async function DapurLayout({
   const headerLabel = perusahaan ? (me?.sppg_nama || "Absensi Kantor") : "Absensi Dapur";
 
   return (
+    <JenisProvider jenis={jenis}>
     <div className="mx-auto min-h-dvh max-w-2xl px-4 pb-28 md:pb-12">
-      <JenisThemeSetter jenis={jenis} />
       <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/5 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <BgnLogo size={34} />
+            <UnitLogo jenis={jenis} nama={me?.sppg_nama || headerLabel} logoUrl={me?.sppg_logo || ""} size={34} />
             <p className="text-sm font-bold tracking-tight">{headerLabel}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -94,5 +94,6 @@ export default async function DapurLayout({
         aksesGizi={aksesGizi}
       />
     </div>
+    </JenisProvider>
   );
 }

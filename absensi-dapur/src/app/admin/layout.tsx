@@ -8,9 +8,9 @@ import CommandPaletteTrigger from "@/components/CommandPaletteTrigger";
 import PaketGuard from "@/components/PaketGuard";
 import LogoutButton from "@/components/LogoutButton";
 import BirthdayGreeting from "@/components/BirthdayGreeting";
-import BgnLogo from "@/components/BgnLogo";
+import UnitLogo from "@/components/UnitLogo";
 import SettingsMenu from "@/components/SettingsMenu";
-import JenisThemeSetter from "@/components/JenisThemeSetter";
+import { JenisProvider } from "@/lib/use-jenis";
 import { paketEfektif, paketExpired, fiturAktif, SEMUA_FITUR, PAKET_LABEL } from "@/lib/paket";
 
 export const dynamic = "force-dynamic";
@@ -43,13 +43,13 @@ export default async function AdminLayout({
   const fitur: string[] = isSuper ? SEMUA_FITUR : fiturAktif(paket);
 
   return (
+    <JenisProvider jenis={jenis}>
     <div className="mx-auto min-h-dvh w-full max-w-[1920px] px-4 pb-12 sm:px-6 lg:px-8 xl:px-10">
-      <JenisThemeSetter jenis={jenis} />
       <a href="#konten-utama" className="skip-link">Lewati navigasi</a>
       <header className="sticky top-0 z-10 -mx-4 mb-6 border-b border-white/10 bg-ink-950/85 px-4 py-3 shadow-appbar backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <BgnLogo size={38} />
+            <UnitLogo jenis={jenis} nama={dapurNama} logoUrl={me?.sppg_logo || ""} size={38} />
             <div className="min-w-0 break-words leading-tight">
               <p className="text-sm font-bold tracking-tight">Panel {fullAdmin ? "Admin" : "Sub-Admin"} · {dapurNama}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
@@ -131,10 +131,11 @@ export default async function AdminLayout({
             <circle cx="12" cy="12" r="9" />
             <path d="M12 7v5l3 2" />
           </svg>
-          <span>Masa aktif langganan dapur ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.</span>
+          <span>Masa aktif langganan {perusahaan ? "unit" : "dapur"} ini sudah berakhir — sebagian fitur terkunci sampai diperpanjang.</span>
         </div>
       )}
       <main id="konten-utama" tabIndex={-1} className="min-w-0">{children}</main>
     </div>
+    </JenisProvider>
   );
 }

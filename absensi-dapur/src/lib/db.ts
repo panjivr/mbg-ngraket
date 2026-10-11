@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-11a.sppg-jenis-perusahaan";
+const SCHEMA_VERSION = "2026-10-11b.sppg-jenis-logo";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -421,11 +421,15 @@ async function doEnsureSchema(): Promise<void> {
         -- (kantor/usaha — hanya absensi & kepegawaian, fitur dapur disembunyikan).
         -- Satu database, satu skema; pembeda cukup kolom ini + tema tampilan.
         jenis           TEXT NOT NULL DEFAULT 'dapur',
+        -- Logo unit (data URL / URL). Kosong = pakai lambang default (BGN untuk
+        -- dapur, atau inisial korporat untuk perusahaan).
+        logo_url        TEXT NOT NULL DEFAULT '',
         created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `);
-    // Kolom jenis untuk basis data lama (tabel sppg sudah ada sebelum fitur ini).
+    // Kolom untuk basis data lama (tabel sppg sudah ada sebelum fitur ini).
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS jenis TEXT NOT NULL DEFAULT 'dapur'`);
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS logo_url TEXT NOT NULL DEFAULT ''`);
     // --- SOP (Standar Operasional Prosedur) per dapur --- (butuh tabel sppg)
     await client.query(`
       CREATE TABLE IF NOT EXISTS sop (
