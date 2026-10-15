@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-15a.slip-ttd-elektronik";
+const SCHEMA_VERSION = "2026-10-15b.slip-ttd-mode";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -863,6 +863,9 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_aktif BOOLEAN NOT NULL DEFAULT FALSE`);
     // Catatan (NB) tingkat dapur — tampil di bawah SEMUA slip karyawan.
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_nb TEXT NOT NULL DEFAULT ''`);
+    // Mode tanda tangan elektronik slip: 'dua' (penerima+penyetuju) | 'satu'
+    // (penerima, HR bisa mewakili) | 'terima' (hanya status "sudah diterima").
+    await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_ttd_mode TEXT NOT NULL DEFAULT 'dua'`);
 
     // Tanda tangan elektronik slip per periode:
     //  - confirmed_at  : "diterima" oleh KARYAWAN (penerima).
