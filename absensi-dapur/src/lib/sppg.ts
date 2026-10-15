@@ -37,6 +37,8 @@ export interface Sppg {
   slip_aktif: boolean;
   /** Catatan (NB) yang tampil di bawah semua slip karyawan dapur ini. */
   slip_nb: string;
+  /** Mode tanda tangan elektronik slip: 'dua' | 'satu' | 'terima'. */
+  slip_ttd_mode: string;
   // Paket langganan + masa aktif (monetisasi per dapur).
   paket: string;
   paket_until: string | null;

@@ -38,6 +38,7 @@ interface Config {
   show_until: string | null;
   aktif: boolean;
   nb: string;
+  ttd_mode: string;
 }
 
 export default function HrPanel() {
@@ -222,6 +223,7 @@ function PengaturanSlip() {
     show_until: "",
     aktif: false,
     nb: "",
+    ttd_mode: "dua",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -239,6 +241,7 @@ function PengaturanSlip() {
           show_until: c.show_until || "",
           aktif: !!c.aktif,
           nb: c.nb || "",
+          ttd_mode: c.ttd_mode || "dua",
         });
       })
       .finally(() => setLoading(false));
@@ -314,6 +317,19 @@ function PengaturanSlip() {
         <p className="mt-1 text-[11px] text-slate-500">
           Tampil di bagian bawah slip <b>setiap</b> karyawan. Cocok untuk info umum: hari setengah,
           hari kegiatan tanpa gaji, jadwal transfer, dll. Kosongkan bila tak perlu.
+        </p>
+      </div>
+      <div>
+        <label className="label">Mode Tanda Tangan Elektronik Slip</label>
+        <select className="input" value={cfg.ttd_mode} onChange={(e) => setCfg({ ...cfg, ttd_mode: e.target.value })}>
+          <option value="dua">2 tanda tangan — penerima &amp; penyetuju (HR)</option>
+          <option value="satu">1 tanda tangan — penerima saja (HR boleh mewakili)</option>
+          <option value="terima">Status &quot;sudah diterima&quot; saja (tanpa nama, waktu bisa diatur)</option>
+        </select>
+        <p className="mt-1 text-[11px] text-slate-500">
+          <b>2 tanda tangan</b>: karyawan menandatangani &quot;diterima&quot;, HR menandatangani &quot;disahkan&quot;. ·{" "}
+          <b>1 tanda tangan</b>: cukup penerima; bila perlu, HR bisa menandai diterima mewakili (tanpa tulisan &quot;diwakili&quot;). ·{" "}
+          <b>Status diterima</b>: hanya menampilkan &quot;sudah diterima&quot; + tanggal/jam (bisa diatur HR), tanpa nama/peran.
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -492,14 +508,14 @@ function CetakSlip() {
   }, [userId]);
 
   const tandaTanganHr = useCallback(
-    async (unsign: boolean) => {
+    async (action: "sahkan" | "batal-sah" | "terima" | "batal-terima", at?: string) => {
       if (!slip || typeof userId !== "number") return;
       setHrSigning(true);
       try {
         const res = await fetch("/api/hr/slip-sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user: userId, from: slip.periode.from, to: slip.periode.to, unsign }),
+          body: JSON.stringify({ user: userId, from: slip.periode.from, to: slip.periode.to, action, at: at || "" }),
         });
         if (res.ok) await tampil();
       } finally {

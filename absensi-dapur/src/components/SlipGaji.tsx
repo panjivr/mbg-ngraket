@@ -71,12 +71,49 @@ export default function SlipGaji({
   verifyQr?: string;
   /** URL verifikasi yang dikodekan pada QR. */
   verifyUrl?: string;
-  /** Aksi HR menandatangani/mengesahkan slip (toggle). Disediakan di panel HR. */
-  onHrSign?: (unsign: boolean) => void;
+  /** Aksi HR atas tanda tangan slip. Disediakan di panel HR. */
+  onHrSign?: (action: "sahkan" | "batal-sah" | "terima" | "batal-terima", at?: string) => void;
   hrSigning?: boolean;
 }) {
   const [paper, setPaper] = useState("A4");
+  const [hrAt, setHrAt] = useState("");
   const u = slip.user;
+  const mode = slip.ttd_mode || "dua";
+
+  // Kontrol HR untuk menandai "diterima" mewakili penerima (mode satu/terima),
+  // dengan waktu yang bisa diatur. Kosongkan waktu = sekarang.
+  const hrReceiptCtl = onHrSign ? (
+    <div className="no-print mt-1.5 flex flex-col items-center gap-1">
+      <input
+        type="datetime-local"
+        value={hrAt}
+        onChange={(e) => setHrAt(e.target.value)}
+        className="rounded border border-gray-300 px-2 py-1 text-[11px] text-black"
+      />
+      <button
+        onClick={() => onHrSign("terima", hrAt)}
+        disabled={hrSigning}
+        className="rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+      >
+        {hrSigning ? "Menyimpan…" : "Tandai Diterima"}
+      </button>
+      <span className="text-[9px] text-gray-400">kosongkan waktu = sekarang</span>
+    </div>
+  ) : null;
+
+  const qrBlock = (
+    <div className="flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2">
+      {verifyQr ? (
+        // eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis.
+        <img src={verifyQr} alt="QR verifikasi keaslian slip" width={104} height={104} style={{ width: 104, height: 104 }} />
+      ) : (
+        <div className="grid h-[104px] w-[104px] place-items-center text-[10px] text-gray-400">QR</div>
+      )}
+      <p className="mt-1 max-w-[120px] text-center text-[9px] leading-tight text-gray-500">
+        Pindai untuk verifikasi keaslian slip
+      </p>
+    </div>
+  );
   const namaDapur = (dapur || "").replace(/^SPPG\s+/i, "");
 
   const baris = (label: string, detail: string, nilai: number, minus = false) => (
@@ -266,84 +303,95 @@ export default function SlipGaji({
           </div>
         )}
 
-        {/* Tanda tangan elektronik: karyawan (diterima) & HR (disahkan) + QR verifikasi */}
+        {/* Tanda tangan elektronik — mode: dua (penerima+penyetuju) | satu
+            (penerima, HR bisa mewakili) | terima (hanya status diterima). */}
         <div className="mt-6 rounded-md border border-gray-300 bg-gray-50 p-3 sm:p-4">
-          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
-            {/* Kiri: tanda tangan karyawan */}
-            <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Diterima oleh</p>
-              <div className="flex flex-1 flex-col items-center justify-center py-1">
+          <div className={"grid grid-cols-1 items-stretch gap-3 " + (mode === "dua" ? "sm:grid-cols-[1fr_auto_1fr]" : "sm:grid-cols-[1fr_auto]")}>
+            {mode === "terima" ? (
+              /* Minimal: hanya status "sudah diterima" + waktu, tanpa nama/jabatan. */
+              <div className="flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white p-4 text-center">
                 {slip.confirmed_at ? (
                   <>
                     <span className="text-2xl leading-none text-green-700">✔</span>
-                    <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
-                    <p className="text-[11px] text-gray-500">{fmtWaktu(slip.confirmed_at)}</p>
+                    <p className="mt-1 text-sm font-semibold text-green-700">Sudah diterima</p>
+                    <p className="text-xs text-gray-600">{fmtWaktu(slip.confirmed_at)}</p>
+                    {onHrSign && (
+                      <button onClick={() => onHrSign("batal-terima")} disabled={hrSigning} className="no-print mt-1 text-[10px] text-gray-400 underline hover:text-gray-600">
+                        batalkan
+                      </button>
+                    )}
                   </>
                 ) : onConfirm ? (
-                  <button
-                    onClick={onConfirm}
-                    disabled={confirming}
-                    className="no-print rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {confirming ? "Menyimpan…" : "✓ Tanda Tangani (Terima)"}
+                  <button onClick={onConfirm} disabled={confirming} className="no-print rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                    {confirming ? "Menyimpan…" : "✓ Tandai Sudah Diterima"}
                   </button>
-                ) : (
-                  <span className="text-xs text-gray-400">Belum ditandatangani</span>
-                )}
-              </div>
-              <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">{u.nama}</p>
-              <p className="text-[10px] text-gray-500">Karyawan / Penerima</p>
-            </div>
-
-            {/* Tengah: QR tanda tangan elektronik */}
-            <div className="flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2">
-              {verifyQr ? (
-                // eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis.
-                <img src={verifyQr} alt="QR verifikasi keaslian slip" width={104} height={104} style={{ width: 104, height: 104 }} />
-              ) : (
-                <div className="grid h-[104px] w-[104px] place-items-center text-[10px] text-gray-400">QR</div>
-              )}
-              <p className="mt-1 max-w-[120px] text-center text-[9px] leading-tight text-gray-500">
-                Pindai untuk verifikasi keaslian slip
-              </p>
-            </div>
-
-            {/* Kanan: tanda tangan HR */}
-            <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Disahkan oleh</p>
-              <div className="flex flex-1 flex-col items-center justify-center py-1">
-                {slip.hr_signed_at ? (
-                  <>
-                    <span className="text-2xl leading-none text-green-700">✔</span>
-                    <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
-                    <p className="text-[11px] text-gray-500">{fmtWaktu(slip.hr_signed_at)}</p>
-                  </>
                 ) : onHrSign ? (
-                  <button
-                    onClick={() => onHrSign(false)}
-                    disabled={hrSigning}
-                    className="no-print rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {hrSigning ? "Menyimpan…" : "✓ Sahkan & Tanda Tangani"}
-                  </button>
+                  hrReceiptCtl
                 ) : (
-                  <span className="text-xs text-gray-400">Belum disahkan</span>
+                  <span className="text-xs text-gray-400">Belum diterima</span>
                 )}
               </div>
-              <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">
-                {slip.hr_signed_nama || "—"}
-              </p>
-              <p className="text-[10px] text-gray-500">Admin HR / Penyetuju</p>
-              {slip.hr_signed_at && onHrSign && (
-                <button
-                  onClick={() => onHrSign(true)}
-                  disabled={hrSigning}
-                  className="no-print mt-1 text-[10px] text-gray-400 underline hover:text-gray-600"
-                >
-                  batalkan tanda tangan
-                </button>
-              )}
-            </div>
+            ) : (
+              /* Penerima (mode dua & satu) — dengan nama & peran. */
+              <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Diterima oleh</p>
+                <div className="flex flex-1 flex-col items-center justify-center py-1">
+                  {slip.confirmed_at ? (
+                    <>
+                      <span className="text-2xl leading-none text-green-700">✔</span>
+                      <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
+                      <p className="text-[11px] text-gray-500">{fmtWaktu(slip.confirmed_at)}</p>
+                    </>
+                  ) : onConfirm ? (
+                    <button onClick={onConfirm} disabled={confirming} className="no-print rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                      {confirming ? "Menyimpan…" : "✓ Tanda Tangani (Terima)"}
+                    </button>
+                  ) : mode === "satu" && onHrSign ? (
+                    hrReceiptCtl
+                  ) : (
+                    <span className="text-xs text-gray-400">Belum ditandatangani</span>
+                  )}
+                </div>
+                <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">{u.nama}</p>
+                <p className="text-[10px] text-gray-500">Karyawan / Penerima</p>
+                {mode === "satu" && slip.confirmed_at && onHrSign && (
+                  <button onClick={() => onHrSign("batal-terima")} disabled={hrSigning} className="no-print mt-1 text-[10px] text-gray-400 underline hover:text-gray-600">
+                    batalkan tanda tangan
+                  </button>
+                )}
+              </div>
+            )}
+
+            {qrBlock}
+
+            {/* Penyetuju HR — hanya mode dua. */}
+            {mode === "dua" && (
+              <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Disahkan oleh</p>
+                <div className="flex flex-1 flex-col items-center justify-center py-1">
+                  {slip.hr_signed_at ? (
+                    <>
+                      <span className="text-2xl leading-none text-green-700">✔</span>
+                      <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
+                      <p className="text-[11px] text-gray-500">{fmtWaktu(slip.hr_signed_at)}</p>
+                    </>
+                  ) : onHrSign ? (
+                    <button onClick={() => onHrSign("sahkan")} disabled={hrSigning} className="no-print rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+                      {hrSigning ? "Menyimpan…" : "✓ Sahkan & Tanda Tangani"}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-400">Belum disahkan</span>
+                  )}
+                </div>
+                <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">{slip.hr_signed_nama || "—"}</p>
+                <p className="text-[10px] text-gray-500">Admin HR / Penyetuju</p>
+                {slip.hr_signed_at && onHrSign && (
+                  <button onClick={() => onHrSign("batal-sah")} disabled={hrSigning} className="no-print mt-1 text-[10px] text-gray-400 underline hover:text-gray-600">
+                    batalkan tanda tangan
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {verifyUrl && (

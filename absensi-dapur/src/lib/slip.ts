@@ -54,6 +54,8 @@ export interface Slip {
   hr_signed_at: string | null;
   /** Nama HR penyetuju (snapshot) atau null. */
   hr_signed_nama: string | null;
+  /** Mode tanda tangan: 'dua' | 'satu' | 'terima'. */
+  ttd_mode: string;
   /** Catatan (NB) tingkat dapur — tampil di bawah slip. */
   nb: string;
 }
@@ -224,8 +226,13 @@ export async function computeSlip(
     )
   )[0];
 
-  // Catatan (NB) tingkat dapur — sama untuk semua slip karyawan.
-  const nbRow = (await query<{ slip_nb: string }>(`SELECT slip_nb FROM sppg WHERE id = $1`, [sppgId]))[0];
+  // Catatan (NB) + mode tanda tangan tingkat dapur — sama untuk semua slip.
+  const nbRow = (
+    await query<{ slip_nb: string; slip_ttd_mode: string }>(
+      `SELECT slip_nb, slip_ttd_mode FROM sppg WHERE id = $1`,
+      [sppgId],
+    )
+  )[0];
 
   return {
     user: u,
@@ -244,6 +251,7 @@ export async function computeSlip(
     confirmed_at: konf?.confirmed_at || null,
     hr_signed_at: konf?.hr_signed_at || null,
     hr_signed_nama: konf?.hr_signed_nama || null,
+    ttd_mode: nbRow?.slip_ttd_mode || "dua",
     nb: nbRow?.slip_nb || "",
   };
 }
