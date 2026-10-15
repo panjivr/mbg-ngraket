@@ -57,12 +57,23 @@ export default function SlipGaji({
   canPrint = false,
   onConfirm,
   confirming = false,
+  verifyQr,
+  verifyUrl,
+  onHrSign,
+  hrSigning = false,
 }: {
   slip: Slip;
   dapur: string;
   canPrint?: boolean;
   onConfirm?: () => void;
   confirming?: boolean;
+  /** QR tanda tangan elektronik (data URL) untuk verifikasi keaslian. */
+  verifyQr?: string;
+  /** URL verifikasi yang dikodekan pada QR. */
+  verifyUrl?: string;
+  /** Aksi HR menandatangani/mengesahkan slip (toggle). Disediakan di panel HR. */
+  onHrSign?: (unsign: boolean) => void;
+  hrSigning?: boolean;
 }) {
   const [paper, setPaper] = useState("A4");
   const u = slip.user;
@@ -255,27 +266,88 @@ export default function SlipGaji({
           </div>
         )}
 
-        {/* Konfirmasi diterima (bukan tanda tangan) */}
-        <div className="mt-6 rounded-md border border-gray-300 bg-gray-50 p-3">
-          {slip.confirmed_at ? (
-            <p className="text-center text-sm font-semibold text-green-700">
-              ✅ Telah dikonfirmasi diterima pada {fmtWaktu(slip.confirmed_at)}
-            </p>
-          ) : onConfirm ? (
-            <div className="text-center">
-              <p className="mb-2 text-xs text-gray-600">
-                Dengan menekan tombol di bawah, Anda mengonfirmasi telah menerima slip gaji ini.
-              </p>
-              <button
-                onClick={onConfirm}
-                disabled={confirming}
-                className="no-print rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {confirming ? "Menyimpan…" : "✓ Konfirmasi Diterima"}
-              </button>
+        {/* Tanda tangan elektronik: karyawan (diterima) & HR (disahkan) + QR verifikasi */}
+        <div className="mt-6 rounded-md border border-gray-300 bg-gray-50 p-3 sm:p-4">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[1fr_auto_1fr]">
+            {/* Kiri: tanda tangan karyawan */}
+            <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Diterima oleh</p>
+              <div className="flex flex-1 flex-col items-center justify-center py-1">
+                {slip.confirmed_at ? (
+                  <>
+                    <span className="text-2xl leading-none text-green-700">✔</span>
+                    <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
+                    <p className="text-[11px] text-gray-500">{fmtWaktu(slip.confirmed_at)}</p>
+                  </>
+                ) : onConfirm ? (
+                  <button
+                    onClick={onConfirm}
+                    disabled={confirming}
+                    className="no-print rounded-lg bg-green-600 px-4 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {confirming ? "Menyimpan…" : "✓ Tanda Tangani (Terima)"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">Belum ditandatangani</span>
+                )}
+              </div>
+              <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">{u.nama}</p>
+              <p className="text-[10px] text-gray-500">Karyawan / Penerima</p>
             </div>
-          ) : (
-            <p className="text-center text-sm text-gray-500">Belum dikonfirmasi oleh karyawan.</p>
+
+            {/* Tengah: QR tanda tangan elektronik */}
+            <div className="flex flex-col items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2">
+              {verifyQr ? (
+                // eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis.
+                <img src={verifyQr} alt="QR verifikasi keaslian slip" width={104} height={104} style={{ width: 104, height: 104 }} />
+              ) : (
+                <div className="grid h-[104px] w-[104px] place-items-center text-[10px] text-gray-400">QR</div>
+              )}
+              <p className="mt-1 max-w-[120px] text-center text-[9px] leading-tight text-gray-500">
+                Pindai untuk verifikasi keaslian slip
+              </p>
+            </div>
+
+            {/* Kanan: tanda tangan HR */}
+            <div className="flex flex-col rounded-md border border-gray-300 bg-white p-3 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Disahkan oleh</p>
+              <div className="flex flex-1 flex-col items-center justify-center py-1">
+                {slip.hr_signed_at ? (
+                  <>
+                    <span className="text-2xl leading-none text-green-700">✔</span>
+                    <p className="mt-1 text-[11px] text-gray-500">Ditandatangani elektronik</p>
+                    <p className="text-[11px] text-gray-500">{fmtWaktu(slip.hr_signed_at)}</p>
+                  </>
+                ) : onHrSign ? (
+                  <button
+                    onClick={() => onHrSign(false)}
+                    disabled={hrSigning}
+                    className="no-print rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {hrSigning ? "Menyimpan…" : "✓ Sahkan & Tanda Tangani"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-400">Belum disahkan</span>
+                )}
+              </div>
+              <p className="border-t border-gray-300 pt-1 text-xs font-semibold text-black">
+                {slip.hr_signed_nama || "—"}
+              </p>
+              <p className="text-[10px] text-gray-500">Admin HR / Penyetuju</p>
+              {slip.hr_signed_at && onHrSign && (
+                <button
+                  onClick={() => onHrSign(true)}
+                  disabled={hrSigning}
+                  className="no-print mt-1 text-[10px] text-gray-400 underline hover:text-gray-600"
+                >
+                  batalkan tanda tangan
+                </button>
+              )}
+            </div>
+          </div>
+
+          {verifyUrl && (
+            <p className="mt-2 break-all text-center text-[9px] text-gray-400">{verifyUrl}</p>
           )}
         </div>
 

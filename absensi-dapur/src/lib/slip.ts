@@ -48,7 +48,12 @@ export interface Slip {
   kasbon_items: KasbonItem[];
   total: number;
   hari: HariSlip[];
+  /** Tanda tangan karyawan (diterima) — ISO atau null. */
   confirmed_at: string | null;
+  /** Tanda tangan HR (disahkan) — ISO atau null. */
+  hr_signed_at: string | null;
+  /** Nama HR penyetuju (snapshot) atau null. */
+  hr_signed_nama: string | null;
   /** Catatan (NB) tingkat dapur — tampil di bawah slip. */
   nb: string;
 }
@@ -212,8 +217,8 @@ export async function computeSlip(
   const total = upahKehadiran + upahLembur - potongan - kasbon;
 
   const konf = (
-    await query<{ confirmed_at: string }>(
-      `SELECT confirmed_at::text FROM slip_konfirmasi
+    await query<{ confirmed_at: string | null; hr_signed_at: string | null; hr_signed_nama: string | null }>(
+      `SELECT confirmed_at::text, hr_signed_at::text, hr_signed_nama FROM slip_konfirmasi
         WHERE user_id = $1 AND periode_from = $2 AND periode_to = $3`,
       [userId, from, to],
     )
@@ -237,6 +242,8 @@ export async function computeSlip(
     total,
     hari,
     confirmed_at: konf?.confirmed_at || null,
+    hr_signed_at: konf?.hr_signed_at || null,
+    hr_signed_nama: konf?.hr_signed_nama || null,
     nb: nbRow?.slip_nb || "",
   };
 }

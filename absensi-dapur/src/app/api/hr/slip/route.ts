@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireHr } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { computeSlip } from "@/lib/slip";
+import { buildSlipVerification } from "@/lib/slip-verify";
 import { ok, fail, route } from "@/lib/api";
 import { localDate } from "@/lib/time";
 
@@ -29,5 +30,6 @@ export const GET = route(async (req: NextRequest) => {
 
   const slip = await computeSlip(hr.sppg_id as number, userId, from, to);
   if (!slip) return fail(404, "Pegawai tidak ditemukan.");
-  return ok({ slip, dapur: sppg?.nama || "" });
+  const { verifyUrl, verifyQr } = await buildSlipVerification(slip, sppg?.nama || "", req.nextUrl.origin);
+  return ok({ slip, dapur: sppg?.nama || "", verifyUrl, verifyQr });
 });

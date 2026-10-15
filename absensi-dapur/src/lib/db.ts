@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-11b.sppg-jenis-logo";
+const SCHEMA_VERSION = "2026-10-15a.slip-ttd-elektronik";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -864,16 +864,30 @@ async function doEnsureSchema(): Promise<void> {
     // Catatan (NB) tingkat dapur — tampil di bawah SEMUA slip karyawan.
     await client.query(`ALTER TABLE sppg ADD COLUMN IF NOT EXISTS slip_nb TEXT NOT NULL DEFAULT ''`);
 
-    // Konfirmasi "diterima" oleh karyawan per periode slip.
+    // Tanda tangan elektronik slip per periode:
+    //  - confirmed_at  : "diterima" oleh KARYAWAN (penerima).
+    //  - hr_signed_*   : "disahkan" oleh ADMIN HR (penyetuju).
+    // Kedua pihak bisa menandatangani; keaslian slip diverifikasi via QR bertanda
+    // tangan (HMAC) pada halaman /verifikasi-slip.
     await client.query(`
       CREATE TABLE IF NOT EXISTS slip_konfirmasi (
-        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        periode_from DATE NOT NULL,
-        periode_to   DATE NOT NULL,
-        confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        periode_from  DATE NOT NULL,
+        periode_to    DATE NOT NULL,
+        confirmed_at  TIMESTAMPTZ,
+        hr_signed_at  TIMESTAMPTZ,
+        hr_signed_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        hr_signed_nama TEXT,
         PRIMARY KEY (user_id, periode_from, periode_to)
       );
     `);
+    // Kolom tanda tangan HR untuk basis data lama + izinkan confirmed_at kosong
+    // (baris bisa dibuat HR lebih dulu sebelum karyawan mengonfirmasi).
+    await client.query(`ALTER TABLE slip_konfirmasi ADD COLUMN IF NOT EXISTS hr_signed_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE slip_konfirmasi ADD COLUMN IF NOT EXISTS hr_signed_by INTEGER`);
+    await client.query(`ALTER TABLE slip_konfirmasi ADD COLUMN IF NOT EXISTS hr_signed_nama TEXT`);
+    await client.query(`ALTER TABLE slip_konfirmasi ALTER COLUMN confirmed_at DROP NOT NULL`);
+    await client.query(`ALTER TABLE slip_konfirmasi ALTER COLUMN confirmed_at DROP DEFAULT`);
 
     // Penyesuaian slip per HARI (HR menimpa hasil absensi otomatis).
     // status: penuh | setengah | sakit | izin | alpha | libur. upah = nominal efektif hari itu.
