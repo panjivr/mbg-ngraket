@@ -7,6 +7,8 @@ import SlipGaji from "@/components/SlipGaji";
 export default function SlipSayaPage() {
   const [slip, setSlip] = useState<Slip | null>(null);
   const [dapur, setDapur] = useState("");
+  const [verifyQr, setVerifyQr] = useState("");
+  const [verifyUrl, setVerifyUrl] = useState("");
   const [pesan, setPesan] = useState("");
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
@@ -19,6 +21,8 @@ export default function SlipSayaPage() {
       if (data.visible) {
         setSlip(data.slip);
         setDapur(data.dapur || "");
+        setVerifyQr(data.verifyQr || "");
+        setVerifyUrl(data.verifyUrl || "");
         setPesan("");
       } else {
         setSlip(null);
@@ -51,7 +55,7 @@ export default function SlipSayaPage() {
         <div className="card p-6 text-center text-slate-400">Memuat…</div>
       ) : slip ? (
         <div className="overflow-hidden rounded-2xl border border-white/10">
-          <SlipGaji slip={slip} dapur={dapur} onConfirm={konfirmasi} confirming={confirming} />
+          <SlipGaji slip={slip} dapur={dapur} onConfirm={konfirmasi} confirming={confirming} verifyQr={verifyQr} verifyUrl={verifyUrl} />
         </div>
       ) : (
         <div className="card p-8 text-center">

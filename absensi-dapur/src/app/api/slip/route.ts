@@ -1,6 +1,8 @@
+import { NextRequest } from "next/server";
 import { requireSession } from "@/lib/session";
 import { getSppg } from "@/lib/sppg";
 import { computeSlip } from "@/lib/slip";
+import { buildSlipVerification } from "@/lib/slip-verify";
 import { query } from "@/lib/db";
 import { ok, fail, route } from "@/lib/api";
 
@@ -54,7 +56,7 @@ function windowInfo(
   return { visible: true, pesan: "", from: sppg.slip_period_from, to: sppg.slip_period_to };
 }
 
-export const GET = route(async () => {
+export const GET = route(async (req: NextRequest) => {
   const s = await requireSession();
   const sppg = await getSppg(s.sppg_id as number);
   if (!sppg) return fail(404, "Data dapur tidak ditemukan.");
@@ -67,7 +69,8 @@ export const GET = route(async () => {
   if (!slip.user.slip_show) {
     return ok({ visible: false, pesan: "Slip Anda belum diterbitkan oleh HR." });
   }
-  return ok({ visible: true, slip, dapur: sppg.nama || "" });
+  const { verifyUrl, verifyQr } = await buildSlipVerification(slip, sppg.nama || "", req.nextUrl.origin);
+  return ok({ visible: true, slip, dapur: sppg.nama || "", verifyUrl, verifyQr });
 });
 
 // Karyawan mengonfirmasi telah menerima slip periode berjalan.
@@ -77,9 +80,12 @@ export const POST = route(async () => {
   if (!sppg) return fail(404, "Data dapur tidak ditemukan.");
   const w = windowInfo(sppg, sppg.tz || "Asia/Jakarta");
   if (!w.visible) return fail(403, "Slip tidak sedang ditampilkan.");
+  // Tanda tangan karyawan — pertahankan tanda tangan HR bila baris sudah ada.
   await query(
-    `INSERT INTO slip_konfirmasi (user_id, periode_from, periode_to)
-     VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+    `INSERT INTO slip_konfirmasi (user_id, periode_from, periode_to, confirmed_at)
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (user_id, periode_from, periode_to)
+     DO UPDATE SET confirmed_at = COALESCE(slip_konfirmasi.confirmed_at, now())`,
     [s.uid, w.from, w.to],
   );
   return ok({ confirmed: true });

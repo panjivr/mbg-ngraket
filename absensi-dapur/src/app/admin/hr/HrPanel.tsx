@@ -454,7 +454,10 @@ function CetakSlip() {
   const [userId, setUserId] = useState<number | "">("");
   const [slip, setSlip] = useState<Slip | null>(null);
   const [dapur, setDapur] = useState("");
+  const [verifyQr, setVerifyQr] = useState("");
+  const [verifyUrl, setVerifyUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hrSigning, setHrSigning] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -474,6 +477,8 @@ function CetakSlip() {
       if (res.ok) {
         setSlip(d.slip);
         setDapur(d.dapur || "");
+        setVerifyQr(d.verifyQr || "");
+        setVerifyUrl(d.verifyUrl || "");
       } else {
         setSlip(null);
         setErr(d?.error || `Gagal memuat slip (kode ${res.status}).`);
@@ -485,6 +490,24 @@ function CetakSlip() {
       setLoading(false);
     }
   }, [userId]);
+
+  const tandaTanganHr = useCallback(
+    async (unsign: boolean) => {
+      if (!slip || typeof userId !== "number") return;
+      setHrSigning(true);
+      try {
+        const res = await fetch("/api/hr/slip-sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: userId, from: slip.periode.from, to: slip.periode.to, unsign }),
+        });
+        if (res.ok) await tampil();
+      } finally {
+        setHrSigning(false);
+      }
+    },
+    [slip, userId, tampil],
+  );
 
   return (
     <div className="space-y-4">
@@ -513,7 +536,7 @@ function CetakSlip() {
           <AdjustHarian userId={userId} slip={slip} onSaved={tampil} />
           <KasbonManager userId={userId} onChanged={tampil} />
           <div className="overflow-hidden rounded-2xl border border-white/10">
-            <SlipGaji slip={slip} dapur={dapur} canPrint />
+            <SlipGaji slip={slip} dapur={dapur} canPrint verifyQr={verifyQr} verifyUrl={verifyUrl} onHrSign={tandaTanganHr} hrSigning={hrSigning} />
           </div>
         </>
       )}
