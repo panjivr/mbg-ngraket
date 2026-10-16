@@ -15,7 +15,8 @@ export interface SlipUser {
 }
 
 // Status kehadiran efektif per hari (bisa ditimpa HR).
-export type StatusHari = "penuh" | "setengah" | "sakit" | "izin" | "alpha" | "libur";
+// 'telat' = hadir penuh tetapi terlambat (tetap digaji, menambah potongan telat).
+export type StatusHari = "penuh" | "setengah" | "telat" | "sakit" | "izin" | "alpha" | "libur";
 
 export interface HariSlip {
   tanggal: string;
@@ -127,15 +128,11 @@ export async function computeSlip(
     [userId, from, to],
   );
 
-  // Rangkum absensi per tanggal (masuk, lembur, telat/tepat).
+  // Rangkum absensi per tanggal (masuk, lembur).
   const absHari = new Map<string, { masuk: boolean; lembur: boolean }>();
-  let tepat = 0;
-  let telat = 0;
   for (const r of rows) {
     const prev = absHari.get(r.d) || { masuk: false, lembur: false };
     if (r.check_in) prev.masuk = true;
-    if (r.status_masuk === "Tepat Waktu") tepat += 1;
-    else if (r.status_masuk === "Terlambat") telat += 1;
     if (r.check_in && r.check_out) {
       const menit = (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / 60000;
       if (menit > ambangMenit) prev.lembur = true;
@@ -152,6 +149,20 @@ export async function computeSlip(
   );
   const adjMap = new Map<string, AdjustRow>();
   for (const a of adjRows) adjMap.set(a.tanggal, a);
+
+  // Tepat/telat: dari absensi untuk hari yang TIDAK ditimpa HR; untuk hari yang
+  // ditimpa HR, pakai status override ('telat' menambah hitungan telat).
+  let tepat = 0;
+  let telat = 0;
+  for (const r of rows) {
+    if (adjMap.has(r.d)) continue;
+    if (r.status_masuk === "Tepat Waktu") tepat += 1;
+    else if (r.status_masuk === "Terlambat") telat += 1;
+  }
+  for (const a of adjMap.values()) {
+    if (a.status === "telat") telat += 1;
+    else if (a.status === "penuh" || a.status === "setengah") tepat += 1;
+  }
 
   // Hari khusus tingkat DAPUR (libur/kegiatan) — berlaku ke semua pegawai.
   const hkRows = await query<{ tanggal: string; keterangan: string; digaji: boolean }>(
@@ -194,7 +205,7 @@ export async function computeSlip(
     return { tanggal, masuk, status, upah, lembur, override, catatan };
   });
 
-  const hadir = hari.filter((h) => h.status === "penuh" || h.status === "setengah").length;
+  const hadir = hari.filter((h) => h.status === "penuh" || h.status === "setengah" || h.status === "telat").length;
   const lemburHari = hari.filter((h) => h.lembur).length;
   const upahKehadiran = hari.reduce((a, h) => a + h.upah, 0);
   const upahLembur = lemburHari * u.lembur_per_hari;

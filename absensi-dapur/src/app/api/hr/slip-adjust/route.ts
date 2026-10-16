@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const STATUS = ["penuh", "setengah", "sakit", "izin", "alpha", "libur"];
+const STATUS = ["penuh", "setengah", "telat", "sakit", "izin", "alpha", "libur"];
 
 // HR menyimpan penyesuaian slip per hari untuk satu pegawai.
 // body: { user, items: [{ tanggal, status, upah, lembur, catatan, reset? }] }
