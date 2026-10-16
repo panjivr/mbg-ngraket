@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
-import { quoteAcak, type Quote } from "@/lib/quotes";
+import { quoteAcakDesa, type Quote } from "@/lib/quotes";
 import AbsenStoryCard from "@/components/AbsenStoryCard";
 
 interface SettingsLite {
@@ -94,7 +94,8 @@ export default function AbsenPanel({
   const [quote, setQuote] = useState<Quote | null>(null);
   const [shareInfo, setShareInfo] = useState<{
     action: "masuk" | "pulang";
-    waktuIso: string;
+    checkIn: string | null;
+    checkOut: string | null;
     status: string | null;
   } | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
@@ -270,12 +271,16 @@ export default function AbsenPanel({
       }
       const label = data.action === "check_out" ? "Absen pulang" : "Absen masuk";
       setMessage({ kind: "ok", text: `${label} berhasil dicatat. Terima kasih!` });
-      setQuote(quoteAcak());
+      setQuote(quoteAcakDesa());
       // Info untuk kartu story (dibagikan ke WA/IG).
       const act: "masuk" | "pulang" = data.action === "check_out" ? "pulang" : "masuk";
       const att = (data.attendance || {}) as { check_in?: string; check_out?: string; status_masuk?: string | null };
-      const waktuIso = (act === "pulang" ? att.check_out : att.check_in) || new Date().toISOString();
-      setShareInfo({ action: act, waktuIso, status: att.status_masuk ?? null });
+      setShareInfo({
+        action: act,
+        checkIn: att.check_in ?? null,
+        checkOut: att.check_out ?? null,
+        status: att.status_masuk ?? null,
+      });
       setSelfie(null);
       await loadToday();
     } catch {
@@ -639,11 +644,12 @@ export default function AbsenPanel({
             jenis={jenis}
             logoUrl={unitLogo}
             action={shareInfo.action}
-            waktuIso={shareInfo.waktuIso}
+            checkIn={shareInfo.checkIn}
+            checkOut={shareInfo.checkOut}
             status={shareInfo.status}
             quote={quote}
             tz={settings?.tz}
-            onReshuffle={() => setQuote(quoteAcak())}
+            onReshuffle={() => setQuote(quoteAcakDesa())}
           />
         </div>
       ) : (
