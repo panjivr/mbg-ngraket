@@ -4,6 +4,10 @@ import { useState } from "react";
 import type { Slip, StatusHari } from "@/lib/slip";
 import SlipShield from "@/components/SlipShield";
 
+// Warna resmi BGN (navy + royal blue) agar slip bernuansa tema BGN.
+const BGN_NAVY = "#0e1f55";
+const BGN_BLUE = "#3464e6";
+
 // Tampilan ringkas status hari pada checklist kehadiran.
 const STATUS_TAMPIL: Record<StatusHari, { sym: string; cls: string }> = {
   penuh: { sym: "✓", cls: "border-green-600 bg-green-50 text-green-700" },
@@ -147,6 +151,7 @@ export default function SlipGaji({
           body{visibility:hidden!important}
           .slip-print-root{visibility:visible!important;position:absolute!important;left:0;top:0;width:100%;min-height:0!important;padding-top:0!important;padding-bottom:0!important}
           .slip-print-root *{visibility:visible!important}
+          .slip-print-root,.slip-print-root *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
           .no-print{display:none!important}
         }`}</style>
       ) : (
@@ -190,10 +195,10 @@ export default function SlipGaji({
           menunjukkan isi slip ini kepada orang lain atau tim lain dalam bentuk apa pun.
         </div>
 
-        {/* Kop */}
-        <div className="border-b-2 border-black pb-3 text-center">
-          <h1 className="text-base font-bold uppercase sm:text-lg">SPPG {namaDapur}</h1>
-          <p className="mt-1 text-sm font-semibold uppercase tracking-wide">Slip Gaji Karyawan</p>
+        {/* Kop — aksen biru BGN */}
+        <div className="border-b-2 pb-3 text-center" style={{ borderColor: BGN_NAVY }}>
+          <h1 className="text-base font-bold uppercase sm:text-lg" style={{ color: BGN_NAVY }}>SPPG {namaDapur}</h1>
+          <p className="mt-1 text-sm font-semibold uppercase tracking-wide" style={{ color: BGN_BLUE }}>Slip Gaji Karyawan</p>
         </div>
 
         {/* Identitas */}
@@ -255,7 +260,7 @@ export default function SlipGaji({
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[420px] border-collapse text-sm">
             <thead>
-              <tr style={{ backgroundColor: "#dbe4f0" }}>
+              <tr style={{ backgroundColor: BGN_NAVY, color: "#ffffff" }}>
                 <th className="border border-black px-2 py-1.5 text-left sm:px-3">Komponen</th>
                 <th className="border border-black px-2 py-1.5 text-center sm:px-3">Perhitungan</th>
                 <th className="border border-black px-2 py-1.5 text-right sm:px-3">Jumlah</th>
@@ -281,7 +286,7 @@ export default function SlipGaji({
                   slip.kasbon,
                   true,
                 )}
-              <tr className="text-base font-bold" style={{ backgroundColor: "#cfe0cf" }}>
+              <tr className="text-base font-bold" style={{ backgroundColor: "#dbe4f0", color: BGN_NAVY }}>
                 <td className="border border-black px-2 py-2 sm:px-3" colSpan={2}>TOTAL DITERIMA</td>
                 <td className="whitespace-nowrap border border-black px-2 py-2 text-right sm:px-3">{rupiah(slip.total)}</td>
               </tr>
