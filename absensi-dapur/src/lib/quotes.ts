@@ -9,6 +9,7 @@ import { NUSANTARA } from "./quotes/nusantara";
 import { KERJA } from "./quotes/kerja";
 import { SUKSES } from "./quotes/sukses";
 import { ETOS } from "./quotes/etos";
+import { PETUAH } from "./quotes/petuah";
 
 export type { Quote };
 
@@ -20,9 +21,20 @@ export const QUOTES: Quote[] = [
   ...KERJA,
   ...SUKSES,
   ...ETOS,
+  ...PETUAH,
 ];
 
-/** Ambil satu kutipan acak. */
+// Kolam kutipan "membumi" — petuah kyai/orang tua desa, etos sederhana,
+// peribahasa Nusantara, & nasihat agama. Bahasa ringan, cocok untuk kartu absen
+// agar menyemangati semua kalangan (bukan kutipan filsuf/korporat yang berat).
+export const QUOTES_DESA: Quote[] = [...PETUAH, ...ETOS, ...NUSANTARA, ...ISLAM];
+
+/** Ambil satu kutipan acak (seluruh kolam). */
 export function quoteAcak(): Quote {
   return QUOTES[Math.floor(Math.random() * QUOTES.length)];
+}
+
+/** Ambil satu kutipan acak bergaya "desa" (sederhana & membumi). */
+export function quoteAcakDesa(): Quote {
+  return QUOTES_DESA[Math.floor(Math.random() * QUOTES_DESA.length)];
 }
