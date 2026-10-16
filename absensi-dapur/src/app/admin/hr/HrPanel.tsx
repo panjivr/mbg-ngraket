@@ -471,7 +471,6 @@ function CetakSlip() {
   const [slip, setSlip] = useState<Slip | null>(null);
   const [dapur, setDapur] = useState("");
   const [verifyQr, setVerifyQr] = useState("");
-  const [verifyUrl, setVerifyUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [hrSigning, setHrSigning] = useState(false);
   const [err, setErr] = useState("");
@@ -494,7 +493,6 @@ function CetakSlip() {
         setSlip(d.slip);
         setDapur(d.dapur || "");
         setVerifyQr(d.verifyQr || "");
-        setVerifyUrl(d.verifyUrl || "");
       } else {
         setSlip(null);
         setErr(d?.error || `Gagal memuat slip (kode ${res.status}).`);
@@ -552,7 +550,7 @@ function CetakSlip() {
           <AdjustHarian userId={userId} slip={slip} onSaved={tampil} />
           <KasbonManager userId={userId} onChanged={tampil} />
           <div className="overflow-hidden rounded-2xl border border-white/10">
-            <SlipGaji slip={slip} dapur={dapur} canPrint verifyQr={verifyQr} verifyUrl={verifyUrl} onHrSign={tandaTanganHr} hrSigning={hrSigning} />
+            <SlipGaji slip={slip} dapur={dapur} canPrint verifyQr={verifyQr} onHrSign={tandaTanganHr} hrSigning={hrSigning} />
           </div>
         </>
       )}
