@@ -11,6 +11,7 @@ const BGN_BLUE = "#3464e6";
 // Tampilan ringkas status hari pada checklist kehadiran.
 const STATUS_TAMPIL: Record<StatusHari, { sym: string; cls: string }> = {
   penuh: { sym: "✓", cls: "border-green-600 bg-green-50 text-green-700" },
+  telat: { sym: "T", cls: "border-orange-500 bg-orange-50 text-orange-700" },
   setengah: { sym: "½", cls: "border-blue-600 bg-blue-50 text-blue-700" },
   sakit: { sym: "S", cls: "border-amber-500 bg-amber-50 text-amber-700" },
   izin: { sym: "I", cls: "border-sky-500 bg-sky-50 text-sky-700" },
@@ -214,7 +215,7 @@ export default function SlipGaji({
         {/* Checklist hari masuk (dengan status penyesuaian bila ada) */}
         <div className="mt-4">
           <p className="mb-1.5 text-xs font-semibold text-gray-700">
-            Rekap Kehadiran (✓ penuh · ½ setengah · S sakit · I izin · – tidak masuk · L libur)
+            Rekap Kehadiran (✓ penuh · T telat · ½ setengah · S sakit · I izin · – tidak masuk · L libur)
           </p>
           <div className="flex flex-wrap gap-1.5">
             {slip.hari.map((h) => {

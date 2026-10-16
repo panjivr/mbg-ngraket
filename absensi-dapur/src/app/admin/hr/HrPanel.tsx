@@ -14,6 +14,7 @@ function tglPendek(iso: string): string {
 }
 const STATUS_OPSI: { v: StatusHari; l: string }[] = [
   { v: "penuh", l: "Hadir Penuh" },
+  { v: "telat", l: "Hadir Terlambat" },
   { v: "setengah", l: "Setengah (50%)" },
   { v: "sakit", l: "Sakit" },
   { v: "izin", l: "Izin" },
@@ -573,7 +574,7 @@ function AdjustHarian({ userId, slip, onSaved }: { userId: number; slip: Slip; o
 
   const gaji = slip.user.gaji_harian;
   const upahDefault = (status: StatusHari) =>
-    status === "penuh" ? gaji : status === "setengah" ? Math.round(gaji / 2) : 0;
+    status === "penuh" || status === "telat" ? gaji : status === "setengah" ? Math.round(gaji / 2) : 0;
 
   const upd = (tgl: string, patch: Partial<HariSlip>) => {
     setRows((prev) => prev.map((r) => (r.tanggal === tgl ? { ...r, ...patch } : r)));
@@ -584,7 +585,7 @@ function AdjustHarian({ userId, slip, onSaved }: { userId: number; slip: Slip; o
     upd(tgl, {
       status,
       upah: upahDefault(status),
-      lembur: status === "penuh" || status === "setengah" ? undefined : false,
+      lembur: status === "penuh" || status === "setengah" || status === "telat" ? undefined : false,
     });
 
   const save = async () => {
