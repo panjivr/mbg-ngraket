@@ -58,7 +58,6 @@ export default function SlipGaji({
   onConfirm,
   confirming = false,
   verifyQr,
-  verifyUrl,
   onHrSign,
   hrSigning = false,
 }: {
@@ -69,8 +68,6 @@ export default function SlipGaji({
   confirming?: boolean;
   /** QR tanda tangan elektronik (data URL) untuk verifikasi keaslian. */
   verifyQr?: string;
-  /** URL verifikasi yang dikodekan pada QR. */
-  verifyUrl?: string;
   /** Aksi HR atas tanda tangan slip. Disediakan di panel HR. */
   onHrSign?: (action: "sahkan" | "batal-sah" | "terima" | "batal-terima", at?: string) => void;
   hrSigning?: boolean;
@@ -79,6 +76,20 @@ export default function SlipGaji({
   const [hrAt, setHrAt] = useState("");
   const u = slip.user;
   const mode = slip.ttd_mode || "dua";
+
+  // Cetak/Simpan PDF: jadikan nama file = nama karyawan + periode (browser
+  // memakai document.title sebagai nama file default), lalu kembalikan semula.
+  const cetak = () => {
+    const bersih = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+    const prev = document.title;
+    document.title = bersih(`Slip Gaji - ${u.nama} - ${tgl(slip.periode.from)} sd ${tgl(slip.periode.to)}`);
+    const restore = () => {
+      document.title = prev;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    window.print();
+  };
 
   // Kontrol HR untuk menandai "diterima" mewakili penerima (mode satu/terima),
   // dengan waktu yang bisa diatur. Kosongkan waktu = sekarang.
@@ -163,7 +174,7 @@ export default function SlipGaji({
             ))}
           </select>
           <button
-            onClick={() => window.print()}
+            onClick={cetak}
             className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white"
           >
             🖨️ Cetak / PDF
@@ -393,10 +404,6 @@ export default function SlipGaji({
               </div>
             )}
           </div>
-
-          {verifyUrl && (
-            <p className="mt-2 break-all text-center text-[9px] text-gray-400">{verifyUrl}</p>
-          )}
         </div>
 
         <p className="mt-6 text-[11px] text-gray-500">
