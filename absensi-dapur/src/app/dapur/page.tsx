@@ -23,7 +23,11 @@ export default async function DapurPage() {
       <PengumumanCard />
       {!perusahaan && <PengingatAPD />}
       {!perusahaan && <BebanHariIni />}
-      <AbsenPanel />
+      <AbsenPanel
+        nama={session?.nama || ""}
+        jenis={me?.sppg_jenis || "dapur"}
+        unitLogo={me?.sppg_logo || ""}
+      />
       <DapurQuickMenu />
       <StaffLeaderboard compact />
     </div>

@@ -8,6 +8,7 @@ import { PENGUSAHA } from "./quotes/pengusaha";
 import { NUSANTARA } from "./quotes/nusantara";
 import { KERJA } from "./quotes/kerja";
 import { SUKSES } from "./quotes/sukses";
+import { ETOS } from "./quotes/etos";
 
 export type { Quote };
 
@@ -18,6 +19,7 @@ export const QUOTES: Quote[] = [
   ...NUSANTARA,
   ...KERJA,
   ...SUKSES,
+  ...ETOS,
 ];
 
 /** Ambil satu kutipan acak. */

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
 import { quoteAcak, type Quote } from "@/lib/quotes";
+import AbsenStoryCard from "@/components/AbsenStoryCard";
 
 interface SettingsLite {
   nama_dapur: string;
@@ -61,7 +62,15 @@ type Geo = { lat: number; lng: number; accuracy: number };
 /** Jendela waktu pembatalan absen terakhir (selaras dengan server). */
 const CANCEL_WINDOW_MS = 180 * 60_000;
 
-export default function AbsenPanel() {
+export default function AbsenPanel({
+  nama = "",
+  jenis,
+  unitLogo,
+}: {
+  nama?: string;
+  jenis?: string;
+  unitLogo?: string;
+}) {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<SettingsLite | null>(null);
   const [shift, setShift] = useState<ShiftInfo | null>(null);
@@ -83,6 +92,11 @@ export default function AbsenPanel() {
   const [titik, setTitik] = useState<"dapur" | "event">("dapur");
   const [canceling, setCanceling] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [shareInfo, setShareInfo] = useState<{
+    action: "masuk" | "pulang";
+    waktuIso: string;
+    status: string | null;
+  } | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(
     null,
   );
@@ -257,6 +271,11 @@ export default function AbsenPanel() {
       const label = data.action === "check_out" ? "Absen pulang" : "Absen masuk";
       setMessage({ kind: "ok", text: `${label} berhasil dicatat. Terima kasih!` });
       setQuote(quoteAcak());
+      // Info untuk kartu story (dibagikan ke WA/IG).
+      const act: "masuk" | "pulang" = data.action === "check_out" ? "pulang" : "masuk";
+      const att = (data.attendance || {}) as { check_in?: string; check_out?: string; status_masuk?: string | null };
+      const waktuIso = (act === "pulang" ? att.check_out : att.check_in) || new Date().toISOString();
+      setShareInfo({ action: act, waktuIso, status: att.status_masuk ?? null });
       setSelfie(null);
       await loadToday();
     } catch {
@@ -608,13 +627,33 @@ export default function AbsenPanel() {
         </p>
       )}
 
-      {/* Kutipan motivasi setelah absen berhasil */}
-      {quote && (
+      {/* Kartu story hasil absen + bagikan ke WA/IG (pengganti screenshot) */}
+      {shareInfo ? (
         <div className="card border-emas-500/25 bg-emas-500/5 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">✨ Kutipan Hari Ini</p>
-          <p className="mt-2 text-sm italic leading-relaxed text-slate-100">“{quote.teks}”</p>
-          <p className="mt-1 text-xs text-slate-400">— {quote.sumber}</p>
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-emas-300">
+            ✨ Bagikan Momen Absenmu
+          </p>
+          <AbsenStoryCard
+            nama={nama}
+            unit={settings?.nama_dapur || ""}
+            jenis={jenis}
+            logoUrl={unitLogo}
+            action={shareInfo.action}
+            waktuIso={shareInfo.waktuIso}
+            status={shareInfo.status}
+            quote={quote}
+            tz={settings?.tz}
+            onReshuffle={() => setQuote(quoteAcak())}
+          />
         </div>
+      ) : (
+        quote && (
+          <div className="card border-emas-500/25 bg-emas-500/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emas-300">✨ Kutipan Hari Ini</p>
+            <p className="mt-2 text-sm italic leading-relaxed text-slate-100">“{quote.teks}”</p>
+            <p className="mt-1 text-xs text-slate-400">— {quote.sumber}</p>
+          </div>
+        )
       )}
 
       {/* Tombol aksi */}
