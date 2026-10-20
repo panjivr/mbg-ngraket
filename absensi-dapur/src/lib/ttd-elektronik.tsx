@@ -108,16 +108,21 @@ function useTtd(): Ctx {
  * Bila nonaktif, tampilkan ruang kosong (tinggiKosong) untuk tanda tangan basah.
  */
 export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string }) {
-  const { aktif, label } = useTtd();
+  const { aktif, label, qr } = useTtd();
   if (!aktif) return <div className={tinggiKosong} />;
   return (
     <div className="my-1 flex flex-col items-center justify-center gap-0.5 py-1" style={{ color: "#0e1f55" }}>
-      <span
-        className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-        style={{ borderColor: "#0e1f55" }}
-      >
-        ✔ Tanda Tangan Elektronik
-      </span>
+      {qr ? (
+        // eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis.
+        <img src={qr} alt="QR tanda tangan elektronik" width={72} height={72} style={{ width: 72, height: 72 }} />
+      ) : (
+        <span
+          className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          style={{ borderColor: "#0e1f55" }}
+        >
+          ✔ Tanda Tangan Elektronik
+        </span>
+      )}
       {label && <span className="text-[9px] text-gray-700">{label}</span>}
       <span className="text-[9px] italic text-gray-600">Ditandatangani secara elektronik oleh</span>
     </div>
@@ -130,24 +135,14 @@ export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string })
  * tersertifikasi BSrE/PSrE. Bisa dimatikan lewat kontrol.
  */
 export function KeteranganTtd({ className = "" }: { className?: string }) {
-  const { aktif, keterangan, qr } = useTtd();
-  if (!aktif) return null;
+  const { aktif, keterangan } = useTtd();
+  if (!aktif || !keterangan) return null;
   return (
-    <div className={"mt-2 flex items-center gap-3 " + className}>
-      {qr && (
-        <div className="flex shrink-0 flex-col items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis. */}
-          <img src={qr} alt="QR verifikasi tanda tangan elektronik" width={70} height={70} style={{ width: 70, height: 70 }} />
-          <span className="mt-0.5 text-[8px] text-gray-500">Pindai untuk verifikasi</span>
-        </div>
-      )}
-      {keterangan && (
-        <p className="text-[9px] italic leading-snug text-gray-500">
-          Dokumen ini ditandatangani secara elektronik melalui sistem Absensi MBG. Tanda tangan
-          elektronik sah sebagai alat bukti sesuai UU ITE (belum tersertifikasi BSrE/PSrE).
-        </p>
-      )}
-    </div>
+    <p className={"mt-2 text-[9px] italic leading-snug text-gray-500 " + className}>
+      Dokumen ini ditandatangani secara elektronik melalui sistem Absensi MBG. Tanda tangan
+      elektronik sah sebagai alat bukti sesuai UU ITE (belum tersertifikasi BSrE/PSrE). Pindai QR
+      pada tanda tangan untuk verifikasi.
+    </p>
   );
 }
 
