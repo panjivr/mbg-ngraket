@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 /**
  * Tanda tangan elektronik untuk dokumen cetak (/cetak/*).
@@ -23,6 +23,39 @@ function fmtWaktu(d: Date): string {
   const jam = String(d.getHours()).padStart(2, "0");
   const mnt = String(d.getMinutes()).padStart(2, "0");
   return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()} · ${jam}.${mnt} WIB`;
+}
+
+/** Jenis/judul dokumen dari heading pertama di area cetak (atau judul tab). */
+function jenisDokumen(): string {
+  if (typeof document === "undefined") return "Dokumen";
+  const root = document.getElementById("cetak-konten");
+  const h = root?.querySelector("h1,h2,h3")?.textContent?.trim();
+  return (h || document.title || "Dokumen").slice(0, 160);
+}
+
+/**
+ * Ambil ISI dokumen cetak sebagai teks (mewakili berkas) untuk disimpan &
+ * ditampilkan saat QR diverifikasi. Nilai input/contentEditable ikut terbaca;
+ * kontrol & tombol (.no-print) dibuang.
+ */
+function ambilKonten(): string {
+  if (typeof document === "undefined") return "";
+  const src = document.getElementById("cetak-konten");
+  if (!src) return "";
+  const clone = src.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("input,textarea,select").forEach((el) => {
+    const v = (el as HTMLInputElement).value || "";
+    el.replaceWith(document.createTextNode(v));
+  });
+  clone.querySelectorAll(".no-print,button,svg").forEach((e) => e.remove());
+  clone.style.position = "absolute";
+  clone.style.left = "-99999px";
+  clone.style.top = "0";
+  clone.style.width = (src.clientWidth || 720) + "px";
+  document.body.appendChild(clone);
+  const txt = clone.innerText || clone.textContent || "";
+  document.body.removeChild(clone);
+  return txt.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 60000);
 }
 
 interface Ctx {
@@ -55,40 +88,90 @@ export function TtdProvider({ children }: { children: ReactNode }) {
   const [autoAt] = useState(() => new Date());
 
   const [qr, setQr] = useState("");
+  const idRef = useRef("");
 
   const label = useMemo(
     () => (mode === "manual" ? (manual ? fmtWaktu(new Date(manual)) : "") : fmtWaktu(autoAt)),
     [mode, manual, autoAt],
   );
 
-  // Terbitkan token TTE (ber-HMAC di server) lalu buat QR verifikasi.
   const waktuIso = mode === "manual" ? (manual ? new Date(manual).toISOString() : "") : autoAt.toISOString();
+
+  // Terbitkan dokumen TTE (simpan isi dokumen) lalu buat QR ke /verifikasi?id=.
   useEffect(() => {
     if (!aktif || !waktuIso) {
       setQr("");
+      idRef.current = "";
       return;
     }
     let batal = false;
     (async () => {
       try {
-        const jenis = (typeof document !== "undefined" && document.title) || "Dokumen";
-        const res = await fetch("/api/ttd/sign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ waktu: waktuIso, jenis }),
-        });
-        const d = await res.json();
-        if (batal || !d?.token) return;
-        const url = `${window.location.origin}/verifikasi?t=${encodeURIComponent(d.token)}`;
-        const QR = (await import("qrcode")).default;
-        const dataUrl = await QR.toDataURL(url, { margin: 1, width: 180, errorCorrectionLevel: "M" });
-        if (!batal) setQr(dataUrl);
+        const headers = { "Content-Type": "application/json" };
+        if (!idRef.current) {
+          const res = await fetch("/api/ttd/sign", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
+          });
+          const d = await res.json();
+          if (batal || !d?.id) return;
+          idRef.current = d.id;
+          const url = `${window.location.origin}/verifikasi?id=${d.id}`;
+          const QR = (await import("qrcode")).default;
+          const dataUrl = await QR.toDataURL(url, { margin: 1, width: 180, errorCorrectionLevel: "M" });
+          if (!batal) setQr(dataUrl);
+        } else {
+          // Waktu berubah (mode manual) → perbarui catatan.
+          fetch("/api/ttd/sign", {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
+          }).catch(() => {});
+        }
       } catch {
-        if (!batal) setQr("");
+        /* abaikan */
       }
     })();
     return () => {
       batal = true;
+    };
+  }, [aktif, waktuIso]);
+
+  // Sinkronkan isi dokumen secara otomatis saat diisi/diubah (debounce).
+  useEffect(() => {
+    if (!aktif) return;
+    const root = document.getElementById("cetak-konten");
+    if (!root) return;
+    let timer: number | undefined;
+    const kirim = () => {
+      if (!idRef.current) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        fetch("/api/ttd/sign", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
+        }).catch(() => {});
+      }, 1500);
+    };
+    // Flush langsung saat akan mencetak (keepalive agar sempat terkirim).
+    const flush = () => {
+      if (!idRef.current) return;
+      window.clearTimeout(timer);
+      fetch("/api/ttd/sign", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    root.addEventListener("input", kirim, true);
+    window.addEventListener("beforeprint", flush);
+    return () => {
+      root.removeEventListener("input", kirim, true);
+      window.removeEventListener("beforeprint", flush);
+      window.clearTimeout(timer);
     };
   }, [aktif, waktuIso]);
 

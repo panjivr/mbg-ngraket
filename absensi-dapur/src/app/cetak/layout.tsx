@@ -9,7 +9,7 @@ export default function CetakLayout({ children }: { children: React.ReactNode })
   return (
     <TtdProvider>
       <TtdKontrol />
-      {children}
+      <div id="cetak-konten">{children}</div>
     </TtdProvider>
   );
 }
