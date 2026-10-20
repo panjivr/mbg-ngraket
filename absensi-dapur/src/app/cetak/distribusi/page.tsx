@@ -302,8 +302,8 @@ function Inner() {
             <div className="w-1/3" />
           </div>
           <div className="mt-2 flex items-start">
-            <div className="w-1/3"><StempelTtd tinggiKosong="h-24" /></div>
-            <div className="w-1/3"><StempelTtd tinggiKosong="h-24" /></div>
+            <div className="w-1/3"><StempelTtd nama={sppg.ahli_gizi || ""} peran="Ahli Gizi Dapur" tinggiKosong="h-24" /></div>
+            <div className="w-1/3"><StempelTtd nama={sppg.koordinator || ""} peran="Koordinator Lapangan" tinggiKosong="h-24" /></div>
             <div className="w-1/3" />
           </div>
           <div className="mt-2 flex items-end">
@@ -398,7 +398,7 @@ function Inner() {
     const Box = () => (
       <div className="w-64 shrink-0 self-start border border-black p-3 text-sm">
         <p>Mengetahui:</p>
-        <StempelTtd tinggiKosong="h-12" />
+        <StempelTtd nama={sppg.kepala_sppg || ""} peran="Kepala SPPG" tinggiKosong="h-12" />
         <p>{sppg.kepala_sppg || "____________"}</p>
         <p>Kepala SPPG,&nbsp; {namaSppg}</p>
         <KeteranganTtd />

@@ -142,12 +142,12 @@ function Inner() {
         <div className="mt-10 grid grid-cols-2 gap-6 text-center text-sm">
           <div>
             <p>Petugas Belanja</p>
-            <StempelTtd tinggiKosong="" />
+            <StempelTtd peran="Petugas Belanja" tinggiKosong="" />
             <div className="mt-14 border-t border-black" />
           </div>
           <div>
             <p>Mengetahui,</p>
-            <StempelTtd tinggiKosong="" />
+            <StempelTtd peran="Mengetahui" tinggiKosong="" />
             <div className="mt-14 border-t border-black" />
           </div>
         </div>

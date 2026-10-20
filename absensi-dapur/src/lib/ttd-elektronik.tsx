@@ -1,15 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 /**
  * Tanda tangan elektronik untuk dokumen cetak (/cetak/*).
  * - Checklist di layar: pakai TTD elektronik atau tidak (kalau tidak → ruang
- *   kosong untuk tanda tangan basah, seperti sebelumnya).
+ *   kosong untuk tanda tangan basah).
  * - Waktu TTD: Otomatis (saat ini) atau Manual (pilih hari/tanggal/jam).
- * - Stempel menyesuaikan kolomnya: jabatan/title di atas & nama di bawah tetap
- *   milik kolom itu (mis. Ahli Gizi, Kepala Dapur, Koordinator Lapangan) —
- *   stempel hanya mengisi ruang tanda tangan di tengah. Tanpa barcode/link.
+ * - Tiap stempel menandatangani ATAS NAMA kolomnya sendiri (nama & jabatan yang
+ *   tampil di dokumen, mis. Ahli Gizi / Koordinator Lapangan / Kepala SPPG) —
+ *   BUKAN akun admin yang login. QR per-kolom menyimpan isi dokumen agar hasil
+ *   scan sesuai berkas & menampilkan penanda tangan yang benar.
  */
 
 const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
@@ -61,20 +62,21 @@ function ambilKonten(): string {
 interface Ctx {
   aktif: boolean;
   label: string;
+  waktuIso: string;
   mode: "auto" | "manual";
   manual: string;
   keterangan: boolean;
-  /** QR verifikasi (data URL) — "" bila belum siap. */
-  qr: string;
   setAktif: (v: boolean) => void;
   setMode: (m: "auto" | "manual") => void;
   setManual: (s: string) => void;
   setKeterangan: (v: boolean) => void;
+  /** Daftarkan fungsi flush (sinkron isi dokumen) milik tiap stempel. */
+  registerFlush: (fn: () => void) => () => void;
 }
 
 const FALLBACK: Ctx = {
-  aktif: false, label: "", mode: "auto", manual: "", keterangan: true, qr: "",
-  setAktif() {}, setMode() {}, setManual() {}, setKeterangan() {},
+  aktif: false, label: "", waktuIso: "", mode: "auto", manual: "", keterangan: true,
+  setAktif() {}, setMode() {}, setManual() {}, setKeterangan() {}, registerFlush: () => () => {},
 };
 
 const TtdContext = createContext<Ctx | null>(null);
@@ -84,100 +86,46 @@ export function TtdProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [manual, setManual] = useState("");
   const [keterangan, setKeterangan] = useState(true);
-  // Waktu "saat ini" dipaku saat halaman dibuka agar stabil di dokumen.
   const [autoAt] = useState(() => new Date());
-
-  const [qr, setQr] = useState("");
-  const idRef = useRef("");
 
   const label = useMemo(
     () => (mode === "manual" ? (manual ? fmtWaktu(new Date(manual)) : "") : fmtWaktu(autoAt)),
     [mode, manual, autoAt],
   );
-
   const waktuIso = mode === "manual" ? (manual ? new Date(manual).toISOString() : "") : autoAt.toISOString();
 
-  // Terbitkan dokumen TTE (simpan isi dokumen) lalu buat QR ke /verifikasi?id=.
-  useEffect(() => {
-    if (!aktif || !waktuIso) {
-      setQr("");
-      idRef.current = "";
-      return;
-    }
-    let batal = false;
-    (async () => {
-      try {
-        const headers = { "Content-Type": "application/json" };
-        if (!idRef.current) {
-          const res = await fetch("/api/ttd/sign", {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
-          });
-          const d = await res.json();
-          if (batal || !d?.id) return;
-          idRef.current = d.id;
-          const url = `${window.location.origin}/verifikasi?id=${d.id}`;
-          const QR = (await import("qrcode")).default;
-          const dataUrl = await QR.toDataURL(url, { margin: 1, width: 180, errorCorrectionLevel: "M" });
-          if (!batal) setQr(dataUrl);
-        } else {
-          // Waktu berubah (mode manual) → perbarui catatan.
-          fetch("/api/ttd/sign", {
-            method: "PUT",
-            headers,
-            body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
-          }).catch(() => {});
-        }
-      } catch {
-        /* abaikan */
-      }
-    })();
+  const flushes = useRef(new Set<() => void>());
+  const registerFlush = useCallback((fn: () => void) => {
+    flushes.current.add(fn);
     return () => {
-      batal = true;
+      flushes.current.delete(fn);
     };
-  }, [aktif, waktuIso]);
+  }, []);
 
-  // Sinkronkan isi dokumen secara otomatis saat diisi/diubah (debounce).
+  // Satu listener: sinkronkan isi dokumen semua stempel saat diisi/diubah &
+  // tepat sebelum mencetak.
   useEffect(() => {
     if (!aktif) return;
     const root = document.getElementById("cetak-konten");
     if (!root) return;
     let timer: number | undefined;
-    const kirim = () => {
-      if (!idRef.current) return;
+    const runAll = () => flushes.current.forEach((f) => f());
+    const onInput = () => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        fetch("/api/ttd/sign", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
-        }).catch(() => {});
-      }, 1500);
+      timer = window.setTimeout(runAll, 1500);
     };
-    // Flush langsung saat akan mencetak (keepalive agar sempat terkirim).
-    const flush = () => {
-      if (!idRef.current) return;
-      window.clearTimeout(timer);
-      fetch("/api/ttd/sign", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: idRef.current, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
-        keepalive: true,
-      }).catch(() => {});
-    };
-    root.addEventListener("input", kirim, true);
-    window.addEventListener("beforeprint", flush);
+    root.addEventListener("input", onInput, true);
+    window.addEventListener("beforeprint", runAll);
     return () => {
-      root.removeEventListener("input", kirim, true);
-      window.removeEventListener("beforeprint", flush);
+      root.removeEventListener("input", onInput, true);
+      window.removeEventListener("beforeprint", runAll);
       window.clearTimeout(timer);
     };
-  }, [aktif, waktuIso]);
+  }, [aktif]);
 
   const val = useMemo<Ctx>(
-    () => ({ aktif, label, mode, manual, keterangan, qr, setAktif, setMode, setManual, setKeterangan }),
-    [aktif, label, mode, manual, keterangan, qr],
+    () => ({ aktif, label, waktuIso, mode, manual, keterangan, setAktif, setMode, setManual, setKeterangan, registerFlush }),
+    [aktif, label, waktuIso, mode, manual, keterangan, registerFlush],
   );
   return <TtdContext.Provider value={val}>{children}</TtdContext.Provider>;
 }
@@ -187,11 +135,71 @@ function useTtd(): Ctx {
 }
 
 /**
- * Stempel TTD elektronik — menggantikan ruang tanda tangan di tengah kolom.
- * Bila nonaktif, tampilkan ruang kosong (tinggiKosong) untuk tanda tangan basah.
+ * Stempel TTD elektronik satu penanda tangan. `nama` & `peran` = identitas yang
+ * tampil di dokumen (bukan akun login). Menerbitkan QR per-kolom yang menyimpan
+ * isi dokumen + penanda tangan tsb. Bila nonaktif → ruang kosong (tinggiKosong).
  */
-export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string }) {
-  const { aktif, label, qr } = useTtd();
+export function StempelTtd({
+  nama = "",
+  peran = "",
+  tinggiKosong = "h-14",
+}: {
+  nama?: string;
+  peran?: string;
+  tinggiKosong?: string;
+}) {
+  const { aktif, label, waktuIso, registerFlush } = useTtd();
+  const [qr, setQr] = useState("");
+  const idRef = useRef("");
+  // Simpan nilai terbaru untuk flush.
+  const dataRef = useRef({ nama, peran, waktuIso });
+  dataRef.current = { nama, peran, waktuIso };
+
+  useEffect(() => {
+    if (!aktif || !waktuIso) {
+      setQr("");
+      idRef.current = "";
+      return;
+    }
+    let batal = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/ttd/sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nama, peran, jenis: jenisDokumen(), waktu: waktuIso, konten: ambilKonten() }),
+        });
+        const d = await res.json();
+        if (batal || !d?.id) return;
+        idRef.current = d.id;
+        const url = `${window.location.origin}/verifikasi?id=${d.id}`;
+        const QR = (await import("qrcode")).default;
+        const dataUrl = await QR.toDataURL(url, { margin: 1, width: 180, errorCorrectionLevel: "M" });
+        if (!batal) setQr(dataUrl);
+      } catch {
+        /* abaikan */
+      }
+    })();
+    return () => {
+      batal = true;
+    };
+  }, [aktif, waktuIso, nama, peran]);
+
+  // Flush isi dokumen terbaru untuk catatan stempel ini.
+  useEffect(() => {
+    const fn = () => {
+      if (!idRef.current) return;
+      const { nama: n, peran: p, waktuIso: w } = dataRef.current;
+      fetch("/api/ttd/sign", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: idRef.current, nama: n, peran: p, jenis: jenisDokumen(), waktu: w, konten: ambilKonten() }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    return registerFlush(fn);
+  }, [registerFlush]);
+
   if (!aktif) return <div className={tinggiKosong} />;
   return (
     <div className="my-1 flex flex-col items-center justify-center gap-0.5 py-1" style={{ color: "#0e1f55" }}>
@@ -212,11 +220,7 @@ export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string })
   );
 }
 
-/**
- * Keterangan keabsahan TTE (sekali per dokumen, di bawah blok tanda tangan).
- * Jujur secara hukum: ini TTE sah sebagai alat bukti (UU ITE), belum
- * tersertifikasi BSrE/PSrE. Bisa dimatikan lewat kontrol.
- */
+/** Keterangan keabsahan TTE (sekali per dokumen, di bawah blok tanda tangan). */
 export function KeteranganTtd({ className = "" }: { className?: string }) {
   const { aktif, keterangan } = useTtd();
   if (!aktif || !keterangan) return null;

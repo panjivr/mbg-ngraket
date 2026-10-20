@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-20a.tte-dokumen";
+const SCHEMA_VERSION = "2026-10-20b.tte-peran";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -903,10 +903,12 @@ async function doEnsureSchema(): Promise<void> {
         unit        TEXT NOT NULL DEFAULT '',
         jenis       TEXT NOT NULL DEFAULT 'Dokumen',
         waktu       TIMESTAMPTZ,
+        peran       TEXT NOT NULL DEFAULT '',
         konten      TEXT NOT NULL DEFAULT '',
         created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `);
+    await client.query(`ALTER TABLE tte_dokumen ADD COLUMN IF NOT EXISTS peran TEXT NOT NULL DEFAULT ''`);
 
     // Penyesuaian slip per HARI (HR menimpa hasil absensi otomatis).
     // status: penuh | setengah | sakit | izin | alpha | libur. upah = nominal efektif hari itu.
