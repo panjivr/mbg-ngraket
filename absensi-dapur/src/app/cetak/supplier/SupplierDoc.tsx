@@ -8,7 +8,7 @@
  * Parameter `mode` membedakan PURCHASE ORDER vs INVOICE.
  */
 import { useMemo, useRef, useState } from "react";
-import { StempelTtd } from "@/lib/ttd-elektronik";
+import { StempelTtd, KeteranganTtd } from "@/lib/ttd-elektronik";
 import type { SupplierMode } from "@/lib/supplier";
 
 const PAPERS: Record<string, { label: string; size: string }> = {
@@ -317,6 +317,8 @@ export default function SupplierDoc({ mode, heading }: { mode: SupplierMode; hea
             <p className="font-bold underline"><Ed>( Nama &amp; Jabatan )</Ed></p>
           </div>
         </div>
+        <KeteranganTtd />
+
 
         {/* Catatan kecil / syarat & ketentuan */}
         <div className="mt-5 border-t border-gray-300 pt-2 text-[9px] leading-snug text-gray-600">

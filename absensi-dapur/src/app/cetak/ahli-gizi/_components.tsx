@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
-import { StempelTtd } from "@/lib/ttd-elektronik";
+import { StempelTtd, KeteranganTtd } from "@/lib/ttd-elektronik";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 import { getSasaran, MEAL_FRACTION, MIKRO_KEYS, MIKRO_META } from "@/lib/gizi-nutrisi";
 import GeneratorGizi, { type GeneratorHasil } from "./generator-gizi/GeneratorGizi";
@@ -520,14 +520,17 @@ export function TTDGizi({
     </td>
   );
   return (
-    <table className="mt-6 w-full text-sm">
-      <tbody>
-        <tr>
-          <Kolom {...kiri} />
-          <Kolom {...kanan} />
-        </tr>
-      </tbody>
-    </table>
+    <>
+      <table className="mt-6 w-full text-sm">
+        <tbody>
+          <tr>
+            <Kolom {...kiri} />
+            <Kolom {...kanan} />
+          </tr>
+        </tbody>
+      </table>
+      <KeteranganTtd />
+    </>
   );
 }
 
@@ -1101,14 +1104,17 @@ export function TTDGiziAuto({
     </td>
   );
   return (
-    <table className="mt-6 w-full text-sm">
-      <tbody>
-        <tr>
-          <Kolom peran={kiriPeran} nama={kepala} />
-          <Kolom peran={kananPeran} nama={ahli} />
-        </tr>
-      </tbody>
-    </table>
+    <>
+      <table className="mt-6 w-full text-sm">
+        <tbody>
+          <tr>
+            <Kolom peran={kiriPeran} nama={kepala} />
+            <Kolom peran={kananPeran} nama={ahli} />
+          </tr>
+        </tbody>
+      </table>
+      <KeteranganTtd />
+    </>
   );
 }
 

@@ -13,7 +13,7 @@ import {
   createContext,
   type ReactNode,
 } from "react";
-import { StempelTtd } from "@/lib/ttd-elektronik";
+import { StempelTtd, KeteranganTtd } from "@/lib/ttd-elektronik";
 
 const PAPERS: Record<string, { label: string; size: string }> = {
   A4: { label: "A4 (210×297)", size: "210mm 297mm" },
@@ -193,14 +193,17 @@ export function TTD({
     </td>
   );
   return (
-    <table className="mt-6 w-full text-sm">
-      <tbody>
-        <tr>
-          <Kolom {...kiri} />
-          <Kolom {...kanan} />
-        </tr>
-      </tbody>
-    </table>
+    <>
+      <table className="mt-6 w-full text-sm">
+        <tbody>
+          <tr>
+            <Kolom {...kiri} />
+            <Kolom {...kanan} />
+          </tr>
+        </tbody>
+      </table>
+      <KeteranganTtd />
+    </>
   );
 }
 

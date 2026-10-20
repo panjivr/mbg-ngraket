@@ -7,7 +7,7 @@
  * mengizinkan /cetak/audit bagi pemegang akses_audit; route ikut mengecek DB.
  */
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { StempelTtd } from "@/lib/ttd-elektronik";
+import { StempelTtd, KeteranganTtd } from "@/lib/ttd-elektronik";
 import { useSearchParams } from "next/navigation";
 import { getLaporan, type AuditLaporanResponse } from "@/lib/audit-client";
 import { tingkatMeta, KATEGORI_LABEL, type Tingkat } from "@/lib/audit-risk";
@@ -225,6 +225,8 @@ function Inner() {
             <p className="font-bold underline">{sppg?.kepala_sppg || "……………………………"}</p>
           </div>
         </div>
+        <KeteranganTtd className="text-right" />
+
       </div>
     </div>
   );
