@@ -10,7 +10,7 @@ types.setTypeParser(types.builtins.DATE, (v) => v);
 // Versi skema. Migrasi (82 statement DDL) dilewati saat versi tersimpan sama,
 // sehingga cold start jauh lebih cepat (cukup 1 SELECT, bukan puluhan round-trip).
 // WAJIB dinaikkan setiap ada perubahan skema (tabel/kolom/index/seed) baru.
-const SCHEMA_VERSION = "2026-10-15b.slip-ttd-mode";
+const SCHEMA_VERSION = "2026-10-20a.tte-dokumen";
 
 /**
  * Single shared connection pool. Cached on `globalThis` so it survives
@@ -891,6 +891,22 @@ async function doEnsureSchema(): Promise<void> {
     await client.query(`ALTER TABLE slip_konfirmasi ADD COLUMN IF NOT EXISTS hr_signed_nama TEXT`);
     await client.query(`ALTER TABLE slip_konfirmasi ALTER COLUMN confirmed_at DROP NOT NULL`);
     await client.query(`ALTER TABLE slip_konfirmasi ALTER COLUMN confirmed_at DROP DEFAULT`);
+
+    // Dokumen cetak yang ditandatangani elektronik (self-hosted). Menyimpan isi
+    // dokumen agar QR bisa menampilkan konten berkas saat diverifikasi.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tte_dokumen (
+        id          TEXT PRIMARY KEY,
+        sppg_id     INTEGER,
+        signer_uid  INTEGER,
+        signer_nama TEXT,
+        unit        TEXT NOT NULL DEFAULT '',
+        jenis       TEXT NOT NULL DEFAULT 'Dokumen',
+        waktu       TIMESTAMPTZ,
+        konten      TEXT NOT NULL DEFAULT '',
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
 
     // Penyesuaian slip per HARI (HR menimpa hasil absensi otomatis).
     // status: penuh | setengah | sakit | izin | alpha | libur. upah = nominal efektif hari itu.
