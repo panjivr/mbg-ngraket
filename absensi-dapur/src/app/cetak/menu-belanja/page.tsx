@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { StempelTtd } from "@/lib/ttd-elektronik";
 import { useSearchParams } from "next/navigation";
 import {
   KATEGORI_MENU_LABEL,
@@ -141,10 +142,12 @@ function Inner() {
         <div className="mt-10 grid grid-cols-2 gap-6 text-center text-sm">
           <div>
             <p>Petugas Belanja</p>
+            <StempelTtd tinggiKosong="" />
             <div className="mt-14 border-t border-black" />
           </div>
           <div>
             <p>Mengetahui,</p>
+            <StempelTtd tinggiKosong="" />
             <div className="mt-14 border-t border-black" />
           </div>
         </div>

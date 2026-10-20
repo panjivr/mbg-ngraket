@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Ed, Tgl, useTanggalISO } from "../akuntan/_components";
+import { StempelTtd } from "@/lib/ttd-elektronik";
 import { AREA_KEBERSIHAN } from "@/lib/ahli-gizi";
 import { getSasaran, MEAL_FRACTION, MIKRO_KEYS, MIKRO_META } from "@/lib/gizi-nutrisi";
 import GeneratorGizi, { type GeneratorHasil } from "./generator-gizi/GeneratorGizi";
@@ -512,7 +513,7 @@ export function TTDGizi({
       <p className="whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
-      <div className="h-14" />
+      <StempelTtd tinggiKosong="h-14" />
       <p className="font-bold underline">
         <Ed>{nama}</Ed>
       </p>
@@ -1093,7 +1094,7 @@ export function TTDGiziAuto({
       <p className="min-h-[2.6em] whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
-      <div className="h-14" />
+      <StempelTtd tinggiKosong="h-14" />
       <p className="font-bold underline">
         <Ed>{nama ? `(${nama})` : "(………………………)"}</Ed>
       </p>
