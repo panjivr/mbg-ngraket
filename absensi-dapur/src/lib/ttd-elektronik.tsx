@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 /**
  * Tanda tangan elektronik untuk dokumen cetak (/cetak/*).
@@ -31,6 +31,8 @@ interface Ctx {
   mode: "auto" | "manual";
   manual: string;
   keterangan: boolean;
+  /** QR verifikasi (data URL) — "" bila belum siap. */
+  qr: string;
   setAktif: (v: boolean) => void;
   setMode: (m: "auto" | "manual") => void;
   setManual: (s: string) => void;
@@ -38,7 +40,7 @@ interface Ctx {
 }
 
 const FALLBACK: Ctx = {
-  aktif: false, label: "", mode: "auto", manual: "", keterangan: true,
+  aktif: false, label: "", mode: "auto", manual: "", keterangan: true, qr: "",
   setAktif() {}, setMode() {}, setManual() {}, setKeterangan() {},
 };
 
@@ -52,13 +54,47 @@ export function TtdProvider({ children }: { children: ReactNode }) {
   // Waktu "saat ini" dipaku saat halaman dibuka agar stabil di dokumen.
   const [autoAt] = useState(() => new Date());
 
+  const [qr, setQr] = useState("");
+
   const label = useMemo(
     () => (mode === "manual" ? (manual ? fmtWaktu(new Date(manual)) : "") : fmtWaktu(autoAt)),
     [mode, manual, autoAt],
   );
+
+  // Terbitkan token TTE (ber-HMAC di server) lalu buat QR verifikasi.
+  const waktuIso = mode === "manual" ? (manual ? new Date(manual).toISOString() : "") : autoAt.toISOString();
+  useEffect(() => {
+    if (!aktif || !waktuIso) {
+      setQr("");
+      return;
+    }
+    let batal = false;
+    (async () => {
+      try {
+        const jenis = (typeof document !== "undefined" && document.title) || "Dokumen";
+        const res = await fetch("/api/ttd/sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ waktu: waktuIso, jenis }),
+        });
+        const d = await res.json();
+        if (batal || !d?.token) return;
+        const url = `${window.location.origin}/verifikasi?t=${encodeURIComponent(d.token)}`;
+        const QR = (await import("qrcode")).default;
+        const dataUrl = await QR.toDataURL(url, { margin: 1, width: 180, errorCorrectionLevel: "M" });
+        if (!batal) setQr(dataUrl);
+      } catch {
+        if (!batal) setQr("");
+      }
+    })();
+    return () => {
+      batal = true;
+    };
+  }, [aktif, waktuIso]);
+
   const val = useMemo<Ctx>(
-    () => ({ aktif, label, mode, manual, keterangan, setAktif, setMode, setManual, setKeterangan }),
-    [aktif, label, mode, manual, keterangan],
+    () => ({ aktif, label, mode, manual, keterangan, qr, setAktif, setMode, setManual, setKeterangan }),
+    [aktif, label, mode, manual, keterangan, qr],
   );
   return <TtdContext.Provider value={val}>{children}</TtdContext.Provider>;
 }
@@ -94,13 +130,24 @@ export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string })
  * tersertifikasi BSrE/PSrE. Bisa dimatikan lewat kontrol.
  */
 export function KeteranganTtd({ className = "" }: { className?: string }) {
-  const { aktif, keterangan } = useTtd();
-  if (!aktif || !keterangan) return null;
+  const { aktif, keterangan, qr } = useTtd();
+  if (!aktif) return null;
   return (
-    <p className={"mt-2 text-[9px] italic leading-snug text-gray-500 " + className}>
-      Dokumen ini ditandatangani secara elektronik melalui sistem Absensi MBG. Tanda tangan
-      elektronik sah sebagai alat bukti sesuai UU ITE (belum tersertifikasi BSrE/PSrE).
-    </p>
+    <div className={"mt-2 flex items-center gap-3 " + className}>
+      {qr && (
+        <div className="flex shrink-0 flex-col items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- QR data URL dinamis. */}
+          <img src={qr} alt="QR verifikasi tanda tangan elektronik" width={70} height={70} style={{ width: 70, height: 70 }} />
+          <span className="mt-0.5 text-[8px] text-gray-500">Pindai untuk verifikasi</span>
+        </div>
+      )}
+      {keterangan && (
+        <p className="text-[9px] italic leading-snug text-gray-500">
+          Dokumen ini ditandatangani secara elektronik melalui sistem Absensi MBG. Tanda tangan
+          elektronik sah sebagai alat bukti sesuai UU ITE (belum tersertifikasi BSrE/PSrE).
+        </p>
+      )}
+    </div>
   );
 }
 
