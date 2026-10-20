@@ -7,6 +7,7 @@
  * mengizinkan /cetak/audit bagi pemegang akses_audit; route ikut mengecek DB.
  */
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { StempelTtd } from "@/lib/ttd-elektronik";
 import { useSearchParams } from "next/navigation";
 import { getLaporan, type AuditLaporanResponse } from "@/lib/audit-client";
 import { tingkatMeta, KATEGORI_LABEL, type Tingkat } from "@/lib/audit-risk";
@@ -220,7 +221,7 @@ function Inner() {
               {tglLong(data.sampai || data.dari || todayIso())}
             </p>
             <p className="mt-1">Auditor Mutu Dapur</p>
-            <div className="h-20" />
+            <StempelTtd tinggiKosong="h-20" />
             <p className="font-bold underline">{sppg?.kepala_sppg || "……………………………"}</p>
           </div>
         </div>

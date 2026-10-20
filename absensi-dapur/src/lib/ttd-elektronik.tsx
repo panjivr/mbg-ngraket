@@ -1,0 +1,124 @@
+"use client";
+
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+
+/**
+ * Tanda tangan elektronik untuk dokumen cetak (/cetak/*).
+ * - Checklist di layar: pakai TTD elektronik atau tidak (kalau tidak → ruang
+ *   kosong untuk tanda tangan basah, seperti sebelumnya).
+ * - Waktu TTD: Otomatis (saat ini) atau Manual (pilih hari/tanggal/jam).
+ * - Stempel menyesuaikan kolomnya: jabatan/title di atas & nama di bawah tetap
+ *   milik kolom itu (mis. Ahli Gizi, Kepala Dapur, Koordinator Lapangan) —
+ *   stempel hanya mengisi ruang tanda tangan di tengah. Tanpa barcode/link.
+ */
+
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const BULAN = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+function fmtWaktu(d: Date): string {
+  if (!d || Number.isNaN(d.getTime())) return "";
+  const jam = String(d.getHours()).padStart(2, "0");
+  const mnt = String(d.getMinutes()).padStart(2, "0");
+  return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()} · ${jam}.${mnt} WIB`;
+}
+
+interface Ctx {
+  aktif: boolean;
+  label: string;
+  mode: "auto" | "manual";
+  manual: string;
+  setAktif: (v: boolean) => void;
+  setMode: (m: "auto" | "manual") => void;
+  setManual: (s: string) => void;
+}
+
+const FALLBACK: Ctx = {
+  aktif: false, label: "", mode: "auto", manual: "",
+  setAktif() {}, setMode() {}, setManual() {},
+};
+
+const TtdContext = createContext<Ctx | null>(null);
+
+export function TtdProvider({ children }: { children: ReactNode }) {
+  const [aktif, setAktif] = useState(true);
+  const [mode, setMode] = useState<"auto" | "manual">("auto");
+  const [manual, setManual] = useState("");
+  // Waktu "saat ini" dipaku saat halaman dibuka agar stabil di dokumen.
+  const [autoAt] = useState(() => new Date());
+
+  const label = useMemo(
+    () => (mode === "manual" ? (manual ? fmtWaktu(new Date(manual)) : "") : fmtWaktu(autoAt)),
+    [mode, manual, autoAt],
+  );
+  const val = useMemo<Ctx>(
+    () => ({ aktif, label, mode, manual, setAktif, setMode, setManual }),
+    [aktif, label, mode, manual],
+  );
+  return <TtdContext.Provider value={val}>{children}</TtdContext.Provider>;
+}
+
+function useTtd(): Ctx {
+  return useContext(TtdContext) ?? FALLBACK;
+}
+
+/**
+ * Stempel TTD elektronik — menggantikan ruang tanda tangan di tengah kolom.
+ * Bila nonaktif, tampilkan ruang kosong (tinggiKosong) untuk tanda tangan basah.
+ */
+export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string }) {
+  const { aktif, label } = useTtd();
+  if (!aktif) return <div className={tinggiKosong} />;
+  return (
+    <div className="my-1 flex flex-col items-center justify-center gap-0.5 py-1" style={{ color: "#0e1f55" }}>
+      <span
+        className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+        style={{ borderColor: "#0e1f55" }}
+      >
+        ✔ Tanda Tangan Elektronik
+      </span>
+      {label && <span className="text-[9px] text-gray-700">{label}</span>}
+      <span className="text-[9px] italic text-gray-600">Ditandatangani secara elektronik oleh</span>
+    </div>
+  );
+}
+
+/** Kontrol (checklist) TTD elektronik — tampil di layar, tidak ikut tercetak. */
+export function TtdKontrol() {
+  const { aktif, mode, manual, setAktif, setMode, setManual } = useTtd();
+  return (
+    <div className="ttd-kontrol no-print fixed right-3 top-3 z-50 w-60 rounded-xl border border-slate-300 bg-white/95 p-3 text-xs text-slate-800 shadow-lg backdrop-blur">
+      <style>{`@media print{.ttd-kontrol{display:none!important}}`}</style>
+      <label className="flex items-center gap-2 font-semibold">
+        <input type="checkbox" className="h-4 w-4" checked={aktif} onChange={(e) => setAktif(e.target.checked)} />
+        Pakai tanda tangan elektronik
+      </label>
+      <p className="mt-1 text-[10px] leading-snug text-slate-500">
+        Jika tidak dicentang, ruang tanda tangan dibiarkan kosong untuk tanda tangan basah.
+      </p>
+      {aktif && (
+        <div className="mt-2 space-y-1.5 border-t border-slate-200 pt-2">
+          <p className="text-[11px] font-medium text-slate-500">Waktu tanda tangan</p>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="ttd-mode" checked={mode === "auto"} onChange={() => setMode("auto")} />
+            Otomatis (saat ini)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="ttd-mode" checked={mode === "manual"} onChange={() => setMode("manual")} />
+            Manual (pilih hari &amp; tanggal)
+          </label>
+          {mode === "manual" && (
+            <input
+              type="datetime-local"
+              value={manual}
+              onChange={(e) => setManual(e.target.value)}
+              className="w-full rounded border border-slate-300 px-1.5 py-1"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
