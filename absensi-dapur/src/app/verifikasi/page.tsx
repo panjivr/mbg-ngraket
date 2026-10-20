@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 interface DokRow {
   id: string;
   signer_nama: string | null;
+  peran: string | null;
   unit: string;
   jenis: string;
   waktu: string | null;
@@ -39,7 +40,7 @@ export default async function VerifikasiPage({
   if (id && /^[A-Z2-9]{12}$/.test(id)) {
     dok = (
       await query<DokRow>(
-        `SELECT id, signer_nama, unit, jenis, waktu::text, konten, created_at::text
+        `SELECT id, signer_nama, peran, unit, jenis, waktu::text, konten, created_at::text
            FROM tte_dokumen WHERE id = $1`,
         [id],
       )
@@ -75,6 +76,7 @@ export default async function VerifikasiPage({
               <Baris label="Unit" value={dok.unit || "—"} />
               <Baris label="Jenis dokumen" value={dok.jenis || "—"} />
               <Baris label="Ditandatangani oleh" value={dok.signer_nama || "—"} />
+              {dok.peran && <Baris label="Jabatan" value={dok.peran} />}
               <Baris label="Waktu TTE" value={waktuFmt(dok.waktu)} />
               <Baris label="Kode TTE" value={dok.id} />
             </div>

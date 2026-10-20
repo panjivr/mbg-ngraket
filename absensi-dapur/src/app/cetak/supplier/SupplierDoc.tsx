@@ -313,7 +313,7 @@ export default function SupplierDoc({ mode, heading }: { mode: SupplierMode; hea
           </div>
           <div className="text-center text-[12px]">
             <p><Ed>Hormat kami,</Ed></p>
-            <StempelTtd tinggiKosong="h-16" />
+            <StempelTtd peran="Pemasok" tinggiKosong="h-16" />
             <p className="font-bold underline"><Ed>( Nama &amp; Jabatan )</Ed></p>
           </div>
         </div>

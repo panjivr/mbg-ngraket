@@ -221,7 +221,7 @@ function Inner() {
               {tglLong(data.sampai || data.dari || todayIso())}
             </p>
             <p className="mt-1">Auditor Mutu Dapur</p>
-            <StempelTtd tinggiKosong="h-20" />
+            <StempelTtd nama={sppg?.kepala_sppg || ""} peran="Auditor Mutu Dapur" tinggiKosong="h-20" />
             <p className="font-bold underline">{sppg?.kepala_sppg || "……………………………"}</p>
           </div>
         </div>

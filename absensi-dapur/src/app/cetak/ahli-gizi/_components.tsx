@@ -513,7 +513,7 @@ export function TTDGizi({
       <p className="whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
-      <StempelTtd tinggiKosong="h-14" />
+      <StempelTtd nama={nama} peran={peran} tinggiKosong="h-14" />
       <p className="font-bold underline">
         <Ed>{nama}</Ed>
       </p>
@@ -1097,7 +1097,7 @@ export function TTDGiziAuto({
       <p className="min-h-[2.6em] whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
-      <StempelTtd tinggiKosong="h-14" />
+      <StempelTtd nama={nama} peran={peran} tinggiKosong="h-14" />
       <p className="font-bold underline">
         <Ed>{nama ? `(${nama})` : "(………………………)"}</Ed>
       </p>

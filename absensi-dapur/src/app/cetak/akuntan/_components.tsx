@@ -186,7 +186,7 @@ export function TTD({
       <p className="whitespace-pre-line">
         <Ed>{peran}</Ed>
       </p>
-      <StempelTtd tinggiKosong="h-16" />
+      <StempelTtd nama={nama} peran={peran} tinggiKosong="h-16" />
       <p className="font-bold underline">
         <Ed>{nama}</Ed>
       </p>
