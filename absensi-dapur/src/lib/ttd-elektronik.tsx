@@ -30,14 +30,16 @@ interface Ctx {
   label: string;
   mode: "auto" | "manual";
   manual: string;
+  keterangan: boolean;
   setAktif: (v: boolean) => void;
   setMode: (m: "auto" | "manual") => void;
   setManual: (s: string) => void;
+  setKeterangan: (v: boolean) => void;
 }
 
 const FALLBACK: Ctx = {
-  aktif: false, label: "", mode: "auto", manual: "",
-  setAktif() {}, setMode() {}, setManual() {},
+  aktif: false, label: "", mode: "auto", manual: "", keterangan: true,
+  setAktif() {}, setMode() {}, setManual() {}, setKeterangan() {},
 };
 
 const TtdContext = createContext<Ctx | null>(null);
@@ -46,6 +48,7 @@ export function TtdProvider({ children }: { children: ReactNode }) {
   const [aktif, setAktif] = useState(true);
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [manual, setManual] = useState("");
+  const [keterangan, setKeterangan] = useState(true);
   // Waktu "saat ini" dipaku saat halaman dibuka agar stabil di dokumen.
   const [autoAt] = useState(() => new Date());
 
@@ -54,8 +57,8 @@ export function TtdProvider({ children }: { children: ReactNode }) {
     [mode, manual, autoAt],
   );
   const val = useMemo<Ctx>(
-    () => ({ aktif, label, mode, manual, setAktif, setMode, setManual }),
-    [aktif, label, mode, manual],
+    () => ({ aktif, label, mode, manual, keterangan, setAktif, setMode, setManual, setKeterangan }),
+    [aktif, label, mode, manual, keterangan],
   );
   return <TtdContext.Provider value={val}>{children}</TtdContext.Provider>;
 }
@@ -85,9 +88,25 @@ export function StempelTtd({ tinggiKosong = "h-14" }: { tinggiKosong?: string })
   );
 }
 
+/**
+ * Keterangan keabsahan TTE (sekali per dokumen, di bawah blok tanda tangan).
+ * Jujur secara hukum: ini TTE sah sebagai alat bukti (UU ITE), belum
+ * tersertifikasi BSrE/PSrE. Bisa dimatikan lewat kontrol.
+ */
+export function KeteranganTtd({ className = "" }: { className?: string }) {
+  const { aktif, keterangan } = useTtd();
+  if (!aktif || !keterangan) return null;
+  return (
+    <p className={"mt-2 text-[9px] italic leading-snug text-gray-500 " + className}>
+      Dokumen ini ditandatangani secara elektronik melalui sistem Absensi MBG. Tanda tangan
+      elektronik sah sebagai alat bukti sesuai UU ITE (belum tersertifikasi BSrE/PSrE).
+    </p>
+  );
+}
+
 /** Kontrol (checklist) TTD elektronik — tampil di layar, tidak ikut tercetak. */
 export function TtdKontrol() {
-  const { aktif, mode, manual, setAktif, setMode, setManual } = useTtd();
+  const { aktif, mode, manual, keterangan, setAktif, setMode, setManual, setKeterangan } = useTtd();
   return (
     <div className="ttd-kontrol no-print fixed right-3 top-3 z-50 w-60 rounded-xl border border-slate-300 bg-white/95 p-3 text-xs text-slate-800 shadow-lg backdrop-blur">
       <style>{`@media print{.ttd-kontrol{display:none!important}}`}</style>
@@ -117,6 +136,10 @@ export function TtdKontrol() {
               className="w-full rounded border border-slate-300 px-1.5 py-1"
             />
           )}
+          <label className="mt-1 flex items-center gap-2 border-t border-slate-200 pt-2">
+            <input type="checkbox" checked={keterangan} onChange={(e) => setKeterangan(e.target.checked)} />
+            Tampilkan keterangan keabsahan
+          </label>
         </div>
       )}
     </div>

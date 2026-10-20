@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, Suspense, useEffect, useState, type ReactNode } from "react";
-import { StempelTtd } from "@/lib/ttd-elektronik";
+import { StempelTtd, KeteranganTtd } from "@/lib/ttd-elektronik";
 import { useSearchParams } from "next/navigation";
 import type { MenuGrup } from "@/lib/distribusi-types";
 
@@ -396,6 +396,7 @@ function Inner() {
         <StempelTtd tinggiKosong="h-12" />
         <p>{sppg.kepala_sppg || "____________"}</p>
         <p>Kepala SPPG,&nbsp; {namaSppg}</p>
+        <KeteranganTtd />
       </div>
     );
     return (
