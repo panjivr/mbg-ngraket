@@ -1,23 +1,14 @@
 import { PrintFrame, Ed } from "../../akuntan/_components";
 import { getTemplateGizi } from "@/lib/ahli-gizi";
-import { KopGizi } from "../_kop";
 import { TabelSuhuPendinginan } from "./TabelSuhuPendinginan";
 
 const t = getTemplateGizi("suhu-pendinginan")!;
 
-/** Satu kolom tanda tangan (replika kotak "Nama / Paraf / Tanggal" di formulir). */
-function KolomTtd({ peran }: { peran: string }) {
-  return (
-    <td className="border border-black align-top">
-      <div className="px-2 py-1.5 text-center text-[12px] font-bold">{peran}</div>
-      <div className="h-24 border-t border-black" />
-      <div className="border-t border-black px-2 py-1 text-center text-[11px]">
-        Nama / Paraf / Tanggal
-      </div>
-    </td>
-  );
-}
-
+/**
+ * Replika persis FORMULIR PENCATATAN SUHU DAN WAKTU PENDINGINAN MAKANAN
+ * (A4 mendatar, Arial, tanpa kop). Ukuran baris/kolom dalam mm mengikuti
+ * hasil pengukuran PDF asli supaya hasil cetak identik dan muat satu halaman.
+ */
 export default function Page() {
   return (
     <PrintFrame
@@ -28,58 +19,106 @@ export default function Page() {
       landscape
       hideKop
     >
-      <KopGizi heading={t.heading} />
+      {/* Saat cetak: tanpa padding atas/bawah lembar (sisi kiri-kanan tetap 5mm
+          pengaman printer → total ±15mm seperti aslinya) agar muat 1 halaman. */}
+      <style>
+        {
+          "@media print{.sheet.sheet.sheet{padding-top:0!important;padding-bottom:0!important}}"
+        }
+      </style>
+      <div
+        className="text-black"
+        style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+      >
+        <p className="text-center text-[16pt] font-bold leading-tight">
+          {t.heading}
+        </p>
 
-      {/* Identitas formulir */}
-      <table className="mt-4 w-full max-w-md border-collapse text-[12px]">
-        <tbody>
-          {[
-            "Nama SPPG",
-            "Tanggal Produksi",
-            "Petugas",
-            "Verifikator",
-          ].map((label) => (
-            <tr key={label}>
-              <td className="w-44 border border-black px-2 py-1 font-semibold">
-                {label}
-              </td>
-              <td className="border border-black px-2 py-1">
-                : <Ed>&nbsp;</Ed>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {/* Identitas formulir (kotak selebar halaman) */}
+        <table className="mt-[2.5mm] w-full table-fixed border-collapse text-[9.5pt] font-bold">
+          <colgroup>
+            <col style={{ width: "15.6%" }} />
+            <col />
+          </colgroup>
+          <tbody>
+            {["Nama SPPG", "Tanggal Produksi", "Petugas", "Verifikator"].map(
+              (label) => (
+                <tr key={label} className="h-[7.6mm]">
+                  <td className="border border-black px-[1.5mm] align-middle">
+                    {label}
+                  </td>
+                  <td className="border border-black px-[1.5mm] align-middle">
+                    : <Ed>&nbsp;</Ed>
+                  </td>
+                </tr>
+              ),
+            )}
+          </tbody>
+        </table>
 
-      <p className="mt-3 text-justify text-[11px] leading-relaxed">
-        <b>Petunjuk pengisian:</b> Catat setiap tahap pengolahan secara terpisah.
-        Satu baris = satu komponen menu dalam satu tahap. Suhu dicatat menggunakan
-        termometer probe yang telah dikalibrasi. &ldquo;Waktu mulai <i>resting</i>&rdquo;
-        adalah saat makanan selesai dimasak dan dipindahkan ke wadah <i>resting</i>;
-        &ldquo;waktu selesai <i>resting</i>&rdquo; adalah saat komponen siap dilakukan
-        pemorsian.
-      </p>
+        <p className="mt-[1.5mm] text-justify text-[8.5pt] font-bold leading-[1.4]">
+          Petunjuk pengisian: Catat setiap tahap pengolahan secara terpisah.
+          Satu baris = satu komponen menu dalam satu tahap. Suhu dicatat
+          menggunakan termometer probe yang telah dikalibrasi. &quot;Waktu mulai{" "}
+          <i>resting</i>&quot; adalah saat makanan selesai dimasak dan
+          dipindahkan ke wadah <i>resting</i>; &quot;waktu selesai{" "}
+          <i>resting</i>&quot; adalah saat komponen siap dilakukan pemorsian.
+        </p>
 
-      <div className="mt-3">
-        <TabelSuhuPendinginan />
+        <div className="mt-[4mm]">
+          <TabelSuhuPendinginan />
+        </div>
+
+        <p className="mt-[2.5mm] text-justify text-[8.5pt] font-bold leading-[1.4]">
+          Catatan penting: Formulir ini merekam proses per tahap. Nomor tahap
+          harus konsisten dengan identifikasi tahap pada proses memasak,
+          pemorsian, dan pencatatan penyaluran agar keterlacakan (
+          <i>traceability</i>) terjaga.
+        </p>
+
+        {/* Tanda tangan: 3 kolom sama lebar, ±46,5% lebar tabel. Lebar diatur di
+            pembungkus karena CSS cetak global memaksa setiap <table> 100%. */}
+        <div className="ml-[2.3%] mt-[2.5mm] w-[46.5%]">
+          <table className="w-full table-fixed border-collapse text-center font-bold">
+            <tbody>
+              <tr className="h-[7.6mm] text-[8.5pt] leading-tight">
+                {[
+                  "Jurutama Masak",
+                  "Ahli Gizi",
+                  "Kepala SPPG / Verifikator",
+                ].map((p) => (
+                  <td
+                    key={p}
+                    className="border border-black px-[1mm] align-middle"
+                  >
+                    {p}
+                  </td>
+                ))}
+              </tr>
+              <tr className="h-[19mm]">
+                {[0, 1, 2].map((i) => (
+                  <td
+                    key={i}
+                    className="border border-black px-[3mm] pb-[3.4mm] align-bottom"
+                  >
+                    <div className="border-b border-black" />
+                  </td>
+                ))}
+              </tr>
+              <tr className="h-[7.6mm] text-[8.5pt] leading-tight">
+                {[0, 1, 2].map((i) => (
+                  <td
+                    key={i}
+                    className="border border-black px-[1mm] align-middle"
+                  >
+                    Nama / Paraf / Tanggal
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-
-      <p className="mt-3 text-justify text-[11px] leading-relaxed">
-        <b>Catatan penting:</b> Formulir ini merekam proses per tahap. Nomor tahap
-        harus konsisten dengan identifikasi tahap pada proses memasak, pemorsian,
-        dan pencatatan penyaluran agar keterlacakan (<i>traceability</i>) terjaga.
-      </p>
-
-      {/* Tanda tangan 3 kolom: Jurutama Masak · Ahli Gizi · Kepala SPPG / Verifikator */}
-      <table className="mt-5 w-full max-w-2xl border-collapse">
-        <tbody>
-          <tr>
-            <KolomTtd peran="Jurutama Masak" />
-            <KolomTtd peran="Ahli Gizi" />
-            <KolomTtd peran="Kepala SPPG / Verifikator" />
-          </tr>
-        </tbody>
-      </table>
     </PrintFrame>
   );
 }
