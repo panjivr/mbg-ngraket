@@ -44,6 +44,18 @@ const AKSEN: Record<
     ring: "hover:ring-sky-500/40 hover:shadow-sky-500/10",
     teks: "group-hover:text-sky-200",
   },
+  "suhu-pendinginan": {
+    ikon: "bg-blue-500/15 text-blue-300 ring-blue-500/30",
+    garis: "from-blue-500/70",
+    ring: "hover:ring-blue-500/40 hover:shadow-blue-500/10",
+    teks: "group-hover:text-blue-200",
+  },
+  "checklist-sampel": {
+    ikon: "bg-red-500/15 text-red-300 ring-red-500/30",
+    garis: "from-red-500/70",
+    ring: "hover:ring-red-500/40 hover:shadow-red-500/10",
+    teks: "group-hover:text-red-200",
+  },
   "kebersihan-area": {
     ikon: "bg-teal-500/15 text-teal-300 ring-teal-500/30",
     garis: "from-teal-500/70",

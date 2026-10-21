@@ -108,8 +108,9 @@ export function Tgl({ mode = "tanggal" }: { mode?: TglMode }) {
 /** CSS cetak bersama untuk PrintFrame & SavedViewer. */
 function printCss(paper: string, landscape = false): string {
   const dim = PAPERS[paper]?.size || PAPERS.A4.size;
-  // Untuk formulir lebar (grid tanggal 1–31) putar kertas jadi mendatar.
-  const size = landscape ? `${dim} landscape` : dim;
+  // Untuk formulir lebar putar kertas jadi mendatar: tukar lebar↔tinggi.
+  // ("210mm 297mm landscape" tidak valid di CSS → diabaikan browser.)
+  const size = landscape ? dim.split(" ").reverse().join(" ") : dim;
   return `
     @media print {
       @page { size: ${size}; margin: ${landscape ? "10mm" : "16mm"}; }
@@ -120,6 +121,7 @@ function printCss(paper: string, landscape = false): string {
       .doc { page-break-after: always; }
       .doc:last-child { page-break-after: auto; }
       body { background: #fff !important; }
+      .print-root { padding: 0 !important; background: #fff !important; }
     }
     .fld { background: #fff7cc; min-width: 1ch; }
     [contenteditable]:focus { outline: 1px dashed #9ca3af; background: #fff; }
@@ -374,7 +376,7 @@ export function PrintFrame({
   const sheetW = landscape ? "max-w-[1180px]" : "max-w-[820px]";
 
   return (
-    <div className="min-h-screen bg-gray-200 py-6 text-black">
+    <div className="print-root min-h-screen bg-gray-200 py-6 text-black">
       <style>{printCss(paper, landscape)}</style>
 
       <div
@@ -466,7 +468,7 @@ export function SavedViewer({
   const [paper, setPaper] = useState("A4");
   const sheetW = landscape ? "max-w-[1180px]" : "max-w-[820px]";
   return (
-    <div className="min-h-screen bg-gray-200 py-6 text-black">
+    <div className="print-root min-h-screen bg-gray-200 py-6 text-black">
       <style>{printCss(paper, landscape)}</style>
 
       <div

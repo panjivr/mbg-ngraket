@@ -86,6 +86,16 @@ export const TEMPLATE_GIZI: TemplateGizi[] = [
     ikon: "❄️",
     landscape: true,
   },
+  {
+    slug: "suhu-pendinginan",
+    judul: "Pencatatan Suhu & Waktu Pendinginan Makanan",
+    heading: "FORMULIR PENCATATAN SUHU DAN WAKTU PENDINGINAN MAKANAN",
+    nomor: "",
+    deskripsi:
+      "Pencatatan suhu & waktu resting (pendinginan) makanan per tahap pengolahan: pukul & suhu mulai/selesai resting, durasi, suhu ruang, dan paraf — untuk keterlacakan (traceability) proses.",
+    ikon: "🧊",
+    landscape: true,
+  },
   // — Kebersihan (Checklist) —
   {
     slug: "kebersihan-area",
@@ -153,6 +163,15 @@ export const TEMPLATE_GIZI: TemplateGizi[] = [
     deskripsi:
       "Pencatatan penyimpanan sampel makanan wajib 2×24 jam per menu: waktu produksi, jumlah sampel, suhu simpan, dan jadwal pemusnahan — untuk penelusuran bila terjadi keluhan/keracunan.",
     ikon: "🧫",
+  },
+  {
+    slug: "checklist-sampel",
+    judul: "Checklist Sampel Makanan",
+    heading: "CHECKLIST SAMPEL MAKANAN",
+    nomor: "",
+    deskripsi:
+      "Rekap pengambilan sampel makanan per tanggal: pengantaran, nama petugas pengambil, nama menu, dan paraf Pengawas Gizi / Ka SPPG — sesuai format resmi lampiran checklist sampel.",
+    ikon: "🍲",
   },
   {
     slug: "penerimaan-bahan",
@@ -337,7 +356,7 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
   {
     label: "Monitoring Suhu",
     ket: "Suhu makanan, ruang pemorsian, dan penyimpanan dingin.",
-    slugs: ["suhu-makanan", "suhu-pemorsian", "suhu-showcase"],
+    slugs: ["suhu-makanan", "suhu-pemorsian", "suhu-showcase", "suhu-pendinginan"],
   },
   {
     label: "Kebersihan & Sanitasi",
@@ -351,7 +370,7 @@ export const KELOMPOK_GIZI: { label: string; ket: string; slugs: string[] }[] = 
   },
   {
     label: "Keamanan Pangan",
-    ket: "Penerimaan bahan, HACCP, uji organoleptik & retensi sampel.",
-    slugs: ["penerimaan-bahan", "haccp", "organoleptik", "retensi-sampel"],
+    ket: "Penerimaan bahan, HACCP, uji organoleptik, retensi & checklist sampel.",
+    slugs: ["penerimaan-bahan", "haccp", "organoleptik", "retensi-sampel", "checklist-sampel"],
   },
 ];
