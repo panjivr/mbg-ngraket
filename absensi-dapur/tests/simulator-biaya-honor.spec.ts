@@ -149,15 +149,15 @@ test("honor aktual ditampilkan berbeda, bisa bagi rata dan gaji per relawan", as
   );
   await page.getByLabel("Cara menghitung honor").selectOption("roles");
   await page
-    .getByRole("button", { name: "＋ Tambah divisi / relawan" })
+    .getByRole("button", { name: "＋ Tambah divisi / orang" })
     .click();
-  await page.getByLabel("Jumlah orang atau orang-hari 1").fill("1");
-  await page.getByLabel("Honor per unit 1 (Rp)").fill("3000000");
+  await page.getByLabel("Hari 1").fill("1");
+  await page.getByLabel("Tarif 1").fill("3000000");
   await page
-    .getByRole("button", { name: "＋ Tambah divisi / relawan" })
+    .getByRole("button", { name: "＋ Tambah divisi / orang" })
     .click();
-  await page.getByLabel("Jumlah orang atau orang-hari 2").fill("1");
-  await page.getByLabel("Honor per unit 2 (Rp)").fill("2000000");
+  await page.getByLabel("Hari 2").fill("1");
+  await page.getByLabel("Tarif 2").fill("2000000");
   await expect(page.locator(".sim-honor-total")).toContainText("5.000.000");
   page.once("dialog", (d) => d.accept());
   await page

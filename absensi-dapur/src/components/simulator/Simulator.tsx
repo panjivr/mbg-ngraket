@@ -673,6 +673,54 @@ export function ExpenseTable({ s, change }: { s: Scenario; change: Change }) {
     </Section>
   );
 }
+function HonorTable({ s, change }: { s: Scenario; change: Change }) {
+  const h = s.honor, rows = h.roles, reduction = h.optionReduction ?? 0;
+  const update = (i: number, patch: Partial<(typeof rows)[number]>) => {
+    const roles = rows.map((row, j) => {
+      if (i !== j) return row;
+      const next = { ...row, ...patch };
+      if (next.people !== undefined && next.workDays !== undefined) {
+        next.assignments = next.people * next.workDays;
+        next.optionRemoved = Math.min(next.people, next.optionRemoved ?? 0);
+      }
+      return next;
+    });
+    change({ ...s, honor: { ...h, roles } }, "Ubah simulasi honor");
+  };
+  const setReduction = (value: number) => change({ ...s, honor: { ...h, optionReduction: value } }, "Uji tarif honor");
+  const baseline = rows.reduce((sum, r) => sum + r.assignments * r.rate, 0);
+  const compare = rows.reduce((sum, r) => sum + (r.people === undefined || r.workDays === undefined
+    ? r.assignments : (r.people - (r.optionRemoved ?? 0)) * r.workDays) * Math.max(0, r.rate - reduction), 0);
+  const optionSummary = summary(syncHonor(s, compare));
+  const example = () => {
+    if (rows.length && !window.confirm("Ganti tabel saat ini dengan contoh? Simpan JSON dahulu jika perlu.")) return;
+    const roles = [["Aslap", 1, 200000], ["Koordinator admin", 4, 140000], ["Koordinator", 5, 130000], ["Pengolahan", 9, 125000]].map(([name, people, rate]) => ({ name: String(name), people: Number(people), workDays: 5, assignments: Number(people) * 5, rate: Number(rate) }));
+    change({ ...s, honor: { ...h, roles, optionReduction: 0 } }, "Muat contoh honor");
+  };
+  return <div>
+    <p className="sim-muted">Isi satu baris per divisi dengan tarif dan hari yang sama, atau satu baris per orang. Untuk rotasi dengan hari berbeda, pisahkan menjadi beberapa baris. Angka orang adalah jumlah yang dijadwalkan pada setiap hari di baris tersebut.</p>
+    <button onClick={example}>Muat contoh tabel</button> <span className="sim-muted">Contoh saja, bukan data aktual.</span>
+    <div className="sim-table-scroll" tabIndex={0} role="region" aria-label="Tabel honor, geser ke samping"><table><thead><tr><th>Divisi / kode</th><th>Orang masuk / hari</th><th>Hari layanan</th><th>Tarif / hari</th><th>Total awal</th><th>Kurangi orang / hari (uji)</th><th>Penghasilan / orang opsi</th><th></th></tr></thead><tbody>
+      {rows.map((r, i) => {
+        const legacy = r.people === undefined || r.workDays === undefined;
+        return <tr key={i}><td><TextField label={`Divisi ${i+1}`} value={r.name} max={100} onChange={name => update(i, {name})}/></td>
+          {legacy ? <td colSpan={2}><NumberField label={`Total orang-hari lama ${i+1}`} value={r.assignments} integer max={3660000} onChange={assignments => update(i, {assignments})}/><small>Data lama: jumlah orang dan hari tidak diketahui.</small></td> : <><td><NumberField label={`Orang ${i+1}`} value={r.people!} integer max={10000} onChange={people => update(i, {people})}/></td><td><NumberField label={`Hari ${i+1}`} value={r.workDays!} integer max={366} onChange={workDays => update(i, {workDays})}/></td></>}
+          <td><NumberField label={`Tarif ${i+1}`} value={r.rate} integer max={1000000000} onChange={rate => update(i, {rate})}/></td><td>{money(r.assignments * r.rate)}</td>
+          <td>{legacy ? "Tidak tersedia" : <NumberField label={`Kurangi orang ${i+1}`} value={r.optionRemoved ?? 0} integer max={r.people} onChange={optionRemoved => update(i, {optionRemoved})}/>}</td><td>{legacy ? "Tidak tersedia" : money(r.workDays! * Math.max(0, r.rate - reduction))}</td>
+          <td><button onClick={() => change({ ...s, honor: { ...h, roles: rows.filter((_, j) => j !== i) } }, "Hapus baris honor")}>Hapus</button></td></tr>;
+      })}</tbody><tfoot><tr><th colSpan={4}>Total honor awal</th><th>{money(baseline)}</th><td colSpan={3}/></tr></tfoot></table></div>
+    <button onClick={() => rows.length < 500 && change({ ...s, honor: { ...h, roles: [...rows, {name: "Divisi baru", assignments: 0, people: 1, workDays: 0, rate: 0}] } }, "Tambah baris honor")}>＋ Tambah divisi / orang</button>
+    <div className="sim-fields"><NumberField label="Analisis pengurangan tarif per orang per hari (Rp)" value={reduction} integer max={1000000000} onChange={setReduction}/></div>
+    <p>Pilihan cepat: {[0, 5000, 10000, 15000].map(value => <button key={value} onClick={() => setReduction(value)}>{money(value)}</button>)}</p>
+    <p>Hasil opsi: <strong>{money(compare)}</strong> · Penghematan dibanding awal: {money(baseline - compare)}.</p>
+    <p><strong>{optionSummary.balance < 0 ? `Melebihi pagu ${money(-optionSummary.balance)}` : `Sisa pagu ${money(optionSummary.balance)}`}</strong> setelah opsi, berdasarkan {s.basis === "plan" ? "rencana" : s.basis === "actual" ? "realisasi (nilai kosong memakai rencana)" : "proyeksi (nilai kosong memakai rencana)"}. Cadangan belum dikurangi.</p>
+    <button onClick={() => window.confirm(`Masukkan hasil opsi ${money(compare)} ke anggaran? Seluruh pos Honor relawan akan diganti. Ekspor JSON dahulu jika ingin menyimpan rinciannya.`) && change(syncHonor(s, compare), "Sinkronkan opsi honor")}>Gunakan hasil opsi di anggaran</button>
+    <p className="sim-muted">Penghasilan per orang pada opsi adalah hari kerja × tarif setelah pengurangan. Jumlah yang dikurangi berlaku pada setiap hari di baris tersebut; ini simulasi penugasan, bukan pemberhentian. Untuk rotasi, bagi orang ke beberapa baris sesuai hari masing-masing, lalu periksa jadwal setiap orang. Opsi tidak mengubah anggaran sampai dipilih.</p>
+    {h.reduction > 0 && <p className="sim-warning">Kalkulator aktif masih memakai pengurangan lama; total tersinkron {money(honorTotal(s))}. Hapus pengurangan lama sebelum membandingkan jika ingin memakai tarif awal.</p>}
+    <p className="sim-muted">Periksa keselamatan, keamanan 24 jam, kualitas, waktu istirahat, dan pengganti. Pengurangan honor memerlukan kesepakatan dan prosedur yang berlaku; 33 orang bukan batas otomatis.</p>
+  </div>;
+}
+
 export function HonorScenario({ s, change }: { s: Scenario; change: Change }) {
   const h = s.honor,
     total = honorTotal(s),
@@ -786,78 +834,7 @@ export function HonorScenario({ s, change }: { s: Scenario; change: Change }) {
           onChange={(actual) => set({ actual })}
         />
       )}
-      {h.mode === "roles" && (
-        <>
-          <p className="sim-muted">
-            Untuk gaji per orang dalam satu periode, buat satu baris per
-            relawan: isi jumlah 1 dan total gajinya. Untuk divisi dengan tarif
-            harian sama, isi jumlah orang × hari kerja, lalu tarif harian.
-            Gunakan kode anonim bila perlu.
-          </p>
-          {h.roles.map((r, i) => (
-            <div className="sim-role" key={i}>
-              <TextField
-                label={`Divisi atau kode ${i + 1}`}
-                value={r.name}
-                max={100}
-                onChange={(name) =>
-                  set({
-                    roles: h.roles.map((x, j) =>
-                      i === j ? { ...x, name } : x,
-                    ),
-                  })
-                }
-              />
-              <NumberField
-                label={`Jumlah orang atau orang-hari ${i + 1}`}
-                value={r.assignments}
-                integer
-                max={3660000}
-                onChange={(assignments) =>
-                  set({
-                    roles: h.roles.map((x, j) =>
-                      i === j ? { ...x, assignments } : x,
-                    ),
-                  })
-                }
-              />
-              <NumberField
-                label={`Honor per unit ${i + 1} (Rp)`}
-                value={r.rate}
-                integer
-                max={1000000000}
-                onChange={(rate) =>
-                  set({
-                    roles: h.roles.map((x, j) =>
-                      i === j ? { ...x, rate } : x,
-                    ),
-                  })
-                }
-              />
-              <button
-                onClick={() =>
-                  set({ roles: h.roles.filter((_, j) => j !== i) })
-                }
-              >
-                Hapus {i + 1}
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              h.roles.length < 500 &&
-              set({
-                roles: [
-                  ...h.roles,
-                  { name: "Divisi atau kode", assignments: 0, rate: 0 },
-                ],
-              })
-            }
-          >
-            ＋ Tambah divisi / relawan
-          </button>
-        </>
-      )}
+      {h.mode === "roles" && <HonorTable s={s} change={change} />}
       <p className="sim-honor-total">
         Hasil kalkulator <strong>{money(total)}</strong>
       </p>
