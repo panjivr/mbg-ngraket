@@ -27,6 +27,8 @@ export type Expense = {
   frequency: number;
   daily: boolean;
   billing: "daily" | "portion" | "monthly" | "once";
+  monthlyDivisor: "fixed30" | "calendar";
+  monthlyBasis: "calendar" | "service";
   outsideCap: boolean;
   actualProvided: boolean;
   projectedProvided: boolean;
@@ -39,7 +41,7 @@ export type Expense = {
   managedHonor: boolean;
 };
 export type Scenario = {
-  version: 1;
+  version: 2;
   name: string;
   kind: "baseline" | "hemat" | "custom";
   start: string;
@@ -48,6 +50,7 @@ export type Scenario = {
   pm: number;
   days: number;
   rate: number;
+  serviceByMonth: Record<string, number>;
   reserve: number;
   reserveMode: "percent" | "nominal";
   rounding: "round" | "ceil" | "floor";
@@ -86,6 +89,8 @@ export const blankRow = (): Expense => ({
   frequency: 1,
   daily: false,
   billing: "once",
+  monthlyDivisor: "fixed30",
+  monthlyBasis: "calendar",
   outsideCap: false,
   actualProvided: false,
   projectedProvided: false,
@@ -111,7 +116,7 @@ export function preset(): Scenario {
     ["Ard — perlu konfirmasi", 200000, 11],
   ];
   return {
-    version: 1,
+    version: 2,
     name: "Contoh catatan operasional — belum diverifikasi",
     kind: "baseline",
     start: "",
@@ -120,6 +125,7 @@ export function preset(): Scenario {
     pm: 2600,
     days: 10,
     rate: 3000,
+    serviceByMonth: {},
     reserve: 5,
     reserveMode: "percent",
     rounding: "round",
@@ -149,13 +155,13 @@ export function preset(): Scenario {
 export function calendarMonths(
   start: string,
   end: string,
-): { days: number; daysInMonth: number }[] {
+): { key: string; days: number; daysInMonth: number }[] {
   if (!start || !end || start > end) return [];
   const first = new Date(`${start}T00:00:00Z`),
     last = new Date(`${end}T00:00:00Z`);
   if (!Number.isFinite(first.getTime()) || !Number.isFinite(last.getTime()))
     return [];
-  const result: { days: number; daysInMonth: number }[] = [];
+  const result: { key: string; days: number; daysInMonth: number }[] = [];
   let y = first.getUTCFullYear(),
     m = first.getUTCMonth();
   for (let i = 0; i < 1200; i++) {
@@ -171,7 +177,11 @@ export function calendarMonths(
     const daysInMonth = (next - startMonth) / 86400000;
     const from = Math.max(startMonth, first.getTime()),
       to = Math.min(next - 86400000, last.getTime());
-    result.push({ days: (to - from) / 86400000 + 1, daysInMonth });
+    result.push({
+      key: `${String(y).padStart(4, "0")}-${String(m + 1).padStart(2, "0")}`,
+      days: (to - from) / 86400000 + 1,
+      daysInMonth,
+    });
     m++;
     if (m === 12) {
       m = 0;
@@ -191,6 +201,38 @@ export function billingKind(r: Expense) {
     ? "daily"
     : (r.billing ?? "once");
 }
+export function monthlyParts(r: Expense, s: Scenario) {
+  const months = calendarMonths(s.start, s.end);
+  const fixed = (r.monthlyDivisor ?? "calendar") === "fixed30";
+  const service = (r.monthlyBasis ?? "calendar") === "service";
+  if (!months.length)
+    return [
+      { key: "tanpa tanggal", days: s.days, divisor: 30, fallback: true },
+    ];
+  return months.map((m) => ({
+    key: m.key,
+    days: service
+      ? months.length === 1
+        ? s.days
+        : (s.serviceByMonth?.[m.key] ?? 0)
+      : m.days,
+    divisor: fixed ? 30 : m.daysInMonth,
+    fallback: false,
+  }));
+}
+export function monthlyAllocationIncomplete(r: Expense, s: Scenario) {
+  const months = calendarMonths(s.start, s.end);
+  if ((r.monthlyBasis ?? "calendar") !== "service" || months.length <= 1)
+    return false;
+  return (
+    months.some(
+      (m) =>
+        s.serviceByMonth?.[m.key] === undefined ||
+        s.serviceByMonth[m.key] > m.days,
+    ) ||
+    months.reduce((n, m) => n + (s.serviceByMonth?.[m.key] ?? 0), 0) !== s.days
+  );
+}
 export function planCost(r: Expense, s: Scenario) {
   const kind = billingKind(r);
   const multiplier =
@@ -199,31 +241,50 @@ export function planCost(r: Expense, s: Scenario) {
       : kind === "portion"
         ? s.pm * s.days
         : kind === "monthly"
-          ? calendarMonths(s.start, s.end).reduce(
-              (n, m) => n + m.days / m.daysInMonth,
-              0,
-            )
+          ? monthlyParts(r, s).reduce((n, m) => n + m.days / m.divisor, 0)
           : 1;
-  return Math[s.rounding](r.qty * r.price * r.frequency * multiplier);
+  return r.qty * r.price * r.frequency * multiplier;
 }
 
+export function usesPlan(r: Expense, s: Scenario) {
+  return (
+    s.basis === "plan" ||
+    (s.basis === "actual" && !r.actualProvided) ||
+    (s.basis === "projected" && !r.projectedProvided)
+  );
+}
 export function cost(r: Expense, s: Scenario) {
   return r.active
     ? s.basis === "plan"
       ? planCost(r, s)
       : s.basis === "actual"
-        ? r.actual
-        : r.projected
+        ? r.actualProvided
+          ? r.actual
+          : planCost(r, s)
+        : r.projectedProvided
+          ? r.projected
+          : planCost(r, s)
     : 0;
+}
+/** Hilangkan galat representasi angka yang amat dekat dengan bilangan bulat sebelum pembulatan akhir. */
+export function roundTotal(value: number, method: Scenario["rounding"]) {
+  const nearest = Math.round(value);
+  const tolerance = Math.min(
+    1e-7,
+    Number.EPSILON * Math.max(1, Math.abs(value)) * 16,
+  );
+  return Math[method](Math.abs(value - nearest) <= tolerance ? nearest : value);
 }
 export function summary(s: Scenario) {
   const budget = s.pm * s.rate * s.days,
-    total = s.rows
-      .filter((r) => !r.outsideCap)
-      .reduce((n, r) => n + cost(r, s), 0),
-    outside = s.rows
-      .filter((r) => r.outsideCap)
-      .reduce((n, r) => n + cost(r, s), 0),
+    total = roundTotal(
+      s.rows.filter((r) => !r.outsideCap).reduce((n, r) => n + cost(r, s), 0),
+      s.rounding,
+    ),
+    outside = roundTotal(
+      s.rows.filter((r) => r.outsideCap).reduce((n, r) => n + cost(r, s), 0),
+      s.rounding,
+    ),
     balance = budget - total;
   const reserve =
     s.reserveMode === "percent"
@@ -236,7 +297,10 @@ export function summary(s: Scenario) {
     budget,
     total,
     outside,
-    allTotal: total + outside,
+    allTotal: roundTotal(
+      s.rows.reduce((n, r) => n + cost(r, s), 0),
+      s.rounding,
+    ),
     balance,
     reserve,
     gap: balance - reserve,
@@ -297,10 +361,31 @@ export function warnings(s: Scenario): string[] {
       "Subtotal catatan Rp47.150.000 berbeda Rp18.100.000 dari jumlah 10 pos. Selisih belum direkonsiliasi.",
     );
   if (
-    s.rows.some((r) => r.active && billingKind(r) === "monthly") &&
+    s.rows.some(
+      (r) =>
+        r.active &&
+        r.price > 0 &&
+        usesPlan(r, s) &&
+        billingKind(r) === "monthly",
+    ) &&
     (!s.start || !s.end)
   )
-    list.push("Isi tanggal awal dan akhir untuk menghitung biaya bulanan.");
+    list.push(
+      "Tanggal belum lengkap: biaya bulanan menggunakan jumlah hari pelayanan dan pembagi 30 sebagai perkiraan.",
+    );
+  if (
+    s.rows.some(
+      (r) =>
+        r.active &&
+        r.price > 0 &&
+        usesPlan(r, s) &&
+        billingKind(r) === "monthly" &&
+        monthlyAllocationIncomplete(r, s),
+    )
+  )
+    list.push(
+      "Isi pembagian hari pelayanan per bulan; jumlahnya harus sama dengan total hari pelayanan.",
+    );
   if (s.start && s.end && s.days > calendarDays(s))
     list.push("Hari pelayanan melebihi jumlah hari kalender pada periode.");
   if (
@@ -308,14 +393,17 @@ export function warnings(s: Scenario): string[] {
     s.rows.some(
       (r) =>
         r.active &&
-        (planCost(r, s) > 0 || r.actual > 0 || r.projected > 0) &&
+        (r.price > 0 ||
+          planCost(r, s) > 0 ||
+          r.actual > 0 ||
+          r.projected > 0) &&
         !(s.basis === "actual" ? r.actualProvided : r.projectedProvided),
     )
   )
     list.push(
       "Sebagian nilai " +
         (s.basis === "actual" ? "realisasi" : "proyeksi") +
-        " belum diisi; total belum lengkap.",
+        " belum diisi; sementara memakai angka rencana.",
     );
   const honorRows = s.rows.filter(
     (r) => r.active && r.category === CATEGORIES[0],
@@ -340,6 +428,7 @@ export function warnings(s: Scenario): string[] {
     s.rows.some(
       (r) =>
         r.active &&
+        (planCost(r, s) > 0 || r.actual > 0 || r.projected > 0) &&
         (r.category === CATEGORIES[11] ||
           r.priority === "Harus diverifikasi" ||
           /verifikasi/i.test(r.source)),
@@ -391,7 +480,8 @@ function choice<T extends string>(v: unknown, values: readonly T[]): T {
 export const MAX_IMPORT_BYTES = 1024 * 1024;
 export function validateScenario(value: unknown): Scenario {
   const s = obj(value);
-  if (s.version !== 1) throw Error("Versi skema tidak didukung.");
+  if (s.version !== 1 && s.version !== 2)
+    throw Error("Versi skema tidak didukung.");
   if (!Array.isArray(s.rows) || s.rows.length > 500)
     throw Error("Maksimum 500 pos.");
   const h = obj(s.honor);
@@ -409,7 +499,7 @@ export function validateScenario(value: unknown): Scenario {
     return d;
   };
   const result: Scenario = {
-    version: 1,
+    version: 2,
     name: str(s.name, 150),
     kind: choice(s.kind, ["baseline", "hemat", "custom"]),
     start: date(s.start),
@@ -418,12 +508,27 @@ export function validateScenario(value: unknown): Scenario {
     pm: num(s.pm, 1000000, true),
     days: num(s.days, 366, true),
     rate: num(s.rate, 1000000, true),
+    serviceByMonth: Object.fromEntries(
+      Object.entries(
+        s.serviceByMonth === undefined ? {} : obj(s.serviceByMonth),
+      ).map(([key, value]) => {
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key))
+          throw Error("Bulan tidak valid.");
+        return [key, num(value, 31, true)];
+      }),
+    ),
     reserve: num(s.reserve, s.reserveMode === "percent" ? 100 : 1e12),
     reserveMode: choice(s.reserveMode, ["percent", "nominal"]),
     rounding: choice(s.rounding, ["round", "ceil", "floor"]),
     basis: choice(s.basis, ["plan", "actual", "projected"]),
     rows: s.rows.map((value) => {
       const r = obj(value);
+      if (
+        s.version === 2 &&
+        r.billing === "monthly" &&
+        (r.monthlyDivisor === undefined || r.monthlyBasis === undefined)
+      )
+        throw Error("Pengaturan biaya bulanan pada JSON tidak lengkap.");
       return {
         id: str(r.id, 100),
         name: str(r.name, 150),
@@ -444,6 +549,14 @@ export function validateScenario(value: unknown): Scenario {
               ? "daily"
               : "once"
             : choice(r.billing, ["daily", "portion", "monthly", "once"]),
+        monthlyDivisor:
+          r.monthlyDivisor === undefined
+            ? "calendar"
+            : choice(r.monthlyDivisor, ["fixed30", "calendar"]),
+        monthlyBasis:
+          r.monthlyBasis === undefined
+            ? "calendar"
+            : choice(r.monthlyBasis, ["calendar", "service"]),
         outsideCap: r.outsideCap === undefined ? false : bool(r.outsideCap),
         actualProvided:
           r.actualProvided === undefined
@@ -503,7 +616,73 @@ export function validateScenario(value: unknown): Scenario {
 export function parseScenario(text: string) {
   if (new TextEncoder().encode(text).length > MAX_IMPORT_BYTES)
     throw Error("File maksimum 1 MB.");
-  return validateScenario(JSON.parse(text));
+  const raw: unknown = JSON.parse(text);
+  const source = obj(raw);
+  // Format HTML referensi lama menyimpan parameter dalam `params` dan
+  // `freq`/`enabled` pada baris. Jangan menebak format lain yang tidak dikenal.
+  if (
+    source.version === 1 &&
+    source.params !== undefined &&
+    source.honor === undefined
+  ) {
+    const params = obj(source.params);
+    if (!Array.isArray(source.rows) || source.rows.length > 500)
+      throw Error("Maksimum 500 pos.");
+    const base = preset();
+    const mapping: Record<string, string> = {
+      Utilitas: "Utilitas",
+      "Distribusi & BBM": "BBM distribusi",
+      "Sanitasi & Operasional": "Kebersihan & sanitasi",
+      "Jaminan Sosial": "Jaminan sosial",
+      "Barang Habis Pakai": "ATK & barang habis pakai",
+      "Pendukung Lain": "Lainnya / perlu verifikasi",
+      "Perlu Verifikasi": "Lainnya / perlu verifikasi",
+    };
+    const rows = source.rows.map((value, index) => {
+      const r = obj(value),
+        oldCategory = str(r.category, 150),
+        name = str(r.name, 150);
+      const category =
+        oldCategory === "Honor & Insentif"
+          ? /honor.*relawan/i.test(name)
+            ? CATEGORIES[0]
+            : CATEGORIES[9]
+          : (mapping[oldCategory] ?? CATEGORIES[11]);
+      return {
+        ...blankRow(),
+        id: `legacy-${index + 1}`,
+        name,
+        category,
+        qty: num(r.qty, 10000),
+        price: num(r.price, 1e12),
+        frequency: num(r.freq, 366),
+        active: bool(r.enabled),
+        note: `Kategori asal: ${oldCategory}`,
+      };
+    });
+    return validateScenario({
+      ...base,
+      name: "Impor skenario lama",
+      note: "Diimpor dari format HTML lama; periksa jenis dan kategori biaya.",
+      pm: num(params.pm, 1000000, true),
+      days: num(params.days, 366, true),
+      rate: num(params.rate, 1000000, true),
+      reserve: num(params.reserve, 100),
+      rows,
+      honor: {
+        ...base.honor,
+        registered: 0,
+        active: 0,
+        days: 1,
+        rate: 0,
+        mode: "pooled",
+        pooled: 0,
+        actual: 0,
+        roles: [],
+      },
+    });
+  }
+  return validateScenario(raw);
 }
 export const csvCell = (value: unknown) => {
   const s = String(value);
@@ -519,6 +698,12 @@ export function exportCSV(s: Scenario) {
     [
       ["Skenario", s.name],
       ["Dasar", s.basis],
+      [
+        "Keterangan",
+        s.basis === "plan"
+          ? "Rencana"
+          : "Nilai realisasi/proyeksi yang belum diisi menggunakan rencana sementara",
+      ],
       ["Periode", s.start, s.end],
       ["PM", s.pm, "Hari", s.days, "Tarif", s.rate],
       [
@@ -539,6 +724,9 @@ export function exportCSV(s: Scenario) {
         "Tarif",
         "Frekuensi",
         "Jenis biaya",
+        "Pembagi bulanan",
+        "Dasar hari bulanan",
+        "Rincian hari dan pembagi",
         "Di luar pagu",
         "Rencana",
         "Realisasi input lokal",
@@ -557,10 +745,24 @@ export function exportCSV(s: Scenario) {
         r.price,
         r.frequency,
         billingKind(r),
+        billingKind(r) === "monthly" ? r.monthlyDivisor : "",
+        billingKind(r) === "monthly" ? r.monthlyBasis : "",
+        billingKind(r) === "monthly"
+          ? monthlyAllocationIncomplete(r, s)
+            ? "Hari pelayanan belum lengkap"
+            : monthlyParts(r, s)
+                .map(
+                  (m) =>
+                    `${m.key}: ${m.days}/${m.divisor}${m.fallback ? " (perkiraan)" : ""}`,
+                )
+                .join(" + ")
+          : "",
         r.outsideCap ? "Ya" : "Tidak",
-        planCost(r, s),
-        r.actual,
-        r.projected,
+        monthlyAllocationIncomplete(r, s) && billingKind(r) === "monthly"
+          ? "Belum lengkap"
+          : planCost(r, s),
+        r.actualProvided ? r.actual : "",
+        r.projectedProvided ? r.projected : "",
         r.source,
         r.note,
         r.evidence,

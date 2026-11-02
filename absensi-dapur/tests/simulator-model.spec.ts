@@ -30,10 +30,12 @@ test("sumber honor lain diganti dan realisasi tetap terpisah", () => {
   const synced = syncHonor(s, 1000000);
   expect(summary(synced).honor).toBe(1000000);
   synced.basis = "actual";
+  synced.rows.forEach(r=>{r.actualProvided=true; r.actual=0});
   expect(summary(synced).total).toBe(0);
   synced.rows[0].actual = 500;
   expect(summary(synced).total).toBe(500);
   synced.basis = "projected";
+  synced.rows.forEach(r=>{r.projectedProvided=true; r.projected=0});
   expect(summary(synced).total).toBe(0);
 });
 test("perubahan parameter, pengali hari, pembulatan, nonaktif, nol dan defisit", () => {
@@ -45,7 +47,8 @@ test("perubahan parameter, pengali hari, pembulatan, nonaktif, nol dan defisit",
   expect(planCost(s.rows[0], s)).toBe(208);
   s.rounding = "ceil";
   s.rows[0].price = 10.41;
-  expect(planCost(s.rows[0], s)).toBe(209);
+  expect(planCost(s.rows[0], s)).toBeCloseTo(208.2);
+  expect(summary(s).total).toBe(209);
   s.rows[0].active = false;
   expect(summary(s).total).toBe(0);
   s.rows[0].active = true;
@@ -72,7 +75,7 @@ test("impor tervalidasi, batas ukuran, finite, tipe, duplikat dan versi", () => 
   for (const value of [-1, NaN, Infinity, "2600", null])
     expect(() => validateScenario({ ...s, pm: value })).toThrow();
   expect(() => validateScenario({ ...s, pm: 1.5 })).toThrow();
-  expect(() => validateScenario({ ...s, version: 2 })).toThrow();
+  expect(() => validateScenario({ ...s, version: 3 })).toThrow();
   expect(() =>
     validateScenario({ ...s, rows: [s.rows[0], s.rows[0]] }),
   ).toThrow();
