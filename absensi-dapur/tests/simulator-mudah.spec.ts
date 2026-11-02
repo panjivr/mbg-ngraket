@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 test('ponsel: isi biaya harian dan periode lalu lihat hasil', async ({ page }) => {
  await page.setViewportSize({width:390,height:844});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/simulator-operasional');
+ await page.goto('/simulator-operasional');await page.getByLabel('👥 Jumlah penerima').fill('2600');
  await expect(page.getByLabel('📅 Berapa hari?')).toHaveValue('1');
  await expect(page.locator('.sim-conclusion')).toContainText('Isi biaya dulu');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
@@ -12,9 +12,9 @@ test('ponsel: isi biaya harian dan periode lalu lihat hasil', async ({ page }) =
  await page.getByRole('button',{name:'☀ Per hari'}).click();
  await page.getByLabel('Biaya per hari (Rp)',{exact:true}).fill('100000');
  await page.locator('.easy-row').filter({hasText:/^Listrik/}).locator('summary').click();
- await page.locator('.easy-row').filter({hasText:/^Listrik/}).getByLabel('Biaya sekali / periode (Rp)',{exact:true}).fill('300000');
+ await page.locator('.easy-row').filter({hasText:/^Listrik/}).getByLabel('Biaya sekali (Rp)',{exact:true}).fill('300000');
  await expect(page.locator('.sim-conclusion')).toContainText('76.700.000');
- await page.locator('.easy-row').filter({hasText:/^Listrik/}).getByLabel('Biaya sekali / periode (Rp)',{exact:true}).fill('90000000');
+ await page.locator('.easy-row').filter({hasText:/^Listrik/}).getByLabel('Biaya sekali (Rp)',{exact:true}).fill('90000000');
  await expect(page.locator('.sim-conclusion')).toContainText('Melebihi pagu');
  await expect(page.locator('.sim-conclusion')).toContainText('Listrik');
  await expect(page.getByRole('status')).toHaveText('Tersimpan lokal pada browser ini.');
