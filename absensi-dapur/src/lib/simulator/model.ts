@@ -62,10 +62,11 @@ export type Scenario = {
     days: number;
     rate: number;
     reduction: number;
+    optionReduction?: number;
     mode: "uniform" | "roles" | "pooled" | "actual";
     pooled: number;
     actual: number;
-    roles: { name: string; assignments: number; rate: number }[];
+    roles: { name: string; assignments: number; rate: number; people?: number; workDays?: number; optionRemoved?: number }[];
   };
   log: string[];
 };
@@ -581,6 +582,7 @@ export function validateScenario(value: unknown): Scenario {
       days: num(h.days, 366, true),
       rate: num(h.rate, 1000000, true),
       reduction: num(h.reduction, 1000000, true),
+      ...(h.optionReduction === undefined ? {} : {optionReduction:num(h.optionReduction,1000000000,true)}),
       mode: choice(h.mode, ["uniform", "roles", "pooled", "actual"]),
       pooled: h.pooled === undefined ? 0 : num(h.pooled, 1e12),
       actual: h.actual === undefined ? 0 : num(h.actual, 1e12),
@@ -590,11 +592,15 @@ export function validateScenario(value: unknown): Scenario {
           name: str(r.name, 100),
           assignments: num(r.assignments, 3660000, true),
           rate: num(r.rate, 1000000000, true),
+          ...(r.people === undefined ? {} : {people:num(r.people,10000,true)}),
+          ...(r.workDays === undefined ? {} : {workDays:num(r.workDays,366,true)}),
+          ...(r.optionRemoved === undefined ? {} : {optionRemoved:num(r.optionRemoved,10000,true)}),
         };
       }),
     },
     log: Array.isArray(s.log) ? s.log.slice(-30).map((v) => str(v, 250)) : [],
   };
+  if(result.honor.roles.some(r=>((r.people===undefined)!==(r.workDays===undefined)) || (r.people!==undefined && r.workDays!==undefined && (r.assignments!==r.people*r.workDays || (r.optionRemoved??0)>r.people)) || (r.people===undefined && (r.optionRemoved??0)>0))) throw Error("Jumlah orang, hari, dan opsi honor tidak sesuai.");
   if (result.start && result.end && result.start > result.end)
     throw Error("Akhir periode harus sesudah awal.");
   if (
