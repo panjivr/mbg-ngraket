@@ -1063,16 +1063,16 @@ export function ExportActions({
 }
 function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
   const update = (id: string, patch: Partial<Expense>) => change({ ...s, rows: s.rows.map(r => r.id === id ? { ...r, ...patch } : r) }, "Ubah biaya");
-  const daily = s.rows.filter(r=>r.active && r.daily).reduce((n,r)=>n+planCost(r,{...s,days:1}),0);
-  const period = s.rows.filter(r=>r.active && !r.daily).reduce((n,r)=>n+planCost(r,s),0);
-  return <Section title="Biaya harian dan periode" tag="02"><p className="sim-muted">Pilih <strong>Harian</strong> untuk biaya yang berulang setiap hari pelayanan. Pilih <strong>Periode</strong> untuk biaya sekali, misalnya listrik atau BPJS. Masukkan bagian tagihan yang memang ingin dibebankan pada periode ini; tagihan bulanan tidak otomatis dibagi.</p><p className="sim-muted">Biaya harian {money(daily)} × {s.days} hari + biaya periode {money(period)} = <strong>{money(s.rows.reduce((n,r)=>n+(r.active?planCost(r,s):0),0))}</strong>. Preset catatan memakai biaya per periode, bukan biaya per hari.</p><div className="sim-table-scroll" tabIndex={0} role="region" aria-label="Tabel biaya, geser ke samping"><table><thead><tr><th>Aktif</th><th>Nama biaya</th><th>Jenis biaya</th><th>Jumlah</th><th>Harga satuan (Rp)</th><th>Frekuensi</th><th>Total periode</th><th>Hapus</th></tr></thead><tbody>{s.rows.map((r,i)=><tr key={r.id}><td><input type="checkbox" aria-label={`Aktif ${r.name}`} checked={r.active} onChange={e=>update(r.id,{active:e.target.checked})}/></td><td><input aria-label={`Nama biaya ${i+1}`} value={r.name} maxLength={150} onChange={e=>update(r.id,{name:e.target.value})}/></td><td><select aria-label={`Jenis biaya ${r.name}`} value={r.daily?'daily':'period'} onChange={e=>update(r.id,{daily:e.target.value==='daily'})}><option value="daily">Harian</option><option value="period">Periode</option></select></td>{([['qty','Jumlah',10000],['price','Harga satuan',1000000000],['frequency','Frekuensi',366]] as const).map(([key,label,max])=><td key={key}><input type="number" min="0" max={max} step="any" aria-label={`${label} ${r.name}`} value={r[key]} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=0&&n<=max)update(r.id,{[key]:n});}}/></td>)}<td>{r.active ? money(planCost(r,s)) : 'Tidak aktif'}</td><td><button onClick={()=>window.confirm(`Hapus ${r.name}?`) && change({...s,rows:s.rows.filter(x=>x.id!==r.id)},'Hapus pos')}>Hapus</button></td></tr>)}</tbody></table></div><div className="sim-toolbar sim-no-print"><button onClick={()=>s.rows.length<500&&change({...s,rows:[...s.rows,{...blankRow(),daily:true}]},'Tambah pos')}>+ Tambah biaya</button></div></Section>;
+  const dailyTotal = s.rows.filter(r => r.active && r.daily).reduce((n, r) => n + planCost(r, s), 0);
+  const periodTotal = s.rows.filter(r => r.active && !r.daily).reduce((n, r) => n + planCost(r, s), 0);
+  return <div className="easy-costs"><p className="easy-hint">Ketuk nama biaya untuk mengisi jumlahnya.</p><div className="easy-rows">{s.rows.map((r,i)=><details className="easy-row" key={r.id}><summary><span>{r.name || `Biaya ${i+1}`}<small>{!r.active ? 'Tidak aktif' : r.daily ? 'Per hari' : 'Sekali dalam periode'}</small></span><strong>{r.active ? money(planCost(r,s)) : '—'}</strong></summary><div className="easy-row-body"><label className="sim-field"><span>Nama biaya</span><input aria-label={`Nama biaya ${i+1}`} value={r.name} maxLength={150} onChange={e=>update(r.id,{name:e.target.value})}/></label><fieldset><legend>Biaya ini untuk</legend><div className="easy-choices"><button type="button" aria-pressed={r.daily} onClick={()=>update(r.id,{daily:true})}>☀ Per hari</button><button type="button" aria-pressed={!r.daily} onClick={()=>update(r.id,{daily:false})}>▣ Sekali / periode</button></div></fieldset><NumberField label={r.daily ? 'Biaya per hari (Rp)' : 'Biaya sekali / periode (Rp)'} value={r.price} onChange={price=>update(r.id,{price})}/>{(r.qty!==1 || r.frequency!==1) && <p className="sim-muted">Nominal di atas dikalikan jumlah {r.qty} dan frekuensi {r.frequency}. Ubah di rincian lanjutan.</p>}<p className="easy-hint">{r.daily ? `Dikalikan ${s.days} hari pelayanan.` : 'Dihitung sekali. Untuk listrik atau BPJS bulanan, masukkan bagian tagihan untuk periode ini.'}</p><div className="easy-actions"><label className="sim-check"><input type="checkbox" checked={r.active} onChange={e=>update(r.id,{active:e.target.checked})}/> Hitung biaya ini</label><button type="button" onClick={()=>window.confirm(`Hapus ${r.name}?`) && change({...s,rows:s.rows.filter(x=>x.id!==r.id)},'Hapus pos')}>Hapus</button></div></div></details>)}</div><button type="button" className="easy-add" onClick={()=>s.rows.length<500&&change({...s,rows:[...s.rows,{...blankRow(),daily:true}]},'Tambah pos')}>＋ Tambah biaya</button><p className="easy-hint">Biaya harian untuk {s.days} hari: {money(dailyTotal)} · Biaya sekali: {money(periodTotal)}</p></div>;
 }
 
 function Kesimpulan({s}:{s:Scenario}) {
   const t=summary(s); const largest=s.rows.filter(r=>r.active && cost(r,s)>0).sort((a,b)=>cost(b,s)-cost(a,s)).slice(0,3);
   const short=Math.max(0,-t.balance), reserveShort=Math.max(0,-t.gap);
-  const title=!t.budget?'Pagu belum tersedia':short>0?'Melebihi pagu':t.balance===0?'Tepat di batas pagu':t.usage!==null&&t.usage>=90?'Mendekati batas pagu':'Masih dalam pagu';
-  return <section className="sim-conclusion" aria-live="polite"><span>HASIL SIMULASI · {s.basis==='plan'?'RENCANA':s.basis==='actual'?'REALISASI':'PROYEKSI'}</span><h2>{title}</h2><p>{!t.budget?'Isi jumlah penerima dan hari pelayanan untuk menghitung pagu.':short>0?`Kurangi total biaya minimal ${money(short)} agar tidak melebihi pagu.`:`Sisa anggaran ${money(t.balance)}.`}</p>{t.budget>0&&reserveShort>0&&<p>Untuk memenuhi target cadangan, kurangi biaya sebesar {money(reserveShort)}.</p>}{(short>0||reserveShort>0)&&largest.length>0&&<p>Mulai periksa pos terbesar: {largest.map(r=>`${r.name} (${money(cost(r,s))})`).join(', ')}. Tentukan pengurangan sesuai kebutuhan dan ketentuan yang berlaku.</p>}<small>Ini simulasi anggaran, bukan saldo kas atau persetujuan pembiayaan.</small></section>;
+  const title=!t.budget?'Pagu belum tersedia':t.total===0?'Isi biaya dulu':short>0?'Melebihi pagu':t.balance===0?'Tepat di batas pagu':t.usage!==null&&t.usage>=90?'Mendekati batas pagu':'Masih dalam pagu';
+  return <section className="sim-conclusion" aria-live="polite"><span>HASIL SIMULASI · {s.basis==='plan'?'RENCANA':s.basis==='actual'?'REALISASI':'PROYEKSI'}</span><h2>{title}</h2><p>{!t.budget?'Isi jumlah penerima dan hari pelayanan untuk menghitung pagu.':t.total===0?'Ketuk Isi biaya untuk mulai menghitung.':short>0?`Kurangi total biaya minimal ${money(short)} agar tidak melebihi pagu.`:`Sisa anggaran ${money(t.balance)}.`}</p>{t.budget>0&&reserveShort>0&&<p>Untuk memenuhi target cadangan, kurangi biaya sebesar {money(reserveShort)}.</p>}{(short>0||reserveShort>0)&&largest.length>0&&<p>Mulai periksa pos terbesar: {largest.map(r=>`${r.name} (${money(cost(r,s))})`).join(', ')}. Tentukan pengurangan sesuai kebutuhan dan ketentuan yang berlaku.</p>}<small>Ini simulasi anggaran, bukan saldo kas atau persetujuan pembiayaan.</small></section>;
 }
 
 export default function Simulator() {
@@ -1134,27 +1134,20 @@ export default function Simulator() {
           <br />
           <em>Operasional SPPG</em>
         </h1>
-        <p>
-          Rencanakan kebutuhan dapur, uji rotasi petugas, dan lihat ruang
-          anggaran sebelum mengambil keputusan.
-        </p>
-        <div className="sim-badges">
-          <span>Tanpa login</span>
-          <span>Data lokal</span>
-          <span>Contoh anonim</span>
-        </div>
+        <p>Isi jumlah penerima, hari pelayanan, dan biaya. Hasil langsung muncul di bawah.</p>
       </div>
       <p className="sim-save-status" role="status" aria-live="polite">
         {status}
       </p>
-      <Section title="Hitung harian dan periode" tag="01"><div className="sim-fields"><NumberField label="Jumlah penerima manfaat" value={s.pm} integer max={1000000} onChange={pm=>change({...s,pm})}/><NumberField label="Jumlah hari pelayanan" value={s.days} integer max={366} onChange={days=>change({...s,days})}/><div><span>Tarif per penerima / hari</span><p><strong>{money(s.rate)}</strong></p></div></div></Section>
-      <div className="sim-summary"><div className="sim-metrics"><div className="sim-metric"><span>Pagu per hari</span><strong>{money(s.pm * s.rate)}</strong></div><div className="sim-metric"><span>Pagu {s.days} hari</span><strong>{money(summary(s).budget)}</strong></div><div className="sim-metric"><span>Total biaya {s.days} hari ({s.basis === 'plan' ? 'rencana' : s.basis === 'actual' ? 'realisasi' : 'proyeksi'})</span><strong>{money(summary(s).total)}</strong></div></div></div>
-      <p className="sim-muted">Mulai dengan 1 hari. Untuk simulasi 10 hari, ubah jumlah hari menjadi 10. Biaya periode dihitung sekali.</p>
-      <details className="sim-panel"><summary>Lihat rincian pagu, cadangan dan serapan</summary><BudgetSummary s={s} /></details>
-      <details className="sim-panel sim-no-print"><summary>Pengaturan tambahan</summary><BudgetParameters s={s} change={change} /></details>
-      <details className="sim-panel"><summary>Periksa catatan dan peringatan</summary><BudgetWarnings s={s} /></details>
-      <details className="sim-panel"><summary>Isi atau ubah daftar biaya ({s.rows.length} pos)</summary><QuickSheet s={s} change={change} /></details>
-      <details className="sim-panel"><summary>Rincian biaya dan pengaturan lanjutan</summary><ExpenseTable s={s} change={change} /></details>
+      <section className="easy-parameters"><div className="easy-fields"><NumberField label="👥 Jumlah penerima" value={s.pm} integer max={1000000} onChange={pm=>change({...s,pm})}/><NumberField label="📅 Berapa hari?" value={s.days} integer max={366} onChange={days=>change({...s,days})}/></div><p className="easy-hint">Pagu {money(s.rate)} × {s.pm.toLocaleString('id-ID')} penerima × {s.days} hari = <strong>{money(summary(s).budget)}</strong></p></section>
+      <details className="easy-main"><summary><span><strong>🧾 Isi biaya</strong><small>Ketuk untuk menambah atau mengubah</small></span><b>{money(summary(s).total)}</b></summary><QuickSheet s={s} change={change} /></details>
+      <Kesimpulan s={s} />
+      <div className="easy-print"><h2>Rincian biaya</h2><p>Jumlah penerima: {s.pm} · Hari pelayanan: {s.days} · Pagu: {money(summary(s).budget)}</p><table><thead><tr><th>Nama biaya</th><th>Perhitungan</th><th>Rencana</th><th>Realisasi</th><th>Proyeksi</th></tr></thead><tbody>{s.rows.map(r=><tr key={r.id}><td>{r.name} {!r.active && '(tidak aktif)'}</td><td>{r.daily ? 'Harian' : 'Sekali / periode'} · {r.qty} × {money(r.price)} × {r.frequency}{r.daily ? ` × ${s.days} hari` : ''}</td><td>{money(r.active?planCost(r,s):0)}</td><td>{money(r.active?r.actual:0)}</td><td>{money(r.active?r.projected:0)}</td></tr>)}</tbody></table></div>
+      <details className="easy-main sim-no-print"><summary><span><strong>⚙️ Pilihan lain</strong><small>Honor, rincian, simpan, dan cetak</small></span></summary>
+      <details className="sim-panel"><summary>Rincian pagu dan cadangan</summary><BudgetSummary s={s} /></details>
+      <details className="sim-panel"><summary>Pengaturan anggaran</summary><BudgetParameters s={s} change={change} /></details>
+      <details className="sim-panel"><summary>Catatan dan peringatan</summary><BudgetWarnings s={s} /></details>
+      <details className="sim-panel"><summary>Rincian biaya lanjutan</summary><ExpenseTable s={s} change={change} /></details>
       <details className="sim-panel"><summary>Simulasi honor relawan</summary><HonorScenario s={s} change={change} /></details>
       <details className="sim-panel"><summary>Bandingkan skenario</summary>
       <ScenarioComparison
@@ -1203,8 +1196,8 @@ export default function Simulator() {
           ))}
         </ul>
       </details>
-      <Kesimpulan s={s} />
-      <aside className="sim-disclaimer">
+      </details>
+      <details className="sim-disclaimer"><summary>Catatan penggunaan</summary>
         <strong>Batas penggunaan</strong>
         <p>
           Hasil simulasi bukan bukti kelayakan audit atau persetujuan
@@ -1219,7 +1212,7 @@ export default function Simulator() {
           internal. Hindari memasukkan data pribadi pada catatan maupun file
           ekspor.
         </p>
-      </aside>
+      </details>
     </div>
   );
 }
