@@ -1,0 +1,165 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1830"><title>Simulator Operasional SPPG | Djati</title><style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;color:#17243b;background:#f3f6fb}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}header{background:linear-gradient(120deg,#0a1c39,#154e83);color:white;padding:34px max(20px,calc((100vw - 1160px)/2)) 45px}.eyebrow{font-size:12px;letter-spacing:2px;color:#9fdbf9;font-weight:800}h1{font-size:clamp(25px,4vw,39px);margin:12px 0}header p{color:#d3e3f3;max-width:750px;line-height:1.6}.wrap{max-width:1160px;margin:-24px auto 60px;padding:0 18px}.card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:23px;box-shadow:0 8px 28px #17243b0b;margin-bottom:17px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric{padding:19px;border-radius:13px;background:#f5f8fd;border:1px solid #e4ebf4}.metric span{display:block;font-size:12px;color:#65758c;margin-bottom:9px}.metric strong{font-size:clamp(16px,2vw,23px);letter-spacing:-.5px}.metric.green{background:#edf9f3}.metric.red{background:#fff0f0}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:17px}h2{font-size:19px;margin:0}.muted{color:#65758c;font-size:13px;line-height:1.6}.inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}label{display:block;font-size:12px;font-weight:700;color:#50617b;margin-bottom:6px}input,select{width:100%;border:1px solid #d6e0ec;border-radius:9px;padding:11px 12px;background:white;color:#17243b;min-width:0}input:focus,select:focus{outline:2px solid #86baf2;border-color:#3078b7}.btn{border:0;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:750;background:#eaf2fc;color:#154e83}.btn.primary{background:#1268a8;color:white}.btn.danger{background:#fff0f0;color:#ac3441}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:890px;font-size:13px}th{text-align:left;background:#edf3fa;color:#455873;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:12px 9px}td{padding:8px;border-bottom:1px solid #edf0f5}td input,td select{padding:8px;font-size:12px}td.money{text-align:right;white-space:nowrap;font-weight:700}td.actions{text-align:right}.bar{height:12px;border-radius:20px;background:#e4eaf2;overflow:hidden;margin:12px 0}.bar>div{height:100%;background:#1684bd;transition:width .2s}.note{border-left:3px solid #e9a23b;padding:12px 15px;background:#fff9eb;color:#795522;font-size:13px;line-height:1.65;border-radius:5px}.status{font-weight:800}.footer{text-align:center;color:#758398;font-size:12px;margin:20px}.pill{display:inline-block;border-radius:20px;background:#e7f2ff;color:#155c92;padding:5px 10px;font-size:11px;font-weight:800}@media(max-width:850px){.grid,.inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.grid,.inputs{grid-template-columns:1fr 1fr}.card{padding:16px}.metric{padding:12px}.metric strong{font-size:16px}}@media print{header{padding:20px}.wrap{margin:0;max-width:100%}.toolbar,.actions,.btn{display:none!important}.card{break-inside:avoid;box-shadow:none}.tablewrap{overflow:visible}table{min-width:0}td input,td select{border:0;padding:0;appearance:none}}
+</style></head><body>
+<header>
+  <div class="eyebrow">SIMULATOR PUBLIK · DATA DEMO</div>
+  <h1>Simulator Anggaran Operasional SPPG</h1>
+  <p>Hitung pagu maksimal, rincian biaya, simulasi honor, dan KPI operasional. Tidak perlu login. Data contoh anonim — bukan data keuangan riil.</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <div class="grid">
+      <div class="metric"><span>Pagu Maksimum</span><strong id="pagu">Rp0</strong></div>
+      <div class="metric"><span>Total Anggaran</span><strong id="total">Rp0</strong></div>
+      <div class="metric" id="saldoCard"><span>Saldo / Defisit</span><strong id="saldo">Rp0</strong></div>
+      <div class="metric"><span>Biaya per PM / Hari</span><strong id="perpm">Rp0</strong></div>
+    </div>
+    <div class="bar"><div id="bar" style="width:0%"></div></div>
+    <div class="muted" id="status">—</div>
+  </div>
+  <div class="card">
+    <div class="sectionhead"><h2>Parameter Pagu</h2><span class="pill">2600 × 3000 × 10 = 78jt</span></div>
+    <div class="inputs">
+      <label>Jumlah PM<input id="pm" type="number" value="2600" min="0"></label>
+      <label>Hari pelayanan<input id="days" type="number" value="10" min="0"></label>
+      <label>Tarif max / PM / hari<input id="rate" type="number" value="3000" min="0"></label>
+      <label>Target cadangan (%)<input id="reserve" type="number" value="10" min="0" max="100"></label>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sectionhead">
+      <h2>Rincian Biaya Operasional</h2>
+      <div class="toolbar">
+        <button class="btn" onclick="addRow()">+ Tambah Pos</button>
+        <button class="btn" onclick="resetPreset()">Reset Preset</button>
+        <button class="btn" onclick="exportJSON()">Export JSON</button>
+        <button class="btn" onclick="document.getElementById('imp').click()">Import JSON</button>
+        <input id="imp" type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+        <button class="btn primary" onclick="window.print()">Cetak / PDF</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Kategori</th><th>Pos</th><th>Jumlah</th><th>Satuan</th><th>Harga</th><th>Subtotal</th><th>Aktif</th><th></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="note" id="reconNote">Selisih catatan rekonsiliasi ditampilkan terpisah, bukan dimasukkan otomatis sebagai biaya.</div>
+  </div>
+  <div class="card">
+    <div class="sectionhead"><h2>Simulasi Honor & Rotasi (opsional, tidak double-count)</h2></div>
+    <div class="inputs">
+      <label>Personel terdaftar<input id="reg" type="number" value="49"></label>
+      <label>Aktif / hari<input id="active" type="number" value="33"></label>
+      <label>Hari kerja<input id="wdays" type="number" value="10"></label>
+      <label>Honor / orang / hari<input id="honorrate" type="number" value="50000"></label>
+    </div>
+    <p class="muted" style="margin-top:12px">Total honor simulasi: <strong id="honortotal">Rp0</strong>. Pilih "sinkronkan" hanya jika ingin memasukkan ke pos Honor Relawan (satu sumber kebenaran).</p>
+    <button class="btn" onclick="syncHonor()">Sinkronkan ke Pos Honor Relawan</button>
+    <button class="btn" onclick="separateSim()">Simulasi Terpisah</button>
+  </div>
+  <div class="footer">Simulator publik Djati · Data demo anonim · Bukan financial advice · Verifikasi juknis BGN terbaru</div>
+</div>
+<script>
+const fmt = n => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0);
+const $ = id => document.getElementById(id);
+let rows = [
+  {id:1,cat:'Honor Relawan',name:'Honor relawan (contoh)',qty:1,unit:'paket',price:0,active:true},
+  {id:2,cat:'Utilitas',name:'Listrik',qty:1,unit:'bulan',price:2500000,active:true},
+  {id:3,cat:'Utilitas',name:'Air',qty:1,unit:'bulan',price:500000,active:true},
+  {id:4,cat:'BBM',name:'BBM distribusi',qty:1,unit:'periode',price:3000000,active:true},
+  {id:5,cat:'Sanitasi',name:'Kebersihan & sampah',qty:1,unit:'periode',price:800000,active:true},
+  {id:6,cat:'ATK',name:'Barang habis pakai',qty:1,unit:'periode',price:750000,active:true},
+  {id:7,cat:'Keamanan',name:'Honor keamanan',qty:1,unit:'periode',price:1500000,active:true},
+  {id:8,cat:'Lainnya',name:'Rapat koordinasi',qty:1,unit:'kali',price:500000,active:true},
+  {id:9,cat:'Lainnya',name:'Jaminan sosial (contoh)',qty:1,unit:'periode',price:2000000,active:true},
+  {id:10,cat:'Lainnya',name:'Pos lain (review)',qty:1,unit:'item',price:0,active:false}
+];
+let nextId = 11;
+function renderRows(){
+  const tb = $('tbody');
+  tb.innerHTML = '';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input value="${r.cat}" onchange="upd(${r.id},'cat',this.value)"></td>
+      <td><input value="${r.name}" onchange="upd(${r.id},'name',this.value)"></td>
+      <td><input type="number" value="${r.qty}" onchange="upd(${r.id},'qty',+this.value)"></td>
+      <td><input value="${r.unit}" onchange="upd(${r.id},'unit',this.value)"></td>
+      <td><input type="number" value="${r.price}" onchange="upd(${r.id},'price',+this.value)"></td>
+      <td class="money">${fmt(r.active?r.qty*r.price:0)}</td>
+      <td><input type="checkbox" ${r.active?'checked':''} onchange="upd(${r.id},'active',this.checked)"></td>
+      <td class="actions"><button class="btn danger" onclick="del(${r.id})">Hapus</button></td>`;
+    tb.appendChild(tr);
+  });
+  calc();
+}
+function upd(id,k,v){ const r=rows.find(x=>x.id===id); if(r){ r[k]=v; renderRows(); } }
+function del(id){ rows=rows.filter(r=>r.id!==id); renderRows(); }
+function addRow(){ rows.push({id:nextId++,cat:'Lainnya',name:'Pos baru',qty:1,unit:'item',price:0,active:true}); renderRows(); }
+function resetPreset(){ if(confirm('Reset ke preset contoh?')) location.reload(); }
+function calc(){
+  const pm=+ $('pm').value||0, days=+$('days').value||0, rate=+$('rate').value||0;
+  const pagu = pm * rate * days;
+  let total = 0;
+  rows.forEach(r=>{ if(r.active) total += (r.qty||0)*(r.price||0); });
+  const saldo = pagu - total;
+  const perpm = (pm&&days) ? total/(pm*days) : 0;
+  $('pagu').textContent = fmt(pagu);
+  $('total').textContent = fmt(total);
+  $('saldo').textContent = fmt(saldo);
+  $('perpm').textContent = fmt(perpm);
+  const pct = pagu ? Math.min(100, (total/pagu)*100) : 0;
+  $('bar').style.width = pct+'%';
+  const card = $('saldoCard');
+  card.className = 'metric ' + (saldo<0?'red':saldo<pagu*0.1?'green':'');
+  $('status').textContent = saldo<0 ? '⚠ Melewati pagu' : pct>90 ? '⚠ Mendekati pagu' : '✓ Dalam pagu';
+  $('reconNote').textContent = 'Contoh: total 10 pos preset ~Rp29.050.000. Selisih catatan (mis. Rp18.100.000) ditampilkan sebagai isu rekonsiliasi, bukan biaya otomatis.';
+}
+['pm','days','rate','reserve'].forEach(id=>$ (id).addEventListener('input',calc));
+function exportJSON(){
+  const data = {params:{pm:+$('pm').value,days:+$('days').value,rate:+$('rate').value,reserve:+$('reserve').value}, rows};
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download = 'skenario-sppg.json'; a.click();
+}
+function importJSON(inp){
+  const f = inp.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const d = JSON.parse(e.target.result);
+      if(d.params){ ['pm','days','rate','reserve'].forEach(k=>$(k).value = d.params[k]||0); }
+      if(d.rows) rows = d.rows.map((r,i)=>({...r,id:i+1}));
+      nextId = rows.length+10;
+      renderRows();
+    }catch(err){ alert('File JSON tidak valid'); }
+  };
+  reader.readAsText(f);
+}
+function syncHonor(){
+  const h = +$('honortotal').textContent.replace(/[^0-9]/g,'') || 0;
+  let r = rows.find(x=>x.name.toLowerCase().includes('honor relawan'));
+  if(!r){ r={id:nextId++,cat:'Honor Relawan',name:'Honor relawan (sinkron)',qty:1,unit:'paket',price:h,active:true}; rows.unshift(r); }
+  else r.price = h;
+  renderRows();
+  alert('Honor disinkronkan ke pos. Pastikan tidak double-count.');
+}
+function separateSim(){ alert('Simulasi honor tetap terpisah. Tidak mengubah rincian biaya.'); }
+function updateHonor(){
+  const n = +$('active').value||0, d=+$('wdays').value||0, r=+$('honorrate').value||0;
+  $('honortotal').textContent = fmt(n*d*r);
+}
+['reg','active','wdays','honorrate'].forEach(id=>$ (id).addEventListener('input',updateHonor));
+renderRows();
+updateHonor();
+try{
+  const saved = JSON.parse(localStorage.getItem('sppg-sim')||'null');
+  if(saved && saved.rows){ rows=saved.rows.map((r,i)=>({...r,id:i+1})); nextId=rows.length+100;
+    ['pm','days','rate','reserve'].forEach(k=>$(k).value=safeNum(saved.params[k])); }
+}catch(e){}
+function safeNum(v){ return isFinite(+v)?+v:0; }
+window.addEventListener('beforeunload',()=>{
+  localStorage.setItem('sppg-sim', JSON.stringify({params:{pm:+$('pm').value,days:+$('days').value,rate:+$('rate').value,reserve:+$('reserve').value},rows}));
+});
+</script>
+</body></html>
