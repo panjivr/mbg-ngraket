@@ -6,7 +6,7 @@ export const WHATSAPP_NUMBER = "6285157503744";
 // Root layout remains noindex by default; only approved marketing pages opt in.
 export const PUBLIC_INDEXABLE = process.env.VERCEL_ENV !== "preview";
 export const PUBLIC_PATHS = [
-  "/", "/fitur", "/solusi/absensi-sppg", "/solusi/rekap-gaji", "/solusi/distribusi",
+  "/", "/simulator-operasional", "/fitur", "/solusi/absensi-sppg", "/solusi/rekap-gaji", "/solusi/distribusi",
   "/panduan", "/panduan/memilih-aplikasi-sppg", "/panduan/rekap-absensi-shift-malam", "/tentang",
 ];
 export const PRIVATE_PATHS = ["/admin", "/dapur", "/cetak", "/api", "/login", "/info-gizi", "/offline.html"];

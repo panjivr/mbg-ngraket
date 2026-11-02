@@ -52,21 +52,23 @@ export default function ThemeLangProvider({
 
   // Sinkronkan dari localStorage sekali saat mount (menghindari mismatch SSR).
   useEffect(() => {
+    try {
     const savedTheme = localStorage.getItem(THEME_KEY);
     const savedLang = localStorage.getItem(LANG_KEY);
     if (savedTheme === "light" || savedTheme === "dark") setThemeState(savedTheme);
     if (savedLang === "en" || savedLang === "id") setLangState(savedLang);
+    } catch { /* Preferensi default tetap berjalan jika storage ditolak. */ }
   }, []);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    localStorage.setItem(THEME_KEY, t);
+    try { localStorage.setItem(THEME_KEY, t); } catch { /* Preferensi sesi tetap berlaku. */ }
     applyTheme(t);
   }, []);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
-    localStorage.setItem(LANG_KEY, l);
+    try { localStorage.setItem(LANG_KEY, l); } catch { /* Preferensi sesi tetap berlaku. */ }
     applyLang(l);
   }, []);
 
