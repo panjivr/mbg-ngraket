@@ -11,6 +11,10 @@ export const CATEGORIES = [
   "Insentif PIC/PJ",
   "Rapat koordinasi",
   "Lainnya / perlu verifikasi",
+  "Sewa kendaraan",
+  "Insentif fasilitas",
+  "Kemasan",
+  "Bahan baku",
 ] as const;
 export type Expense = {
   id: string;
@@ -22,6 +26,10 @@ export type Expense = {
   price: number;
   frequency: number;
   daily: boolean;
+  billing: "daily" | "portion" | "monthly" | "once";
+  outsideCap: boolean;
+  actualProvided: boolean;
+  projectedProvided: boolean;
   active: boolean;
   source: string;
   note: string;
@@ -51,7 +59,9 @@ export type Scenario = {
     days: number;
     rate: number;
     reduction: number;
-    mode: "uniform" | "roles";
+    mode: "uniform" | "roles" | "pooled" | "actual";
+    pooled: number;
+    actual: number;
     roles: { name: string; assignments: number; rate: number }[];
   };
   log: string[];
@@ -75,6 +85,10 @@ export const blankRow = (): Expense => ({
   price: 0,
   frequency: 1,
   daily: false,
+  billing: "once",
+  outsideCap: false,
+  actualProvided: false,
+  projectedProvided: false,
   active: true,
   source: "Perlu verifikasi",
   note: "",
@@ -124,16 +138,75 @@ export function preset(): Scenario {
       rate: 100000,
       reduction: 0,
       mode: "uniform",
+      pooled: 0,
+      actual: 0,
       roles: [{ name: "Role A (anonim)", assignments: 330, rate: 100000 }],
     },
     log: [],
   };
 }
-export function planCost(r: Expense, s: Scenario) {
-  return Math[s.rounding](
-    r.qty * r.price * r.frequency * (r.daily ? s.days : 1),
-  );
+/** Kalender inklusif; pemisahan bulan menggunakan UTC agar tidak tergantung zona browser. */
+export function calendarMonths(
+  start: string,
+  end: string,
+): { days: number; daysInMonth: number }[] {
+  if (!start || !end || start > end) return [];
+  const first = new Date(`${start}T00:00:00Z`),
+    last = new Date(`${end}T00:00:00Z`);
+  if (!Number.isFinite(first.getTime()) || !Number.isFinite(last.getTime()))
+    return [];
+  const result: { days: number; daysInMonth: number }[] = [];
+  let y = first.getUTCFullYear(),
+    m = first.getUTCMonth();
+  for (let i = 0; i < 1200; i++) {
+    const monthStart = (year: number, month: number) => {
+      const d = new Date(0);
+      d.setUTCHours(0, 0, 0, 0);
+      d.setUTCFullYear(year, month, 1);
+      return d.getTime();
+    };
+    const startMonth = monthStart(y, m),
+      next = monthStart(y, m + 1);
+    if (startMonth > last.getTime()) break;
+    const daysInMonth = (next - startMonth) / 86400000;
+    const from = Math.max(startMonth, first.getTime()),
+      to = Math.min(next - 86400000, last.getTime());
+    result.push({ days: (to - from) / 86400000 + 1, daysInMonth });
+    m++;
+    if (m === 12) {
+      m = 0;
+      y++;
+    }
+  }
+  return result;
 }
+export function calendarDays(s: Scenario) {
+  if (!s.start || !s.end || s.start > s.end) return 0;
+  const a = Date.parse(s.start + "T00:00:00Z"),
+    b = Date.parse(s.end + "T00:00:00Z");
+  return Number.isFinite(a) && Number.isFinite(b) ? (b - a) / 86400000 + 1 : 0;
+}
+export function billingKind(r: Expense) {
+  return r.daily && (!r.billing || r.billing === "once")
+    ? "daily"
+    : (r.billing ?? "once");
+}
+export function planCost(r: Expense, s: Scenario) {
+  const kind = billingKind(r);
+  const multiplier =
+    kind === "daily"
+      ? s.days
+      : kind === "portion"
+        ? s.pm * s.days
+        : kind === "monthly"
+          ? calendarMonths(s.start, s.end).reduce(
+              (n, m) => n + m.days / m.daysInMonth,
+              0,
+            )
+          : 1;
+  return Math[s.rounding](r.qty * r.price * r.frequency * multiplier);
+}
+
 export function cost(r: Expense, s: Scenario) {
   return r.active
     ? s.basis === "plan"
@@ -145,18 +218,25 @@ export function cost(r: Expense, s: Scenario) {
 }
 export function summary(s: Scenario) {
   const budget = s.pm * s.rate * s.days,
-    total = s.rows.reduce((n, r) => n + cost(r, s), 0),
+    total = s.rows
+      .filter((r) => !r.outsideCap)
+      .reduce((n, r) => n + cost(r, s), 0),
+    outside = s.rows
+      .filter((r) => r.outsideCap)
+      .reduce((n, r) => n + cost(r, s), 0),
     balance = budget - total;
   const reserve =
     s.reserveMode === "percent"
       ? Math[s.rounding]((budget * s.reserve) / 100)
       : s.reserve;
   const honor = s.rows
-    .filter((r) => r.category === CATEGORIES[0])
+    .filter((r) => r.category === CATEGORIES[0] && !r.outsideCap)
     .reduce((n, r) => n + cost(r, s), 0);
   return {
     budget,
     total,
+    outside,
+    allTotal: total + outside,
     balance,
     reserve,
     gap: balance - reserve,
@@ -173,12 +253,16 @@ export function honorTotal(
 ) {
   const h = s.honor;
   return Math[s.rounding](
-    h.mode === "roles"
-      ? h.roles.reduce(
-          (n, r) => n + r.assignments * Math.max(0, r.rate - reduction),
-          0,
-        )
-      : active * h.days * Math.max(0, h.rate - reduction),
+    h.mode === "pooled"
+      ? h.pooled
+      : h.mode === "actual"
+        ? h.actual
+        : h.mode === "roles"
+          ? h.roles.reduce(
+              (n, r) => n + r.assignments * Math.max(0, r.rate - reduction),
+              0,
+            )
+          : active * h.days * Math.max(0, h.rate - reduction),
   );
 }
 // One managed row is replaced on every sync; other honor entries are explicitly replaced.
@@ -190,7 +274,12 @@ export function syncHonor(s: Scenario, amount = honorTotal(s)): Scenario {
     category: CATEGORIES[0],
     price: amount,
     managedHonor: true,
-    note: "Rencana simulasi; bukan payroll aktual.",
+    actual: s.honor.mode === "actual" ? amount : 0,
+    actualProvided: s.honor.mode === "actual",
+    note:
+      s.honor.mode === "actual"
+        ? "Nilai aktual dimasukkan pengguna; perlu verifikasi."
+        : "Rencana simulasi; bukan payroll aktual.",
   };
   return {
     ...s,
@@ -202,9 +291,42 @@ export function syncHonor(s: Scenario, amount = honorTotal(s)): Scenario {
 }
 export function warnings(s: Scenario): string[] {
   const t = summary(s),
-    list = [
-      "Catatan sumber: subtotal tertulis Rp47.150.000; jumlah 10 pos Rp29.050.000. Selisih Rp18.100.000 belum direkonsiliasi dan tidak ditambahkan sebagai biaya.",
-    ];
+    list: string[] = [];
+  if (s.name === "Contoh catatan operasional — belum diverifikasi")
+    list.push(
+      "Subtotal catatan Rp47.150.000 berbeda Rp18.100.000 dari jumlah 10 pos. Selisih belum direkonsiliasi.",
+    );
+  if (
+    s.rows.some((r) => r.active && billingKind(r) === "monthly") &&
+    (!s.start || !s.end)
+  )
+    list.push("Isi tanggal awal dan akhir untuk menghitung biaya bulanan.");
+  if (s.start && s.end && s.days > calendarDays(s))
+    list.push("Hari pelayanan melebihi jumlah hari kalender pada periode.");
+  if (
+    s.basis !== "plan" &&
+    s.rows.some(
+      (r) =>
+        r.active &&
+        (planCost(r, s) > 0 || r.actual > 0 || r.projected > 0) &&
+        !(s.basis === "actual" ? r.actualProvided : r.projectedProvided),
+    )
+  )
+    list.push(
+      "Sebagian nilai " +
+        (s.basis === "actual" ? "realisasi" : "proyeksi") +
+        " belum diisi; total belum lengkap.",
+    );
+  const honorRows = s.rows.filter(
+    (r) => r.active && r.category === CATEGORIES[0],
+  );
+  if (
+    honorRows.length &&
+    honorRows.reduce((n, r) => n + cost(r, s), 0) !== honorTotal(s)
+  )
+    list.push(
+      "Total honor pada anggaran berbeda dari kalkulator honor. Periksa sebelum sinkronisasi.",
+    );
   if (s.rate !== 3000)
     list.push(
       "Simulasi nonstandar: tarif berbeda dari acuan Rp3.000/PM/hari; bukan penilaian kepatuhan.",
@@ -223,9 +345,7 @@ export function warnings(s: Scenario): string[] {
           /verifikasi/i.test(r.source)),
     )
   )
-    list.push(
-      "Ada pos yang kelayakan atau klasifikasinya harus diverifikasi, termasuk tulisan “Ard”.",
-    );
+    list.push("Ada pos yang kelayakan atau klasifikasinya harus diverifikasi.");
   const names = s.rows
     .filter((r) => r.active)
     .map((r) => r.name.trim().toLowerCase());
@@ -275,11 +395,16 @@ export function validateScenario(value: unknown): Scenario {
   if (!Array.isArray(s.rows) || s.rows.length > 500)
     throw Error("Maksimum 500 pos.");
   const h = obj(s.honor);
-  if (!Array.isArray(h.roles) || h.roles.length > 50)
-    throw Error("Maksimum 50 role.");
+  if (!Array.isArray(h.roles) || h.roles.length > 500)
+    throw Error("Maksimum 500 divisi atau relawan.");
   const date = (v: unknown) => {
     const d = str(v, 10);
-    if (d && (!/^\d{4}-\d{2}-\d{2}$/.test(d) || (Number.isNaN(Date.parse(d)) || new Date(d).toISOString().slice(0,10) !== d)))
+    if (
+      d &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(d) ||
+        Number.isNaN(Date.parse(d)) ||
+        new Date(d).toISOString().slice(0, 10) !== d)
+    )
       throw Error("Tanggal tidak valid.");
     return d;
   };
@@ -310,9 +435,24 @@ export function validateScenario(value: unknown): Scenario {
         ]),
         unit: str(r.unit, 50),
         qty: num(r.qty, 10000),
-        price: num(r.price),
+        price: num(r.price, 1e12),
         frequency: num(r.frequency, 366),
         daily: bool(r.daily),
+        billing:
+          r.billing === undefined
+            ? r.daily
+              ? "daily"
+              : "once"
+            : choice(r.billing, ["daily", "portion", "monthly", "once"]),
+        outsideCap: r.outsideCap === undefined ? false : bool(r.outsideCap),
+        actualProvided:
+          r.actualProvided === undefined
+            ? r.actual !== 0
+            : bool(r.actualProvided),
+        projectedProvided:
+          r.projectedProvided === undefined
+            ? r.projected !== 0
+            : bool(r.projectedProvided),
         active: bool(r.active),
         source: str(r.source),
         note: str(r.note, 2000),
@@ -328,13 +468,15 @@ export function validateScenario(value: unknown): Scenario {
       days: num(h.days, 366, true),
       rate: num(h.rate, 1000000, true),
       reduction: num(h.reduction, 1000000, true),
-      mode: choice(h.mode, ["uniform", "roles"]),
+      mode: choice(h.mode, ["uniform", "roles", "pooled", "actual"]),
+      pooled: h.pooled === undefined ? 0 : num(h.pooled, 1e12),
+      actual: h.actual === undefined ? 0 : num(h.actual, 1e12),
       roles: h.roles.map((value) => {
         const r = obj(value);
         return {
           name: str(r.name, 100),
           assignments: num(r.assignments, 3660000, true),
-          rate: num(r.rate, 1000000, true),
+          rate: num(r.rate, 1000000000, true),
         };
       }),
     },
@@ -342,6 +484,13 @@ export function validateScenario(value: unknown): Scenario {
   };
   if (result.start && result.end && result.start > result.end)
     throw Error("Akhir periode harus sesudah awal.");
+  if (
+    result.start &&
+    result.end &&
+    calendarDays(result) > 3660 &&
+    result.rows.some((r) => billingKind(r) === "monthly")
+  )
+    throw Error("Biaya bulanan mendukung periode maksimum 3660 hari kalender.");
   if (
     new Set(result.rows.map((r) => r.id)).size !== result.rows.length ||
     result.rows.filter((r) => r.managedHonor).length > 1
@@ -389,7 +538,8 @@ export function exportCSV(s: Scenario) {
         "Qty",
         "Tarif",
         "Frekuensi",
-        "Per hari",
+        "Jenis biaya",
+        "Di luar pagu",
         "Rencana",
         "Realisasi input lokal",
         "Proyeksi input lokal",
@@ -406,7 +556,8 @@ export function exportCSV(s: Scenario) {
         r.qty,
         r.price,
         r.frequency,
-        r.daily ? "Ya" : "Tidak",
+        billingKind(r),
+        r.outsideCap ? "Ya" : "Tidak",
         planCost(r, s),
         r.actual,
         r.projected,

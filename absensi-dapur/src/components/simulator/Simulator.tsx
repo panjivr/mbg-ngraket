@@ -2,6 +2,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   CATEGORIES,
+  billingKind,
+  calendarDays,
+  calendarMonths,
   blankRow,
   cost,
   exportCSV,
@@ -273,9 +276,9 @@ export function BudgetParameters({
       </label>
       <p className="sim-muted">
         Acuan awal Rp3.000/PM/hari berdasarkan materi pengguna, belum
-        diverifikasi terhadap juknis terbaru. 2.600 PM dan 10 hari hanya contoh.
-        Realisasi dan proyeksi diisi terpisah; tidak terhubung ke pembukuan
-        internal.
+        diverifikasi terhadap juknis terbaru. Jumlah penerima dan hari dapat
+        disesuaikan. Realisasi dan proyeksi diisi terpisah; tidak terhubung ke
+        pembukuan internal.
       </p>
     </Section>
   );
@@ -387,23 +390,35 @@ export function ExpenseEditor({
       />
       <NumberField
         label="Tarif satuan (Rp)"
+        max={1e12}
         value={r.price}
         onChange={(price) => set({ price })}
       />
       <NumberField
-        label="Frekuensi per periode / hari"
+        label="Berapa kali biaya ini berulang dalam satuan yang dipilih"
         value={r.frequency}
         max={366}
         onChange={(frequency) => set({ frequency })}
       />
-      <label className="sim-check">
-        <input
-          type="checkbox"
-          checked={r.daily}
-          onChange={(e) => set({ daily: e.target.checked })}
-        />{" "}
-        Kalikan {s.days} hari pelayanan
-      </label>
+      <Select
+        label="Satuan waktu / jumlah"
+        value={billingKind(r)}
+        options={[
+          ["daily", "Per hari pelayanan"],
+          ["portion", "Per porsi"],
+          ["monthly", "Per bulan kalender"],
+          ["once", "Sekali per periode"],
+        ]}
+        onChange={(v) =>
+          set({ billing: v as Expense["billing"], daily: v === "daily" })
+        }
+      />
+      <p className="sim-muted">
+        Total rencana {money(planCost(r, s))};{" "}
+        {billingKind(r) === "monthly" && !s.start
+          ? "isi tanggal periode agar biaya bulanan dihitung."
+          : "perhitungan mengikuti satuan yang dipilih."}
+      </p>
       <TextField
         label="Sumber dana / kelayakan"
         value={r.source}
@@ -425,13 +440,13 @@ export function ExpenseEditor({
         label="Realisasi input lokal (Rp)"
         value={r.actual}
         max={1e12}
-        onChange={(actual) => set({ actual })}
+        onChange={(actual) => set({ actual, actualProvided: true })}
       />
       <NumberField
         label="Proyeksi input lokal (Rp)"
         value={r.projected}
         max={1e12}
-        onChange={(projected) => set({ projected })}
+        onChange={(projected) => set({ projected, projectedProvided: true })}
       />
     </div>
   );
@@ -458,9 +473,9 @@ export function ExpenseTable({ s, change }: { s: Scenario; change: Change }) {
   return (
     <Section title="Rincian biaya operasional" tag="02">
       <p className="sim-muted">
-        Total rencana = kuantitas × tarif × frekuensi × hari (jika dipilih).
-        Buka “Edit rincian” untuk satuan, status, dan catatan. Data contoh bukan
-        pengeluaran aktual yang disahkan.
+        Total rencana mengikuti kuantitas, tarif, frekuensi, dan cara menghitung
+        setiap pos. Buka “Edit rincian” untuk satuan, status, dan catatan. Data
+        contoh bukan pengeluaran aktual yang disahkan.
       </p>
       <div className="sim-toolbar sim-no-print">
         <button
@@ -652,230 +667,210 @@ export function ExpenseTable({ s, change }: { s: Scenario; change: Change }) {
 export function HonorScenario({ s, change }: { s: Scenario; change: Change }) {
   const h = s.honor,
     total = honorTotal(s),
-    set = (patch: Partial<Scenario["honor"]>) =>
-      change({ ...s, honor: { ...h, ...patch } });
-  const synchronize = (amount: number) => {
+    current = s.rows
+      .filter((r) => r.active && r.category === CATEGORIES[0])
+      .reduce((n, r) => n + cost(r, s), 0);
+  const set = (patch: Partial<Scenario["honor"]>) =>
+    change({ ...s, honor: { ...h, ...patch } });
+  const apply = () => {
     if (
       window.confirm(
-        "Ganti seluruh pos kategori Honor relawan dengan satu pos rencana simulasi? Realisasi dan proyeksi pos honor pengganti dimulai dari nol.",
+        `Honor di anggaran saat ini ${money(current)}. Ganti seluruh pos Honor relawan dengan satu pos ${money(total)}? Data realisasi/proyeksi pos tersebut akan diganti. Simpan JSON lebih dulu jika diperlukan.`,
       )
     )
-      change(syncHonor(s, amount), "Sinkronkan honor satu kali");
+      change(syncHonor(s, total), "Sinkronkan honor");
   };
   return (
-    <Section title="Simulasi honor & rotasi" tag="03">
+    <Section title="Honor relawan" tag="03">
       <p className="sim-muted">
-        Simulasi terpisah. Mengubah kalkulator tidak mengubah pos anggaran
-        sampai Anda memilih sinkronisasi. Sinkronisasi mengganti seluruh
-        kategori honor agar tidak dihitung dua kali.
+        Isi sebagai simulasi lokal. Bandingkan jumlahnya dengan anggaran; data
+        tidak terhubung ke penggajian.
       </p>
-      <div className="sim-fields">
+      <Select
+        label="Cara menghitung honor"
+        value={h.mode}
+        options={[
+          ["pooled", "Bagi rata dari total dana"],
+          ["roles", "Per divisi atau setiap relawan"],
+          ["uniform", "Tarif sama per hari"],
+          ["actual", "Masukkan total honor aktual"],
+        ]}
+        onChange={(v) => set({ mode: v as typeof h.mode, reduction: 0 })}
+      />
+      {h.reduction > 0 && (h.mode === "uniform" || h.mode === "roles") && (
+        <p className="sim-warning">
+          Pengurangan lama {money(h.reduction)} per orang-hari masih diterapkan.{" "}
+          <button onClick={() => set({ reduction: 0 })}>
+            Hapus pengurangan
+          </button>
+        </p>
+      )}
+      {h.mode === "pooled" && (
+        <>
+          <button
+            onClick={() => {
+              const t = summary(s);
+              set({ pooled: Math.max(0, t.budget - (t.total - t.honor)) });
+            }}
+          >
+            Isi dari sisa pagu setelah biaya lain
+          </button>
+          <div className="sim-fields">
+            <NumberField
+              label="Total dana honor (Rp)"
+              value={h.pooled}
+              max={1e12}
+              onChange={(pooled) => set({ pooled })}
+            />
+            <NumberField
+              label="Jumlah relawan yang menerima"
+              value={h.registered}
+              integer
+              max={10000}
+              onChange={(registered) => set({ registered })}
+            />
+          </div>
+          <p>
+            Rata-rata per relawan:{" "}
+            <strong>
+              {h.registered
+                ? money(h.pooled / h.registered)
+                : "Isi jumlah relawan"}
+            </strong>
+          </p>
+          <p className="sim-muted">
+            Pembagian rata adalah perkiraan; tentukan pembulatan pembayaran
+            sesuai kebijakan.
+          </p>
+        </>
+      )}
+      {h.mode === "uniform" && (
+        <div className="sim-fields">
+          <NumberField
+            label="Relawan aktif per hari"
+            value={h.active}
+            integer
+            max={10000}
+            onChange={(active) => set({ active })}
+          />
+          <NumberField
+            label="Hari kerja honor"
+            value={h.days}
+            integer
+            max={366}
+            onChange={(days) => set({ days })}
+          />
+          <NumberField
+            label="Honor per orang per hari (Rp)"
+            value={h.rate}
+            integer
+            max={1000000}
+            onChange={(rate) => set({ rate })}
+          />
+        </div>
+      )}
+      {h.mode === "actual" && (
         <NumberField
-          label="Personel terdaftar"
-          value={h.registered}
-          integer
-          max={10000}
-          onChange={(registered) => set({ registered })}
+          label="Total honor yang ingin dimasukkan (Rp)"
+          value={h.actual}
+          max={1e12}
+          onChange={(actual) => set({ actual })}
         />
-        <NumberField
-          label="Petugas aktif per hari"
-          value={h.active}
-          integer
-          max={10000}
-          onChange={(active) => set({ active })}
-        />
-        <NumberField
-          label="Hari kerja efektif honor"
-          value={h.days}
-          integer
-          max={366}
-          onChange={(days) => set({ days })}
-        />
-        <NumberField
-          label="Honor per orang / hari (Rp)"
-          value={h.rate}
-          integer
-          max={1000000}
-          onChange={(rate) => set({ rate })}
-        />
-        <Select
-          label="Metode honor"
-          value={h.mode}
-          options={[
-            ["uniform", "Tarif seragam"],
-            ["roles", "Tarif per role anonim"],
-          ]}
-          onChange={(v) => set({ mode: v as typeof h.mode })}
-        />
-        <Select
-          label="Analisis pengurangan tarif (Rp/hari)"
-          value={String(h.reduction)}
-          options={["0", "5000", "10000", "15000"]}
-          onChange={(v) => set({ reduction: Number(v) })}
-        />
-      </div>
+      )}
       {h.mode === "roles" && (
-        <div>
-          {h.roles.map((role, i) => (
+        <>
+          <p className="sim-muted">
+            Untuk gaji per orang dalam satu periode, buat satu baris per
+            relawan: isi jumlah 1 dan total gajinya. Untuk divisi dengan tarif
+            harian sama, isi jumlah orang × hari kerja, lalu tarif harian.
+            Gunakan kode anonim bila perlu.
+          </p>
+          {h.roles.map((r, i) => (
             <div className="sim-role" key={i}>
               <TextField
-                label={`Nama role ${i + 1} (anonim)`}
-                value={role.name}
+                label={`Divisi atau kode ${i + 1}`}
+                value={r.name}
                 max={100}
                 onChange={(name) =>
                   set({
-                    roles: h.roles.map((r, j) =>
-                      i === j ? { ...r, name } : r,
+                    roles: h.roles.map((x, j) =>
+                      i === j ? { ...x, name } : x,
                     ),
                   })
                 }
               />
               <NumberField
-                label={`Penugasan orang-hari role ${i + 1}`}
-                value={role.assignments}
+                label={`Jumlah orang atau orang-hari ${i + 1}`}
+                value={r.assignments}
                 integer
                 max={3660000}
                 onChange={(assignments) =>
                   set({
-                    roles: h.roles.map((r, j) =>
-                      i === j ? { ...r, assignments } : r,
+                    roles: h.roles.map((x, j) =>
+                      i === j ? { ...x, assignments } : x,
                     ),
                   })
                 }
               />
               <NumberField
-                label={`Tarif role ${i + 1} (Rp)`}
-                value={role.rate}
+                label={`Honor per unit ${i + 1} (Rp)`}
+                value={r.rate}
                 integer
-                max={1000000}
+                max={1000000000}
                 onChange={(rate) =>
                   set({
-                    roles: h.roles.map((r, j) =>
-                      i === j ? { ...r, rate } : r,
+                    roles: h.roles.map((x, j) =>
+                      i === j ? { ...x, rate } : x,
                     ),
                   })
                 }
               />
               <button
-                className="sim-no-print"
                 onClick={() =>
-                  set({ roles: h.roles.filter((_, j) => i !== j) })
+                  set({ roles: h.roles.filter((_, j) => j !== i) })
                 }
               >
-                Hapus role {i + 1}
+                Hapus {i + 1}
               </button>
             </div>
           ))}
           <button
-            className="sim-no-print"
             onClick={() =>
-              h.roles.length < 50 &&
+              h.roles.length < 500 &&
               set({
                 roles: [
                   ...h.roles,
-                  { name: "Role anonim", assignments: 0, rate: 0 },
+                  { name: "Divisi atau kode", assignments: 0, rate: 0 },
                 ],
               })
             }
           >
-            + Tambah role
+            ＋ Tambah divisi / relawan
           </button>
-          <p className="sim-muted">
-            Jumlah penugasan adalah orang-hari aktual yang Anda simulasikan: 3
-            orang × 10 hari = 30. Tidak memakai nama pegawai.
-          </p>
-        </div>
+        </>
       )}
       <p className="sim-honor-total">
-        Total simulasi honor <strong>{money(total)}</strong>
+        Hasil kalkulator <strong>{money(total)}</strong>
       </p>
-      <div className="sim-toolbar sim-no-print">
-        <button onClick={() => synchronize(total)}>
-          Sinkronkan ke pos Honor Relawan
-        </button>
-        <button onClick={() => synchronize(30850000)}>
-          Gunakan contoh honor Rp30.850.000 sekali
-        </button>
-      </div>
+      <p>
+        Honor yang sudah ada di anggaran: <strong>{money(current)}</strong>
+      </p>
+      {current !== total && (
+        <p className="sim-warning" role="status">
+          Jumlah berbeda. Kalkulator belum mengubah anggaran; periksa sebelum
+          memasukkan.
+        </p>
+      )}
+      <button onClick={apply}>Gunakan hasil ini di anggaran</button>
       <p className="sim-muted">
-        Perbandingan berikut memakai tarif seragam, {h.days} hari. Bila memakai
-        role, perbandingan ini tetap analisis tarif seragam dan bukan total role
-        di atas. Penghasilan rata-rata diasumsikan rotasi merata ke{" "}
-        {h.registered} personel.
+        Tombol ini mengganti semua pos kategori Honor relawan menjadi satu pos
+        rencana setelah konfirmasi. Tidak mengubah data payroll internal. Jumlah
+        33 orang tidak otomatis cukup; pastikan kebutuhan kerja dan keselamatan.
       </p>
-      <div
-        className="sim-bars"
-        aria-label="Grafik perbandingan honor tarif seragam"
-      >
-        {[49, 40, 36, 33].map((active) => (
-          <div key={active}>
-            <div>
-              <span>
-                {active} aktif / hari · pengurangan {money(h.reduction)}
-              </span>
-              <strong>
-                {money(active * h.days * Math.max(0, h.rate - h.reduction))}
-              </strong>
-            </div>
-            <div className="sim-meter">
-              <div style={{ width: `${(active / 49) * 100}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div
-        className="sim-table-scroll"
-        tabIndex={0}
-        role="region"
-        aria-label="Perbandingan honor, geser horizontal"
-      >
-        <table>
-          <thead>
-            <tr>
-              <th>Aktif / hari</th>
-              <th>Pengurangan / hari</th>
-              <th>Total honor</th>
-              <th>Hemat vs 49 aktif, tarif awal</th>
-              <th>Rata-rata / personel terdaftar</th>
-              <th>Penurunan rata-rata</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[49, 40, 36, 33].flatMap((active) =>
-              [0, 5000, 10000, 15000].map((reduction) => {
-                const total = active * h.days * Math.max(0, h.rate - reduction),
-                  base = 49 * h.days * h.rate;
-                return (
-                  <tr key={`${active}-${reduction}`}>
-                    <td>{active}</td>
-                    <td>{money(reduction)}</td>
-                    <td>{money(total)}</td>
-                    <td>{money(base - total)}</td>
-                    <td>
-                      {h.registered
-                        ? money(total / h.registered)
-                        : "Tidak tersedia"}
-                    </td>
-                    <td>
-                      {h.registered
-                        ? money((base - total) / h.registered)
-                        : "Tidak tersedia"}
-                    </td>
-                  </tr>
-                );
-              }),
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="sim-warning">
-        33 aktif bukan otomatis cukup. Verifikasi produksi, sanitasi,
-        kebersihan, keamanan 24 jam, istirahat, dan mutu pangan. Analisis tarif
-        bukan instruksi pemotongan honor sepihak; ikuti prosedur yang sah.
-      </div>
     </Section>
   );
 }
+
 export function ScenarioComparison({
   s,
   saved,
@@ -893,11 +888,15 @@ export function ScenarioComparison({
     byCategory = CATEGORIES.map((name) => ({
       name,
       total: s.rows
-        .filter((r) => r.category === name)
+        .filter((r) => r.category === name && !r.outsideCap)
         .reduce((n, r) => n + cost(r, s), 0),
     }));
   return (
     <Section title="Komposisi & perbandingan" tag="04">
+      <p className="sim-muted">
+        Grafik menampilkan biaya dalam pagu operasional. Biaya di luar pagu
+        ditampilkan terpisah pada hasil.
+      </p>
       <div className="sim-bars">
         {byCategory
           .filter((c) => c.total > 0)
@@ -924,9 +923,8 @@ export function ScenarioComparison({
         Duplikasi untuk perbandingan ({saved.length}/5)
       </button>
       <p className="sim-muted">
-        Snapshot pembanding bertahan selama halaman ini terbuka. Ekspor JSON
-        tiap skenario untuk menyimpannya. Skenario aktif tersimpan otomatis
-        secara lokal.
+        Skenario pembanding disimpan di browser ini. Ekspor JSON sebagai
+        cadangan atau untuk pindah perangkat.
       </p>
       {saved.length > 0 && (
         <div
@@ -1073,34 +1071,401 @@ export function ExportActions({
     </Section>
   );
 }
+const billingLabels = {
+  daily: "Per hari",
+  portion: "Per porsi",
+  monthly: "Per bulan",
+  once: "Sekali",
+} as const;
 function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
-  const update = (id: string, patch: Partial<Expense>) => change({ ...s, rows: s.rows.map(r => r.id === id ? { ...r, ...patch } : r) }, "Ubah biaya");
-  const dailyTotal = s.rows.filter(r => r.active && r.daily).reduce((n, r) => n + planCost(r, s), 0);
-  const periodTotal = s.rows.filter(r => r.active && !r.daily).reduce((n, r) => n + planCost(r, s), 0);
-  return <div className="easy-costs"><p className="easy-hint">Ketuk nama biaya untuk mengisi jumlahnya.</p>{s.basis!=="plan" && <p role="status" className="sim-warning">Kolom di sini mengubah rencana. Hasil saat ini memakai {s.basis==="actual"?"realisasi":"proyeksi"} yang diisi pada rincian biaya lanjutan.</p>}<div className="easy-rows">{s.rows.map((r,i)=><details className="easy-row" key={r.id}><summary><span>{r.name || `Biaya ${i+1}`}<small>{!r.active ? 'Tidak aktif' : r.daily ? 'Per hari' : 'Sekali dalam periode'}</small></span><strong>{r.active ? money(planCost(r,s)) : '—'}</strong></summary><div className="easy-row-body"><label className="sim-field"><span>Nama biaya</span><input aria-label={`Nama biaya ${i+1}`} value={r.name} maxLength={150} onChange={e=>update(r.id,{name:e.target.value})}/></label><fieldset><legend>Biaya ini untuk</legend><div className="easy-choices"><button type="button" aria-pressed={r.daily} onClick={()=>update(r.id,{daily:true})}>☀ Per hari</button><button type="button" aria-pressed={!r.daily} onClick={()=>update(r.id,{daily:false})}>▣ Sekali / periode</button></div></fieldset><NumberField label={(r.qty!==1 || r.frequency!==1) ? (r.daily ? 'Harga satuan per hari (Rp)' : 'Harga satuan per periode (Rp)') : (r.daily ? 'Biaya per hari (Rp)' : 'Biaya sekali / periode (Rp)')} value={r.price} onChange={price=>update(r.id,{price})}/>{(r.qty!==1 || r.frequency!==1) && <p className="sim-muted">Nominal di atas dikalikan jumlah {r.qty} dan frekuensi {r.frequency}. Ubah di rincian lanjutan.</p>}<p className="easy-hint">{r.daily ? `Dikalikan ${s.days} hari pelayanan.` : 'Dihitung sekali. Untuk listrik atau BPJS bulanan, masukkan bagian tagihan untuk periode ini.'}</p><div className="easy-actions"><label className="sim-check"><input type="checkbox" checked={r.active} onChange={e=>update(r.id,{active:e.target.checked})}/> Hitung biaya ini</label><button type="button" onClick={()=>window.confirm(`Hapus ${r.name}?`) && change({...s,rows:s.rows.filter(x=>x.id!==r.id)},'Hapus pos')}>Hapus</button></div></div></details>)}</div><button type="button" className="easy-add" onClick={()=>s.rows.length<500&&change({...s,rows:[...s.rows,{...blankRow(),daily:true}]},'Tambah pos')}>＋ Tambah biaya</button><p className="easy-hint">Biaya harian untuk {s.days} hari: {money(dailyTotal)} · Biaya sekali: {money(periodTotal)}</p></div>;
+  const update = (id: string, patch: Partial<Expense>) =>
+    change(
+      { ...s, rows: s.rows.map((r) => (r.id === id ? { ...r, ...patch } : r)) },
+      "Ubah biaya",
+    );
+  return (
+    <div className="easy-costs">
+      <p className="easy-hint">
+        Ketuk nama biaya, pilih cara menghitung, lalu isi nominal.
+      </p>
+      {s.basis !== "plan" && (
+        <p role="status" className="sim-warning">
+          Isian ini mengubah rencana. Hasil memakai{" "}
+          {s.basis === "actual" ? "realisasi" : "proyeksi"} yang diisi di
+          rincian lanjutan.
+        </p>
+      )}
+      <div className="easy-rows">
+        {s.rows.map((r, i) => {
+          const kind = billingKind(r),
+            monthlyMissing = kind === "monthly" && (!s.start || !s.end);
+          return (
+            <details className="easy-row" key={r.id}>
+              <summary>
+                <span>
+                  {r.name || `Biaya ${i + 1}`}
+                  <small>
+                    {!r.active ? "Tidak aktif" : billingLabels[kind]}
+                    {r.outsideCap ? " · Di luar pagu" : ""}
+                  </small>
+                </span>
+                <strong>
+                  {!r.active
+                    ? "—"
+                    : monthlyMissing
+                      ? "Isi tanggal"
+                      : money(planCost(r, s))}
+                </strong>
+              </summary>
+              <div className="easy-row-body">
+                <TextField
+                  label="Nama biaya"
+                  value={r.name}
+                  max={150}
+                  onChange={(name) => update(r.id, { name })}
+                />
+                <Select
+                  label="Kategori biaya"
+                  value={r.category}
+                  options={CATEGORIES}
+                  onChange={(category) => update(r.id, { category })}
+                />
+                <fieldset>
+                  <legend>Cara menghitung</legend>
+                  <div className="easy-choices">
+                    {(
+                      Object.entries(billingLabels) as [
+                        Expense["billing"],
+                        string,
+                      ][]
+                    ).map(([key, label]) => (
+                      <button
+                        type="button"
+                        key={key}
+                        aria-pressed={kind === key}
+                        onClick={() =>
+                          update(r.id, { billing: key, daily: key === "daily" })
+                        }
+                      >
+                        {key === "daily" ? "☀ " : ""}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                {kind === "monthly" && (
+                  <>
+                    <p className="easy-hint">
+                      Masukkan tanggal kalender. Biaya bulanan dibagi sesuai
+                      jumlah hari pada setiap bulan yang dilewati, termasuk hari
+                      awal dan akhir.
+                    </p>
+                    <div className="easy-fields">
+                      <TextField
+                        label="Tanggal awal periode"
+                        type="date"
+                        value={s.start}
+                        onChange={(start) =>
+                          change({
+                            ...s,
+                            start,
+                            end: s.end && start > s.end ? "" : s.end,
+                          })
+                        }
+                      />
+                      <TextField
+                        label="Tanggal akhir periode"
+                        type="date"
+                        value={s.end}
+                        onChange={(end) => change({ ...s, end })}
+                      />
+                    </div>
+                    {s.start && s.end && (
+                      <p className="easy-hint">
+                        {calendarDays(s)} hari kalender dalam periode · {s.days}{" "}
+                        hari pelayanan.
+                      </p>
+                    )}
+                  </>
+                )}
+                <NumberField
+                  max={1e12}
+                  label={
+                    r.qty !== 1 || r.frequency !== 1
+                      ? `Harga satuan ${billingLabels[kind]} (Rp)`
+                      : `Biaya ${billingLabels[kind].toLowerCase()} (Rp)`
+                  }
+                  value={r.price}
+                  onChange={(price) => update(r.id, { price })}
+                />
+                <p className="easy-hint">
+                  {kind === "daily"
+                    ? `${money(r.price)} × ${s.days} hari pelayanan`
+                    : kind === "portion"
+                      ? `${money(r.price)} × ${s.pm.toLocaleString("id-ID")} penerima × ${s.days} hari pelayanan`
+                      : kind === "monthly"
+                        ? monthlyMissing
+                          ? "Lengkapi tanggal agar biaya dihitung."
+                          : `${money(r.price)} × (${calendarMonths(
+                              s.start,
+                              s.end,
+                            )
+                              .map((m) => `${m.days}/${m.daysInMonth}`)
+                              .join(" + ")})`
+                        : `${money(r.price)} × 1 kali`}
+                  {r.qty !== 1 || r.frequency !== 1
+                    ? ` × jumlah ${r.qty} × frekuensi ${r.frequency}`
+                    : ""}{" "}
+                  = {monthlyMissing ? "belum dihitung" : money(planCost(r, s))}.
+                  Pembulatan per baris.
+                </p>
+                <label className="sim-check">
+                  <input
+                    type="checkbox"
+                    checked={r.outsideCap}
+                    onChange={(e) =>
+                      update(r.id, { outsideCap: e.target.checked })
+                    }
+                  />{" "}
+                  Di luar pagu operasional
+                </label>
+                <p className="easy-hint">
+                  Biaya di luar pagu tetap ditampilkan terpisah dan tidak
+                  mengurangi pagu operasional. Pastikan sumber dan aturannya
+                  benar.
+                </p>
+                <div className="easy-actions">
+                  <label className="sim-check">
+                    <input
+                      type="checkbox"
+                      checked={r.active}
+                      onChange={(e) =>
+                        update(r.id, { active: e.target.checked })
+                      }
+                    />{" "}
+                    Hitung biaya ini
+                  </label>
+                  <button
+                    onClick={() =>
+                      window.confirm(`Hapus ${r.name}?`) &&
+                      change(
+                        { ...s, rows: s.rows.filter((x) => x.id !== r.id) },
+                        "Hapus pos",
+                      )
+                    }
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+      <button
+        className="easy-add"
+        onClick={() =>
+          s.rows.length < 500 &&
+          change(
+            {
+              ...s,
+              rows: [
+                ...s.rows,
+                { ...blankRow(), daily: true, billing: "daily" },
+              ],
+            },
+            "Tambah pos",
+          )
+        }
+      >
+        ＋ Tambah biaya
+      </button>
+    </div>
+  );
 }
 
-function Kesimpulan({s}:{s:Scenario}) {
-  const t=summary(s); const largest=s.rows.filter(r=>r.active && cost(r,s)>0).sort((a,b)=>cost(b,s)-cost(a,s)).slice(0,3);
-  const short=Math.max(0,-t.balance), reserveShort=Math.max(0,-t.gap);
-  const title=!t.budget?'Pagu belum tersedia':t.total===0?'Isi biaya dulu':short>0?'Melebihi pagu':t.balance===0?'Tepat di batas pagu':t.usage!==null&&t.usage>=90?'Mendekati batas pagu':'Masih dalam pagu';
-  return <section className="sim-conclusion" aria-live="polite"><span>HASIL SIMULASI · {s.basis==='plan'?'RENCANA':s.basis==='actual'?'REALISASI':'PROYEKSI'}</span><h2>{title}</h2><p>{!t.budget?'Isi jumlah penerima dan hari pelayanan untuk menghitung pagu.':t.total===0?'Ketuk Isi biaya untuk mulai menghitung.':short>0?`Kurangi total biaya minimal ${money(short)} agar tidak melebihi pagu.`:`Sisa anggaran ${money(t.balance)}.`}</p>{t.budget>0&&reserveShort>0&&<p>Untuk memenuhi target cadangan, kurangi biaya sebesar {money(reserveShort)}.</p>}{(short>0||reserveShort>0)&&largest.length>0&&<p>Mulai periksa pos terbesar: {largest.map(r=>`${r.name} (${money(cost(r,s))})`).join(', ')}. Tentukan pengurangan sesuai kebutuhan dan ketentuan yang berlaku.</p>}<small>Ini simulasi anggaran, bukan saldo kas atau persetujuan pembiayaan.</small></section>;
+function Kesimpulan({ s }: { s: Scenario }) {
+  const t = summary(s),
+    incompleteMonth =
+      s.basis === "plan" &&
+      s.rows.some(
+        (r) => r.active && billingKind(r) === "monthly" && (!s.start || !s.end),
+      );
+  const invalidDays = !!(s.start && s.end && s.days > calendarDays(s));
+  const missing =
+    s.basis !== "plan" &&
+    s.rows.some(
+      (r) =>
+        r.active &&
+        (planCost(r, s) > 0 || r.actual > 0 || r.projected > 0) &&
+        !(s.basis === "actual" ? r.actualProvided : r.projectedProvided),
+    );
+  const honorRows = s.rows.filter(
+    (r) => r.active && r.category === CATEGORIES[0],
+  );
+  const honorSum = honorRows.reduce((n, r) => n + cost(r, s), 0),
+    different = honorRows.length > 0 && honorSum !== honorTotal(s);
+  const largest = s.rows
+    .filter((r) => r.active && !r.outsideCap && cost(r, s) > 0)
+    .sort((a, b) => cost(b, s) - cost(a, s))
+    .slice(0, 3);
+  const short = Math.max(0, -t.balance),
+    reserveShort = Math.max(0, -t.gap);
+  const title = incompleteMonth
+    ? "Lengkapi tanggal biaya bulanan"
+    : invalidDays
+      ? "Periksa jumlah hari pelayanan"
+      : missing
+        ? "Data belum lengkap"
+        : !t.budget
+          ? "Pagu belum tersedia"
+          : t.total === 0
+            ? t.outside > 0
+              ? "Belum ada biaya dalam pagu"
+              : "Isi biaya dulu"
+            : short > 0
+              ? "Melebihi pagu"
+              : t.balance === 0
+                ? "Tepat di batas pagu"
+                : t.usage !== null && t.usage >= 90
+                  ? "Mendekati batas pagu"
+                  : "Masih dalam pagu";
+  return (
+    <section className="sim-conclusion" aria-live="polite">
+      <span>
+        HASIL ·{" "}
+        {s.basis === "plan"
+          ? "RENCANA"
+          : s.basis === "actual"
+            ? "REALISASI"
+            : "PROYEKSI"}
+      </span>
+      <h2>{title}</h2>
+      <p>
+        {incompleteMonth
+          ? "Isi tanggal awal dan akhir untuk menghitung biaya bulanan."
+          : invalidDays
+            ? `Periode ini ${calendarDays(s)} hari kalender; hari pelayanan tidak boleh lebih banyak.`
+            : missing
+              ? "Sebagian nilai belum diisi. Isi di Rincian biaya lanjutan sebelum memakai hasil ini."
+              : !t.budget
+                ? "Isi jumlah penerima dan hari pelayanan untuk menghitung pagu."
+                : t.total === 0
+                  ? t.outside > 0
+                    ? "Belum ada biaya yang dibebankan pada pagu operasional."
+                    : "Ketuk Isi biaya untuk mulai menghitung."
+                  : short > 0
+                    ? `Kurangi total biaya minimal ${money(short)} dari biaya dalam pagu.`
+                    : `Sisa anggaran ${money(t.balance)}.`}
+      </p>
+      {!incompleteMonth &&
+        !invalidDays &&
+        !missing &&
+        t.budget > 0 &&
+        reserveShort > 0 && (
+          <p>
+            Untuk mencapai target cadangan, kurangi biaya sebesar{" "}
+            {money(reserveShort)}.
+          </p>
+        )}
+      {!incompleteMonth &&
+        !invalidDays &&
+        !missing &&
+        (short > 0 || reserveShort > 0) &&
+        largest.length > 0 && (
+          <p>
+            Periksa pos terbesar:{" "}
+            {largest.map((r) => `${r.name} (${money(cost(r, s))})`).join(", ")}.
+            Tentukan pengurangan sesuai kebutuhan dan ketentuan.
+          </p>
+        )}
+      {!missing &&
+        !incompleteMonth &&
+        !invalidDays &&
+        t.total > 0 &&
+        t.perPM !== null && (
+          <p>
+            Biaya operasional / penerima / hari:{" "}
+            <strong>{money(t.perPM)}</strong> dibanding tarif {money(s.rate)} (
+            {t.perPM > s.rate ? "+" : ""}
+            {money(t.perPM - s.rate)}).
+          </p>
+        )}
+      <p>
+        {missing || incompleteMonth || invalidDays ? "Sementara — " : ""}Dalam
+        pagu: {money(t.total)} · Di luar pagu: {money(t.outside)} · Total semua:{" "}
+        {money(t.allTotal)}
+      </p>
+      {s.basis === "plan" && /realisasi/i.test(s.name) && (
+        <p>
+          ⚠ Nama skenario berisi “realisasi”, tetapi hasil memakai rencana. Ubah
+          dasar ringkasan jika ingin melihat realisasi.
+        </p>
+      )}
+      {different && (
+        <p>
+          ⚠ Honor anggaran {money(honorSum)} berbeda dari kalkulator{" "}
+          {money(honorTotal(s))}. Buka Simulasi honor relawan untuk memeriksa.
+        </p>
+      )}
+      <small>
+        Simulasi, bukan saldo kas atau persetujuan pembiayaan. Pembulatan per
+        baris.
+      </small>
+    </section>
+  );
+}
+
+function freshScenario(): Scenario {
+  const base = preset();
+  return {
+    ...base,
+    name: "Skenario harian baru",
+    note: "Isi biaya harian atau biaya untuk periode yang dipilih.",
+    pm: 0,
+    days: 1,
+    rows: base.rows
+      .filter((r) => !r.name.startsWith("Ard"))
+      .map((r) => ({ ...r, price: 0, daily: false, billing: "once" })),
+    honor: {
+      ...base.honor,
+      registered: 0,
+      active: 0,
+      days: 1,
+      rate: 0,
+      mode: "pooled",
+      pooled: 0,
+      actual: 0,
+      roles: [],
+    },
+  };
 }
 
 export default function Simulator() {
-  const [s, setS] = useState<Scenario>(() => { const base = preset(); return { ...base, name: "Skenario harian baru", note: "Isi biaya harian atau biaya untuk periode yang dipilih.", days: 1, rows: base.rows.map(r => ({...r, price: 0, daily: false})) }; }),
+  const [s, setS] = useState<Scenario>(freshScenario),
     [ready, setReady] = useState(false),
     [persist, setPersist] = useState(false),
     [status, setStatus] = useState("Memuat penyimpanan lokal…"),
     [saved, setSaved] = useState<Scenario[]>([]);
+  const archiveReadable = useRef(false);
   useEffect(() => {
     try {
       const stored = loadScenario();
       if (stored) setS(stored);
+      const archive = localStorage.getItem(
+        "djati:simulator-operasional:scenarios:v1",
+      );
+      if (archive) {
+        const items: unknown = JSON.parse(archive);
+        if (!Array.isArray(items) || items.length > 5)
+          throw Error("Arsip tidak valid");
+        setSaved(items.map((item) => validateScenario(item)));
+      }
+      archiveReadable.current = true;
       setStatus(
         stored
           ? "Skenario lokal dimuat."
-          : "Contoh siap digunakan. Data hanya di perangkat ini.",
+          : "Skenario siap digunakan. Data hanya di perangkat ini.",
       );
     } catch {
       setStatus(
@@ -1123,6 +1488,45 @@ export default function Simulator() {
     }, 450);
     return () => clearTimeout(timer);
   }, [s, ready, persist]);
+  useEffect(() => {
+    if (!ready || !archiveReadable.current) return;
+    try {
+      localStorage.setItem(
+        "djati:simulator-operasional:scenarios:v1",
+        JSON.stringify(saved),
+      );
+    } catch {
+      setStatus(
+        "Gagal menyimpan daftar skenario lokal. Ekspor JSON untuk menyimpan.",
+      );
+    }
+  }, [ready, saved]);
+  const archiveCurrent = () => {
+    if (!archiveReadable.current) {
+      setStatus(
+        "Arsip skenario tidak dapat dibaca. Ekspor JSON sebelum mengganti.",
+      );
+      return false;
+    }
+    if (saved.length >= 5) {
+      setStatus("Maksimum 5 skenario tersimpan; hapus salah satu.");
+      return false;
+    }
+    const next = [...saved, structuredClone(s)];
+    try {
+      localStorage.setItem(
+        "djati:simulator-operasional:scenarios:v1",
+        JSON.stringify(next),
+      );
+      setSaved(next);
+      return true;
+    } catch {
+      setStatus(
+        "Gagal menyimpan skenario sebelumnya. Ekspor JSON sebelum mengganti.",
+      );
+      return false;
+    }
+  };
   const change: Change = (next, message = "Ubah parameter simulasi") => {
     try {
       const checked = validateScenario(next);
@@ -1146,70 +1550,239 @@ export default function Simulator() {
           <br />
           <em>Operasional SPPG</em>
         </h1>
-        <p>Isi jumlah penerima, hari pelayanan, dan biaya. Hasil langsung muncul di bawah.</p>
+        <p>
+          Isi jumlah penerima, hari pelayanan, dan biaya. Hasil langsung muncul
+          di bawah.
+        </p>
       </div>
       <p className="sim-save-status" role="status" aria-live="polite">
         {status}
       </p>
-      <section className="easy-parameters"><div className="easy-fields"><NumberField label="👥 Jumlah penerima" value={s.pm} integer max={1000000} onChange={pm=>change({...s,pm})}/><NumberField label="📅 Berapa hari?" value={s.days} integer max={366} onChange={days=>change({...s,days})}/></div><p className="easy-hint">Pagu {money(s.rate)} × {s.pm.toLocaleString('id-ID')} penerima × {s.days} hari = <strong>{money(summary(s).budget)}</strong></p></section>
-      <details className="easy-main"><summary><span><strong>🧾 Isi biaya</strong><small>Ketuk untuk menambah atau mengubah</small></span><b>{money(summary(s).total)}</b></summary><QuickSheet s={s} change={change} /></details>
-      <Kesimpulan s={s} />
-      <div className="easy-print"><h2>Rincian biaya</h2><p>Jumlah penerima: {s.pm} · Hari pelayanan: {s.days} · Pagu: {money(summary(s).budget)}</p><table><thead><tr><th>Nama biaya</th><th>Perhitungan</th><th>Rencana</th><th>Realisasi</th><th>Proyeksi</th></tr></thead><tbody>{s.rows.map(r=><tr key={r.id}><td>{r.name} {!r.active && '(tidak aktif)'}</td><td>{r.daily ? 'Harian' : 'Sekali / periode'} · {r.qty} × {money(r.price)} × {r.frequency}{r.daily ? ` × ${s.days} hari` : ''}</td><td>{money(r.active?planCost(r,s):0)}</td><td>{money(r.active?r.actual:0)}</td><td>{money(r.active?r.projected:0)}</td></tr>)}</tbody></table></div>
-      <details className="easy-main sim-no-print"><summary><span><strong>⚙️ Pilihan lain</strong><small>Honor, rincian, simpan, dan cetak</small></span></summary>
-      <details className="sim-panel"><summary>Rincian pagu dan cadangan</summary><BudgetSummary s={s} /></details>
-      <details className="sim-panel"><summary>Pengaturan anggaran</summary><BudgetParameters s={s} change={change} /></details>
-      <details className="sim-panel"><summary>Catatan dan peringatan</summary><BudgetWarnings s={s} /></details>
-      <details className="sim-panel"><summary>Rincian biaya lanjutan</summary><ExpenseTable s={s} change={change} /></details>
-      <details className="sim-panel"><summary>Simulasi honor relawan</summary><HonorScenario s={s} change={change} /></details>
-      <details className="sim-panel"><summary>Bandingkan skenario</summary>
-      <ScenarioComparison
-        s={s}
-        saved={saved}
-        onSave={() => {
-          if (saved.length >= 5) {
-            setStatus(
-              "Maksimum 5 pembanding. Hapus salah satu atau ekspor JSON.",
-            );
-            return;
-          }
-          setSaved([...saved, structuredClone(s)]);
-          setStatus("Snapshot pembanding ditambahkan.");
-        }}
-        onLoad={(v) =>
-          window.confirm("Muat snapshot ini dan timpa skenario aktif?") &&
-          change(structuredClone(v), "Muat pembanding")
-        }
-        onDelete={(i) => setSaved(saved.filter((_, j) => i !== j))}
-      />
-      </details>
-      <details className="sim-panel sim-no-print"><summary>Simpan, impor, ekspor atau cetak</summary><ExportActions
-        s={s}
-        change={change}
-        onClear={() => {
-          setPersist(false);
-          setS(preset());
-          setSaved([]);
-          try {
-            localStorage.removeItem(STORAGE_KEY);
-            setStatus(
-              "Data lokal dihapus. Autosave dimulai lagi setelah perubahan.",
-            );
-          } catch {
-            setStatus("Browser menolak penghapusan penyimpanan lokal.");
-          }
-        }}
-      />
-      </details>
-      <details className="sim-panel sim-no-print">
-        <summary>Catatan perubahan lokal (30 terakhir)</summary>
-        <ul>
-          {s.log.map((v, i) => (
-            <li key={i}>{v}</li>
+      <section className="easy-parameters">
+        <div className="easy-fields">
+          <NumberField
+            label="👥 Jumlah penerima"
+            value={s.pm}
+            integer
+            max={1000000}
+            onChange={(pm) => change({ ...s, pm })}
+          />
+          <NumberField
+            label="📅 Berapa hari?"
+            value={s.days}
+            integer
+            max={366}
+            onChange={(days) => change({ ...s, days })}
+          />
+        </div>
+        <p className="easy-hint">
+          Pagu {money(s.rate)} × {s.pm.toLocaleString("id-ID")} penerima ×{" "}
+          {s.days} hari = <strong>{money(summary(s).budget)}</strong>
+        </p>
+      </section>
+      <div className="sim-toolbar sim-no-print">
+        <button
+          onClick={() => {
+            if (archiveCurrent()) change(freshScenario(), "Skenario baru");
+          }}
+        >
+          ＋ Skenario baru
+        </button>
+        <button
+          onClick={() => {
+            if (archiveCurrent())
+              change(
+                {
+                  ...structuredClone(s),
+                  name: (s.name + " (salinan)").slice(0, 150),
+                },
+                "Duplikasi skenario",
+              );
+          }}
+        >
+          ⧉ Duplikat
+        </button>
+      </div>
+      {saved.length > 0 && (
+        <details className="easy-main sim-no-print">
+          <summary>
+            <span>
+              <strong>📁 Skenario tersimpan ({saved.length})</strong>
+              <small>Ketuk untuk membuka</small>
+            </span>
+          </summary>
+          {saved.map((item, i) => (
+            <div className="sim-toolbar" key={i}>
+              <strong>{item.name}</strong>
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Muat skenario ini dan timpa skenario aktif? Duplikasi dahulu untuk menyimpan perubahan.",
+                    )
+                  )
+                    change(structuredClone(item), "Muat skenario");
+                }}
+              >
+                Buka
+              </button>
+              <button
+                onClick={() =>
+                  window.confirm("Hapus skenario tersimpan ini?") &&
+                  setSaved(saved.filter((_, j) => j !== i))
+                }
+              >
+                Hapus
+              </button>
+            </div>
           ))}
-        </ul>
+        </details>
+      )}
+      <details className="easy-main">
+        <summary>
+          <span>
+            <strong>🧾 Isi biaya</strong>
+            <small>Ketuk untuk menambah atau mengubah</small>
+          </span>
+          <b>{money(summary(s).total)}</b>
+        </summary>
+        <QuickSheet s={s} change={change} />
       </details>
+      <Kesimpulan s={s} />
+      <div className="easy-print">
+        <h2>Rincian biaya</h2>
+        <p>
+          Jumlah penerima: {s.pm} · Hari pelayanan: {s.days} · Pagu:{" "}
+          {money(summary(s).budget)}
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Nama biaya</th>
+              <th>Perhitungan</th>
+              <th>Rencana</th>
+              <th>Realisasi</th>
+              <th>Proyeksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.rows.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  {r.name} {!r.active && "(tidak aktif)"}
+                </td>
+                <td>
+                  {billingLabels[billingKind(r)]} · {r.qty} × {money(r.price)} ×{" "}
+                  {r.frequency}
+                  {billingKind(r) === "daily"
+                    ? ` × ${s.days} hari`
+                    : billingKind(r) === "portion"
+                      ? ` × ${s.pm} penerima × ${s.days} hari`
+                      : billingKind(r) === "monthly"
+                        ? ` × (${
+                            calendarMonths(s.start, s.end)
+                              .map((m) => `${m.days}/${m.daysInMonth}`)
+                              .join(" + ") || "tanggal belum diisi"
+                          })`
+                        : ""}
+                  {r.outsideCap ? " · di luar pagu" : ""}
+                </td>
+                <td>{money(r.active ? planCost(r, s) : 0)}</td>
+                <td>
+                  {r.actualProvided
+                    ? money(r.active ? r.actual : 0)
+                    : "Belum diisi"}
+                </td>
+                <td>
+                  {r.projectedProvided
+                    ? money(r.active ? r.projected : 0)
+                    : "Belum diisi"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <details className="easy-main sim-no-print">
+        <summary>
+          <span>
+            <strong>⚙️ Pilihan lain</strong>
+            <small>Honor, rincian, simpan, dan cetak</small>
+          </span>
+        </summary>
+        <details className="sim-panel">
+          <summary>Rincian pagu dan cadangan</summary>
+          <BudgetSummary s={s} />
+        </details>
+        <details className="sim-panel">
+          <summary>Pengaturan anggaran</summary>
+          <BudgetParameters s={s} change={change} />
+        </details>
+        <details className="sim-panel">
+          <summary>Catatan dan peringatan</summary>
+          <BudgetWarnings s={s} />
+        </details>
+        <details className="sim-panel">
+          <summary>Rincian biaya lanjutan</summary>
+          <ExpenseTable s={s} change={change} />
+        </details>
+        <details className="sim-panel">
+          <summary>Simulasi honor relawan</summary>
+          <HonorScenario s={s} change={change} />
+        </details>
+        <details className="sim-panel">
+          <summary>Bandingkan skenario</summary>
+          <ScenarioComparison
+            s={s}
+            saved={saved}
+            onSave={() => {
+              if (saved.length >= 5) {
+                setStatus(
+                  "Maksimum 5 pembanding. Hapus salah satu atau ekspor JSON.",
+                );
+                return;
+              }
+              setSaved([...saved, structuredClone(s)]);
+              setStatus("Snapshot pembanding ditambahkan.");
+            }}
+            onLoad={(v) =>
+              window.confirm("Muat snapshot ini dan timpa skenario aktif?") &&
+              change(structuredClone(v), "Muat pembanding")
+            }
+            onDelete={(i) => setSaved(saved.filter((_, j) => i !== j))}
+          />
+        </details>
+        <details className="sim-panel sim-no-print">
+          <summary>Simpan, impor, ekspor atau cetak</summary>
+          <ExportActions
+            s={s}
+            change={change}
+            onClear={() => {
+              setPersist(false);
+              setS(preset());
+              setSaved([]);
+              try {
+                localStorage.removeItem(STORAGE_KEY);
+                setStatus(
+                  "Data lokal dihapus. Autosave dimulai lagi setelah perubahan.",
+                );
+              } catch {
+                setStatus("Browser menolak penghapusan penyimpanan lokal.");
+              }
+            }}
+          />
+        </details>
+        <details className="sim-panel sim-no-print">
+          <summary>Catatan perubahan lokal (30 terakhir)</summary>
+          <ul>
+            {s.log.map((v, i) => (
+              <li key={i}>{v}</li>
+            ))}
+          </ul>
+        </details>
       </details>
-      <details className="sim-disclaimer"><summary>Catatan penggunaan</summary>
+      <details className="sim-disclaimer">
+        <summary>Catatan penggunaan</summary>
         <strong>Batas penggunaan</strong>
         <p>
           Hasil simulasi bukan bukti kelayakan audit atau persetujuan

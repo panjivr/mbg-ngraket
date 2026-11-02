@@ -17,18 +17,18 @@ test('honor sinkron tidak menambah dua kali dan tarif per role terpisah',()=>{
 test('masukan yang ditolak tidak meninggalkan angka keliru di layar',async({page})=>{
  const s=preset();s.days=366;s.rows[0].qty=10000;s.rows[0].frequency=366;s.rows[0].price=1;s.rows[0].daily=true;
  await page.addInitScript(value=>localStorage.setItem('djati:simulator-operasional:v1',value),JSON.stringify(s));
- await page.goto('/simulator-operasional');await expect(page.getByRole('status')).toContainText('dimuat');
+ await page.goto('/simulator-operasional');await page.getByLabel('👥 Jumlah penerima').fill('2600');await expect(page.getByRole('status')).toContainText('dimuat');
  await page.locator('.easy-main > summary').filter({hasText:'Isi biaya'}).click();const gas=page.locator('.easy-row').filter({hasText:/^Gas/});await gas.locator('summary').click();
- const amount=gas.getByLabel('Harga satuan per hari (Rp)');await amount.fill('1000000');
+ const amount=gas.getByLabel('Harga satuan Per hari (Rp)');await amount.fill('1000000');
  await expect(page.getByRole('status').first()).toContainText('Perubahan ditolak');await expect(amount).toHaveValue('1');
 });
 test('simulasi lapangan: 1 hari, 10 hari, defisit dan pos dinonaktifkan',async({page})=>{
- await page.goto('/simulator-operasional');await page.locator('.easy-main > summary').filter({hasText:'Isi biaya'}).click();
+ await page.goto('/simulator-operasional');await page.getByLabel('👥 Jumlah penerima').fill('2600');await page.locator('.easy-main > summary').filter({hasText:'Isi biaya'}).click();
  const gas=page.locator('.easy-row').filter({hasText:/^Gas/});const listrik=page.locator('.easy-row').filter({hasText:/^Listrik/});
  await gas.locator('summary').click();await gas.getByRole('button',{name:'☀ Per hari'}).click();await gas.getByLabel('Biaya per hari (Rp)').fill('100000');
- await listrik.locator('summary').click();await listrik.getByLabel('Biaya sekali / periode (Rp)').fill('300000');
+ await listrik.locator('summary').click();await listrik.getByLabel('Biaya sekali (Rp)').fill('300000');
  await expect(page.locator('.sim-conclusion')).toContainText('7.400.000');
  await page.getByLabel('📅 Berapa hari?').fill('10');await expect(page.locator('.sim-conclusion')).toContainText('76.700.000');
- await listrik.getByLabel('Biaya sekali / periode (Rp)').fill('78000000');await expect(page.locator('.sim-conclusion')).toContainText('Kurangi total biaya minimal Rp 1.000.000');await expect(page.locator('.sim-conclusion')).toContainText('Rp 4.900.000');
+ await listrik.getByLabel('Biaya sekali (Rp)').fill('78000000');await expect(page.locator('.sim-conclusion')).toContainText('Kurangi total biaya minimal Rp 1.000.000');await expect(page.locator('.sim-conclusion')).toContainText('Rp 4.900.000');
  await listrik.getByLabel('Hitung biaya ini').uncheck();await expect(page.locator('.sim-conclusion')).toContainText('77.000.000');
 });
