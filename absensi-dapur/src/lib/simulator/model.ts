@@ -102,7 +102,7 @@ export function preset(): Scenario {
     kind: "baseline",
     start: "",
     end: "",
-    note: "Data contoh, bukan pengeluaran aktual yang disahkan.",
+    note: "Nominal contoh adalah total per periode; tentukan periode yang sesuai. Bukan pengeluaran aktual yang disahkan.",
     pm: 2600,
     days: 10,
     rate: 3000,
