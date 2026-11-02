@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   CATEGORIES,
   blankRow,
@@ -43,6 +43,15 @@ function NumberField({
   disabled?: boolean;
 }) {
   const [error, setError] = useState("");
+  const [draft, setDraft] = useState(value === 0 ? "" : String(value));
+  const draftRef = useRef(draft);
+  useEffect(() => {
+    if (Number(draftRef.current) !== value) {
+      const next = value === 0 ? "" : String(value);
+      draftRef.current = next;
+      setDraft(next);
+    }
+  }, [value]);
   return (
     <label className="sim-field">
       <span>{label}</span>
@@ -52,7 +61,8 @@ function NumberField({
         min="0"
         max={max}
         step={integer ? "1" : "any"}
-        value={value}
+        value={draft}
+        placeholder="Isi angka"
         disabled={disabled}
         aria-invalid={!!error}
         onChange={(e) => {
@@ -71,6 +81,8 @@ function NumberField({
             return;
           }
           setError("");
+          draftRef.current = raw;
+          setDraft(raw);
           onChange(raw === "" ? 0 : n);
         }}
       />

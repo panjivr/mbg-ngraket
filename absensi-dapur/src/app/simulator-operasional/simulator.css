@@ -551,3 +551,24 @@
 .sim-intro{padding:22px}.sim-intro h1{font-size:clamp(26px,4vw,40px);margin:8px 0}.sim-intro p{font-size:14px}.sim-save-status{margin:8px 0}.easy-parameters,.easy-main{background:white;border:1px solid #d6e1eb;border-radius:14px;padding:16px;margin:12px 0}.easy-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.easy-hint{color:#52647a;font-size:12px;line-height:1.55;margin:10px 0}.easy-main>summary,.easy-row>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;min-height:44px;cursor:pointer}.easy-main>summary::-webkit-details-marker,.easy-row>summary::-webkit-details-marker{display:none}.easy-main>summary:after,.easy-row>summary:after{content:"＋";font-size:20px;color:#147d82}.easy-main[open]>summary:after,.easy-row[open]>summary:after{content:"−"}.easy-main>summary strong{display:block;color:#10243a;font-size:16px}.easy-main>summary small,.easy-row>summary small{display:block;color:#52647a;font-size:12px}.easy-main>summary b{margin-left:auto;color:#10243a}.easy-rows{border-top:1px solid #d6e1eb}.easy-row{border-bottom:1px solid #d6e1eb;padding:8px 0}.easy-row>summary{color:#10243a;font-size:14px}.easy-row>summary strong{margin-left:auto}.easy-row-body{display:grid;gap:12px;padding:12px 0}.easy-row-body legend{color:#52647a;font-size:13px;margin-bottom:6px}.easy-choices,.easy-actions{display:flex;gap:8px;flex-wrap:wrap}.easy-choices button{flex:1;min-width:120px}.easy-choices button[aria-pressed=true]{background:#147d82;border-color:#147d82;color:#fff}.easy-actions{justify-content:space-between;align-items:center}.easy-add{margin-top:14px}.sim-conclusion{padding:20px;margin:12px 0}.sim-conclusion h2{font-size:clamp(23px,4vw,32px)}.sim-disclaimer summary{cursor:pointer;color:#52647a;font-size:12px}.easy-main .sim-panel{box-shadow:none}.easy-main>summary:focus-visible,.easy-row>summary:focus-visible{outline:3px solid #147d82;outline-offset:3px}
 
 .easy-print{display:none}@media print{.easy-print{display:block;color:#000}.easy-print table{min-width:0;table-layout:fixed}.easy-print tr{break-inside:avoid}}
+
+/* Ruang yang fleksibel untuk layar sempit dan teks yang diperbesar. */
+.easy-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.easy-main, .easy-parameters, .easy-row, .easy-row-body, .sim-conclusion { min-width: 0; }
+.easy-main > summary > span, .easy-row > summary > span { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.easy-main > summary b, .easy-row > summary strong { min-width: 0; overflow-wrap: anywhere; text-align: right; }
+.easy-main > summary::after, .easy-row > summary::after { flex: 0 0 auto; }
+.easy-row-body fieldset, .easy-actions, .easy-choices { min-width: 0; }
+.easy-choices button { min-height: 48px; }
+.sim-conclusion, .easy-hint { overflow-wrap: anywhere; }
+@media (max-width: 380px) {
+  .easy-parameters, .easy-main, .sim-conclusion { padding: 14px; }
+  .easy-fields { gap: 8px; }
+  .easy-main > summary, .easy-row > summary { flex-wrap: wrap; }
+  .easy-main > summary > span, .easy-row > summary > span { flex-basis: 45%; }
+  .easy-choices button { flex-basis: 100%; }
+}
+@media (max-width: 540px) {
+  .simulator input:not([type=checkbox]):not([type=file]), .simulator select { font-size: 16px; }
+  .simulator .easy-fields .sim-field > span { line-height: 1.3; min-height: 2.6em; }
+}
