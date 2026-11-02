@@ -544,3 +544,5 @@
     break-inside: avoid;
   }
 }
+
+.sim-conclusion{background:#102d43;color:#fff;border-radius:18px;padding:28px;margin:25px 0}.sim-conclusion span{font-size:12px;letter-spacing:.12em;color:#f0ca71}.sim-conclusion h2{font-size:clamp(26px,5vw,40px);font-weight:800;margin:8px 0}.sim-conclusion p{font-size:17px;line-height:1.6;margin:10px 0}.sim-conclusion small{display:block;color:#c2d7e5;margin-top:14px}@media print{.sim-conclusion{background:white;color:black;border:1px solid #555}.sim-conclusion span,.sim-conclusion small{color:black}}
