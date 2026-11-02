@@ -1061,6 +1061,18 @@ export function ExportActions({
     </Section>
   );
 }
+function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
+  const update = (id: string, patch: Partial<Expense>) => change({ ...s, rows: s.rows.map(r => r.id === id ? { ...r, ...patch } : r) }, "Ubah biaya");
+  return <Section title="Isi biaya seperti di Excel" tag="02"><p className="sim-muted">Ubah nama, jumlah, harga, atau frekuensi. Total dihitung otomatis. Geser tabel ke samping di ponsel.</p><div className="sim-table-scroll" tabIndex={0} role="region" aria-label="Tabel biaya, geser ke samping"><table><thead><tr><th>Aktif</th><th>Nama biaya</th><th>Jumlah</th><th>Harga satuan (Rp)</th><th>Frekuensi</th><th>Total rencana</th><th>Hapus</th></tr></thead><tbody>{s.rows.map((r,i)=><tr key={r.id}><td><input type="checkbox" aria-label={`Aktif ${r.name}`} checked={r.active} onChange={e=>update(r.id,{active:e.target.checked})}/></td><td><input aria-label={`Nama biaya ${i+1}`} value={r.name} maxLength={150} onChange={e=>update(r.id,{name:e.target.value})}/></td>{([['qty','Jumlah',10000],['price','Harga satuan',1000000000],['frequency','Frekuensi',366]] as const).map(([key,label,max])=><td key={key}><input type="number" min="0" max={max} step="any" aria-label={`${label} ${r.name}`} value={r[key]} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=0&&n<=max)update(r.id,{[key]:n});}}/></td>)}<td>{r.active ? money(planCost(r,s)) : 'Tidak aktif'}{r.daily && <small> × hari</small>}</td><td><button onClick={()=>window.confirm(`Hapus ${r.name}?`) && change({...s,rows:s.rows.filter(x=>x.id!==r.id)},'Hapus pos')}>Hapus</button></td></tr>)}</tbody></table></div><div className="sim-toolbar sim-no-print"><button onClick={()=>s.rows.length<500&&change({...s,rows:[...s.rows,blankRow()]},'Tambah pos')}>+ Tambah biaya</button></div></Section>;
+}
+
+function Kesimpulan({s}:{s:Scenario}) {
+  const t=summary(s); const largest=s.rows.filter(r=>r.active && cost(r,s)>0).sort((a,b)=>cost(b,s)-cost(a,s)).slice(0,3);
+  const short=Math.max(0,-t.balance), reserveShort=Math.max(0,-t.gap);
+  const title=!t.budget?'Pagu belum tersedia':short>0?'Melebihi pagu':t.balance===0?'Tepat di batas pagu':t.usage!==null&&t.usage>=90?'Mendekati batas pagu':'Masih dalam pagu';
+  return <section className="sim-conclusion" aria-live="polite"><span>HASIL SIMULASI · {s.basis==='plan'?'RENCANA':s.basis==='actual'?'REALISASI':'PROYEKSI'}</span><h2>{title}</h2><p>{!t.budget?'Isi jumlah penerima dan hari pelayanan untuk menghitung pagu.':short>0?`Kurangi total biaya minimal ${money(short)} agar tidak melebihi pagu.`:`Sisa anggaran ${money(t.balance)}.`}</p>{t.budget>0&&reserveShort>0&&<p>Untuk memenuhi target cadangan, kurangi biaya sebesar {money(reserveShort)}.</p>}{(short>0||reserveShort>0)&&largest.length>0&&<p>Mulai periksa pos terbesar: {largest.map(r=>`${r.name} (${money(cost(r,s))})`).join(', ')}. Tentukan pengurangan sesuai kebutuhan dan ketentuan yang berlaku.</p>}<small>Ini simulasi anggaran, bukan saldo kas atau persetujuan pembiayaan.</small></section>;
+}
+
 export default function Simulator() {
   const [s, setS] = useState<Scenario>(() => preset()),
     [ready, setReady] = useState(false),
@@ -1133,11 +1145,14 @@ export default function Simulator() {
       <p className="sim-save-status" role="status" aria-live="polite">
         {status}
       </p>
-      <BudgetSummary s={s} />
-      <BudgetParameters s={s} change={change} />
-      <BudgetWarnings s={s} />
-      <ExpenseTable s={s} change={change} />
-      <HonorScenario s={s} change={change} />
+      <Section title="Anggaran" tag="01"><div className="sim-fields"><NumberField label="Jumlah penerima manfaat" value={s.pm} integer max={1000000} onChange={pm=>change({...s,pm})}/><NumberField label="Hari pelayanan" value={s.days} integer max={366} onChange={days=>change({...s,days})}/><div><span>Tarif per penerima / hari</span><p><strong>{money(s.rate)}</strong></p></div></div></Section>
+      <details className="sim-panel"><summary>Lihat rincian pagu, cadangan dan serapan</summary><BudgetSummary s={s} /></details>
+      <details className="sim-panel sim-no-print"><summary>Pengaturan tambahan</summary><BudgetParameters s={s} change={change} /></details>
+      <details className="sim-panel"><summary>Periksa catatan dan peringatan</summary><BudgetWarnings s={s} /></details>
+      <details className="sim-panel"><summary>Isi atau ubah daftar biaya ({s.rows.length} pos)</summary><QuickSheet s={s} change={change} /></details>
+      <details className="sim-panel"><summary>Rincian biaya dan pengaturan lanjutan</summary><ExpenseTable s={s} change={change} /></details>
+      <details className="sim-panel"><summary>Simulasi honor relawan</summary><HonorScenario s={s} change={change} /></details>
+      <details className="sim-panel"><summary>Bandingkan skenario</summary>
       <ScenarioComparison
         s={s}
         saved={saved}
@@ -1157,7 +1172,8 @@ export default function Simulator() {
         }
         onDelete={(i) => setSaved(saved.filter((_, j) => i !== j))}
       />
-      <ExportActions
+      </details>
+      <details className="sim-panel sim-no-print"><summary>Simpan, impor, ekspor atau cetak</summary><ExportActions
         s={s}
         change={change}
         onClear={() => {
@@ -1174,6 +1190,7 @@ export default function Simulator() {
           }
         }}
       />
+      </details>
       <details className="sim-panel sim-no-print">
         <summary>Catatan perubahan lokal (30 terakhir)</summary>
         <ul>
@@ -1182,6 +1199,7 @@ export default function Simulator() {
           ))}
         </ul>
       </details>
+      <Kesimpulan s={s} />
       <aside className="sim-disclaimer">
         <strong>Batas penggunaan</strong>
         <p>
