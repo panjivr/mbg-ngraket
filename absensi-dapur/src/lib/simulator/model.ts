@@ -43,6 +43,7 @@ export type Expense = {
 export type Scenario = {
   version: 2;
   name: string;
+  savedAt?: string;
   kind: "baseline" | "hemat" | "custom";
   start: string;
   end: string;
@@ -502,6 +503,7 @@ export function validateScenario(value: unknown): Scenario {
   const result: Scenario = {
     version: 2,
     name: str(s.name, 150),
+    ...(typeof s.savedAt === "string" && !Number.isNaN(Date.parse(s.savedAt)) ? { savedAt: new Date(s.savedAt).toISOString() } : {}),
     kind: choice(s.kind, ["baseline", "hemat", "custom"]),
     start: date(s.start),
     end: date(s.end),

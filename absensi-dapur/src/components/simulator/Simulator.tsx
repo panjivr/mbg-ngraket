@@ -906,7 +906,7 @@ export function ScenarioComparison({
           ))}
       </div>
       <button className="sim-no-print" onClick={onSave}>
-        Duplikasi untuk perbandingan ({saved.length}/5)
+        Duplikasi untuk perbandingan ({saved.length}/10)
       </button>
       <p className="sim-muted">
         Skenario pembanding disimpan di browser ini. Ekspor JSON sebagai
@@ -964,13 +964,21 @@ export function ScenarioComparison({
 export function ExportActions({
   s,
   change,
-  onClear,
+  onClear, saved, onImportMany,
 }: {
   s: Scenario;
   change: Change;
   onClear: () => void;
+  saved: Scenario[];
+  onImportMany: (items: Scenario[], mode: "replace" | "skip", replaceIndices: number[]) => boolean;
 }) {
   const [error, setError] = useState("");
+  const [incoming, setIncoming] = useState<Scenario[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [replaceIndices, setReplaceIndices] = useState<number[]>([]);
+  const picked = incoming.filter((_, i) => selected.includes(i));
+  const overflow = saved.length + picked.length > 10;
+  const importSelected = (mode: "replace" | "skip") => { if (onImportMany(picked, mode, replaceIndices)) { setIncoming([]); setSelected([]); setReplaceIndices([]); setError(""); } };
   return (
     <Section title="Simpan, ekspor & cetak" tag="05">
       <div className="sim-toolbar sim-no-print">
@@ -985,6 +993,7 @@ export function ExportActions({
         >
           Ekspor JSON
         </button>
+        <button onClick={() => download("semua-skenario-operasional.json", JSON.stringify({ version: 1, scenarios: [{ ...s, savedAt: new Date().toISOString() }, ...saved] }, null, 2), "application/json")}>Ekspor semua skenario</button>
         <button
           onClick={() =>
             download(
@@ -1008,9 +1017,17 @@ export function ExportActions({
                 file = input.files?.[0];
               if (!file) return;
               try {
-                if (file.size > MAX_IMPORT_BYTES)
-                  throw Error("File maksimum 1 MB.");
-                let next = parseScenario(await file.text());
+                if (file.size > MAX_IMPORT_BYTES * 12) throw Error("File maksimum 12 MB.");
+                const contents = await file.text();
+                const raw: unknown = JSON.parse(contents);
+                if (raw && typeof raw === "object" && "scenarios" in raw) {
+                  if (!("version" in raw) || raw.version !== 1) throw Error("Versi kumpulan skenario tidak didukung.");
+                  const list = (raw as { scenarios: unknown }).scenarios;
+                  if (!Array.isArray(list) || !list.length || list.length > 11) throw Error("File harus berisi 1–11 skenario.");
+                  const parsed = list.map(item => parseScenario(JSON.stringify(item)));
+                  setIncoming(parsed); setSelected(parsed.map((_, i) => i)); setReplaceIndices([]); setError(""); return;
+                }
+                let next = parseScenario(contents);
                 const candidates = next.rows.filter(
                   (r) =>
                     billingKind(r) === "once" &&
@@ -1079,6 +1096,7 @@ export function ExportActions({
           Hapus data lokal
         </button>
       </div>
+      {incoming.length > 0 && <div className="sim-import-list"><h3>Pilih skenario yang akan diimpor</h3><p>Skenario aktif tidak berubah. Pilih yang ingin disimpan di perangkat ini.</p>{incoming.map((item, i) => <label className="sim-import-choice" key={i}><input type="checkbox" checked={selected.includes(i)} onChange={e => setSelected(e.target.checked ? [...selected, i] : selected.filter(n => n !== i))}/><span><strong>{item.name}</strong> · {money(summary(item).allTotal)} · {item.savedAt ? new Date(item.savedAt).toLocaleString("id-ID") : "Tanggal simpan tidak tersedia"}</span></label>)}<p>{selected.length} dipilih · {saved.length}/10 tempat terisi.</p>{overflow ? <><p role="status">Tempat tidak cukup. Pilih {Math.max(0, saved.length + picked.length - 10)} skenario tersimpan yang akan diganti, atau lewati yang tidak muat. Maksimal 10 skenario dapat dipilih untuk mengganti.</p>{saved.map((item,i) => <label className="sim-import-choice" key={i}><input type="checkbox" checked={replaceIndices.includes(i)} onChange={e => setReplaceIndices(e.target.checked ? [...replaceIndices,i] : replaceIndices.filter(n => n !== i))}/><span>Ganti: {item.name} · {money(summary(item).allTotal)} · {item.savedAt ? new Date(item.savedAt).toLocaleString("id-ID") : "Tanggal tidak tersedia"}</span></label>)}<button disabled={!selected.length || picked.length > 10 || replaceIndices.length !== saved.length + picked.length - 10} onClick={() => importSelected("replace")}>Ganti skenario lama</button> <button disabled={!selected.length} onClick={() => importSelected("skip")}>Lewati kelebihan</button></> : <button disabled={!selected.length} onClick={() => importSelected("skip")}>Impor yang dipilih</button>} <button onClick={() => {setIncoming([]); setSelected([]);}}>Batal</button></div>}
       {error && (
         <p role="alert" className="sim-negative">
           {error}
@@ -1086,8 +1104,8 @@ export function ExportActions({
       )}
       <p className="sim-muted">
         Data hanya di browser/perangkat ini, tidak disimpan ke server. Maksimum
-        impor 1 MB / 500 pos. JSON berisi satu skenario; CSV memuat parameter
-        dan rincian. Untuk PDF, pilih A4 landscape pada dialog cetak browser.
+        impor 12 MB untuk kumpulan; tiap skenario maksimal 1 MB / 500 pos. CSV memuat parameter
+        dan rincian. Untuk PDF, pilih Simpan sebagai PDF dan aktifkan cetak latar belakang.
       </p>
     </Section>
   );
@@ -1593,6 +1611,24 @@ function freshScenario(): Scenario {
   };
 }
 
+function PrintReport({s}: {s: Scenario}) {
+  const t = summary(s);
+  const basis = s.basis === "plan" ? "Rencana" : s.basis === "actual" ? "Realisasi" : "Proyeksi";
+  const reduction = s.honor.optionReduction ?? 0;
+  return <article className="report-print">
+    <header><div><small>DJATI · SIMULATOR OPERASIONAL SPPG</small><h1>Laporan simulasi anggaran</h1><p>{s.name}</p></div><div className="report-date">Dasar: {basis}</div></header>
+    <section className="report-summary"><div><span>HASIL TERHADAP PAGU</span><h2>{t.budget === 0 ? "Pagu belum tersedia" : t.balance < 0 ? `Melebihi pagu ${money(-t.balance)}` : `Sisa pagu ${money(t.balance)}`}</h2><p>Setelah cadangan: {t.gap < 0 ? `kurang ${money(-t.gap)}` : `tersisa ${money(t.gap)}`} · Biaya per penerima per hari: {t.perPM === null ? "belum dapat dihitung" : money(t.perPM)} dibanding tarif {money(s.rate)}.</p></div></section>
+    <div className="report-metrics"><div><small>PAGU OPERASIONAL</small><b>{money(t.budget)}</b></div><div><small>BIAYA DALAM PAGU</small><b>{money(t.total)}</b></div><div><small>DI LUAR PAGU</small><b>{money(t.outside)}</b></div><div><small>TOTAL SELURUH BIAYA</small><b>{money(t.allTotal)}</b></div></div>
+    <p><b>Dasar hitung:</b> {s.pm.toLocaleString("id-ID")} penerima × {s.days} hari pelayanan × {money(s.rate)}. Periode: {s.start || "belum diisi"} s.d. {s.end || "belum diisi"}. Cadangan {money(t.reserve)}. Nilai realisasi/proyeksi kosong memakai rencana.</p>
+    <h2>Rincian biaya</h2><table><thead><tr><th>Pos / kategori</th><th>Dasar perhitungan</th><th>Rencana</th><th>Realisasi</th><th>Proyeksi</th></tr></thead><tbody>{s.rows.map(r => <tr key={r.id}><td>{r.name}<br/><small>{r.category}{r.outsideCap ? " · luar pagu" : ""}{!r.active ? " · nonaktif" : ""}{r.note ? ` · ${r.note}` : ""}{r.source ? ` · Sumber: ${r.source}` : ""}{r.evidence ? ` · Bukti: ${r.evidence}` : ""}</small></td><td>{billingLabels[billingKind(r)]} · {r.qty} × {money(r.price)} × {r.frequency}{billingKind(r) === "daily" ? ` × ${s.days} hari` : billingKind(r) === "portion" ? ` × ${s.pm} × ${s.days} hari` : billingKind(r) === "monthly" ? ` × ${monthlyAllocationIncomplete(r,s) ? "belum lengkap" : monthlyParts(r,s).map(m => `${m.key}: ${m.days}/${m.divisor}${m.fallback ? " (perkiraan)" : ""}`).join(" + ")}` : ""}</td><td>{r.active && billingKind(r) === "monthly" && monthlyAllocationIncomplete(r,s) ? "Belum lengkap" : money(r.active ? planCost(r,s) : 0)}</td><td>{r.actualProvided ? money(r.active ? r.actual : 0) : "Belum diisi"}</td><td>{r.projectedProvided ? money(r.active ? r.projected : 0) : "Belum diisi"}</td></tr>)}</tbody></table>
+    {s.honor.mode !== "roles" && <><h2>Perhitungan honor relawan</h2><p>Metode: {s.honor.mode === "pooled" ? "Bagi rata" : s.honor.mode === "actual" ? "Honor aktual" : "Tarif sama per hari"}. Total kalkulator: {money(honorTotal(s))}. Relawan terdaftar: {s.honor.registered}; aktif: {s.honor.active}; hari: {s.honor.days}; tarif: {money(s.honor.rate)} per hari. Pastikan hasil sudah dipilih untuk anggaran bila ingin menggunakannya.</p></>}
+    {s.honor.mode === "roles" && s.honor.roles.length > 0 && <><h2>Simulasi honor per divisi / orang</h2><p>Pengurangan tarif opsi: {money(reduction)} per orang per hari. Total kalkulator awal: {money(honorTotal(s))}. Angka di anggaran mengikuti pos honor yang dipilih, bukan otomatis hasil opsi.</p><table><thead><tr><th>Divisi / kode</th><th>Orang × hari</th><th>Tarif / hari</th><th>Total awal</th><th>Opsi: kurangi orang / hari</th><th>Total opsi</th></tr></thead><tbody>{s.honor.roles.map((r,i) => <tr key={i}><td>{r.name}</td><td>{r.people === undefined ? `${r.assignments} orang-hari` : `${r.people} × ${r.workDays}`}</td><td>{money(r.rate)}</td><td>{money(r.assignments*r.rate)}</td><td>{r.people === undefined ? "Tidak diketahui" : r.optionRemoved ?? 0}</td><td>{money((r.people === undefined || r.workDays === undefined ? r.assignments : (r.people - (r.optionRemoved ?? 0))*r.workDays)*Math.max(0,r.rate-reduction))}</td></tr>)}</tbody></table></>}
+    {s.note && <p><b>Catatan skenario:</b> {s.note}</p>}
+    {warnings(s).length > 0 && <><h2>Hal yang perlu diperiksa</h2><ul>{warnings(s).map((w,i)=><li key={i}>{w}</li>)}</ul></>}
+    <footer>Simulasi berdasarkan data yang diisi; bukan saldo kas, payroll, atau persetujuan pembiayaan. Pastikan kebutuhan kerja, keselamatan, dan jadwal rotasi sebelum mengambil keputusan.</footer>
+  </article>;
+}
+
 export default function Simulator() {
   const [s, setS] = useState<Scenario>(freshScenario),
     [ready, setReady] = useState(false),
@@ -1609,7 +1645,7 @@ export default function Simulator() {
       );
       if (archive) {
         const items: unknown = JSON.parse(archive);
-        if (!Array.isArray(items) || items.length > 5)
+        if (!Array.isArray(items) || items.length > 10)
           throw Error("Arsip tidak valid");
         setSaved(items.map((item) => validateScenario(item)));
       }
@@ -1664,11 +1700,11 @@ export default function Simulator() {
       );
       return false;
     }
-    if (saved.length >= 5) {
-      setStatus("Maksimum 5 skenario tersimpan; hapus salah satu.");
+    if (saved.length >= 10) {
+      setStatus("Maksimum 10 skenario tersimpan; hapus salah satu.");
       return false;
     }
-    const next = [...saved, structuredClone(s)];
+    const next = [...saved, { ...structuredClone(s), savedAt: new Date().toISOString() }];
     try {
       localStorage.setItem(
         "djati:simulator-operasional:scenarios:v1",
@@ -1699,6 +1735,7 @@ export default function Simulator() {
   };
   return (
     <div className="simulator">
+      <PrintReport s={s} />
       <div className="sim-intro">
         <span className="sim-eyebrow">DJATI / ALAT PUBLIK</span>
         <h1>
@@ -1789,6 +1826,7 @@ export default function Simulator() {
           {saved.map((item, i) => (
             <div className="sim-toolbar" key={i}>
               <strong>{item.name}</strong>
+              <span>{money(summary(item).allTotal)} · {item.savedAt ? new Date(item.savedAt).toLocaleString("id-ID") : "Tanggal simpan tidak tersedia"}</span>
               <button
                 onClick={() => {
                   if (
@@ -1922,13 +1960,13 @@ export default function Simulator() {
             s={s}
             saved={saved}
             onSave={() => {
-              if (saved.length >= 5) {
+              if (saved.length >= 10) {
                 setStatus(
-                  "Maksimum 5 pembanding. Hapus salah satu atau ekspor JSON.",
+                  "Maksimum 10 pembanding. Hapus salah satu atau ekspor JSON.",
                 );
                 return;
               }
-              setSaved([...saved, structuredClone(s)]);
+              setSaved([...saved, { ...structuredClone(s), savedAt: new Date().toISOString() }]);
               setStatus("Snapshot pembanding ditambahkan.");
             }}
             onLoad={(v) =>
@@ -1943,6 +1981,15 @@ export default function Simulator() {
           <ExportActions
             s={s}
             change={change}
+            saved={saved}
+            onImportMany={(items, mode, replaceIndices) => {
+              if (!archiveReadable.current) { setStatus("Arsip tidak dapat dibaca. Impor dibatalkan."); return false; }
+              const accepted = mode === "skip" ? items.slice(0, Math.max(0, 10 - saved.length)) : items.slice(0, 10);
+              const removed = mode === "replace" ? replaceIndices : [];
+              const next = [...saved.filter((_, i) => !removed.includes(i)), ...accepted.map(item => ({...structuredClone(item), savedAt: item.savedAt ?? new Date().toISOString()}))];
+              if (removed.length && !window.confirm(`Ganti ${removed.length} skenario yang dipilih: ${removed.map(i => saved[i].name).join(", ")}?`)) return false;
+              try { localStorage.setItem("djati:simulator-operasional:scenarios:v1", JSON.stringify(next)); setSaved(next); setStatus(`${accepted.length} skenario diimpor; ${items.length - accepted.length} dilewati.`); return true; } catch { setStatus("Penyimpanan gagal; arsip tidak diubah."); return false; }
+            }}
             onClear={() => {
               setPersist(false);
               setS(freshScenario());
