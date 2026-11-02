@@ -11,22 +11,22 @@ import {
 } from "../src/lib/simulator/model";
 test("prorata kalender lintas bulan dan tahun kabisat", () => {
   const s = preset(),
-    r = { ...blankRow(), billing: "monthly" as const, price: 3100000 };
+    r = { ...blankRow(), billing: "monthly" as const, monthlyDivisor:"calendar" as const, price: 3100000 };
   s.start = "2026-10-19";
   s.end = "2026-10-30";
   s.days = 10;
   expect(calendarMonths(s.start, s.end)).toEqual([
-    { days: 12, daysInMonth: 31 },
+    { key:"2026-10", days: 12, daysInMonth: 31 },
   ]);
   expect(planCost(r, s)).toBe(1200000);
   s.start = "2026-10-31";
   s.end = "2026-11-02";
-  expect(planCost(r, s)).toBe(Math.round(3100000 * (1 / 31 + 2 / 30)));
+  expect(planCost(r, s)).toBeCloseTo(3100000 * (1 / 31 + 2 / 30));
   s.start = "2024-02-01";
   s.end = "2024-02-29";
   expect(planCost(r, s)).toBe(3100000);
   s.start = "";
-  expect(planCost(r, s)).toBe(0);
+  expect(planCost(r, s)).toBeCloseTo(3100000*10/30);
 });
 test("per porsi dan di luar pagu terpisah", () => {
   const s = preset(),
@@ -41,6 +41,7 @@ test("per porsi dan di luar pagu terpisah", () => {
 });
 test("legacy tetap dibaca, nominal aktual dan bagi rata serta gaji berbeda", () => {
   const old = JSON.parse(JSON.stringify(preset()));
+  old.version = 1;
   old.rows.forEach((r: Record<string, unknown>) => {
     delete r.billing;
     delete r.outsideCap;
@@ -86,17 +87,16 @@ test("antarmuka bulanan, porsi, luar pagu dan penyimpanan skenario", async ({
   const gas = page.locator(".easy-row").filter({ hasText: /^Gas/ });
   await gas.locator("summary").click();
   await gas.getByRole("button", { name: "Per bulan" }).click();
-  await expect(page.locator(".sim-conclusion")).toContainText(
-    "Lengkapi tanggal biaya bulanan",
-  );
+  await expect(gas).toContainText("Tanggal belum lengkap");
   await gas.getByLabel("Tanggal awal periode").fill("2026-10-19");
   await gas.getByLabel("Tanggal akhir periode").fill("2026-10-30");
+  await gas.getByLabel("Pembagi biaya bulanan").selectOption("calendar");
   await gas.getByLabel("Biaya per bulan (Rp)").fill("3100000");
   await expect(gas).toContainText("1.200.000");
   await expect(gas).toContainText("12 hari kalender");
-  await page.getByLabel("📅 Berapa hari?").fill("13");
+  await page.getByLabel("📅 Hari pelayanan").fill("13");
   await expect(page.locator(".sim-conclusion")).toContainText("Periksa jumlah hari pelayanan");
-  await page.getByLabel("📅 Berapa hari?").fill("10");
+  await page.getByLabel("📅 Hari pelayanan").fill("10");
   await gas.getByRole("button", { name: "Per porsi" }).click();
   await gas.getByLabel("Biaya per porsi (Rp)").fill("500");
   await expect(gas).toContainText("13.000.000");

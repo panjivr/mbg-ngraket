@@ -5,6 +5,8 @@ import {
   billingKind,
   calendarDays,
   calendarMonths,
+  monthlyParts,
+  monthlyAllocationIncomplete,
   blankRow,
   cost,
   exportCSV,
@@ -16,6 +18,7 @@ import {
   preset,
   summary,
   syncHonor,
+  usesPlan,
   uid,
   validateScenario,
   warnings,
@@ -192,13 +195,19 @@ export function BudgetParameters({
           label="Periode mulai (opsional)"
           type="date"
           value={s.start}
-          onChange={(start) => set({ start })}
+          onChange={(start) =>
+            set({
+              start,
+              end: s.end && start > s.end ? "" : s.end,
+              serviceByMonth: {},
+            })
+          }
         />
         <TextField
           label="Periode akhir (opsional)"
           type="date"
           value={s.end}
-          onChange={(end) => set({ end })}
+          onChange={(end) => set({ end, serviceByMonth: {} })}
         />
         <NumberField
           label="Penerima manfaat / hari"
@@ -250,7 +259,7 @@ export function BudgetParameters({
           onChange={(v) => set({ basis: v as Scenario["basis"] })}
         />
         <Select
-          label="Pembulatan per pos (Rupiah)"
+          label="Pembulatan total akhir (Rupiah)"
           value={s.rounding}
           options={[
             ["round", "Terdekat"],
@@ -416,7 +425,7 @@ export function ExpenseEditor({
       <p className="sim-muted">
         Total rencana {money(planCost(r, s))};{" "}
         {billingKind(r) === "monthly" && !s.start
-          ? "isi tanggal periode agar biaya bulanan dihitung."
+          ? "tanggal belum lengkap; menggunakan hari pelayanan dengan pembagi 30."
           : "perhitungan mengikuti satuan yang dipilih."}
       </p>
       <TextField
@@ -1024,8 +1033,43 @@ export function ExportActions({
               try {
                 if (file.size > MAX_IMPORT_BYTES)
                   throw Error("File maksimum 1 MB.");
-                const next = parseScenario(await file.text());
-                if (window.confirm("Timpa skenario aktif dengan file ini?")) {
+                let next = parseScenario(await file.text());
+                const candidates = next.rows.filter(
+                  (r) =>
+                    billingKind(r) === "once" &&
+                    (/internet|bpjs|listrik|langganan/i.test(r.name) ||
+                      /^sewa$/i.test(r.name.trim())),
+                );
+                if (
+                  candidates.length &&
+                  window.confirm(
+                    `Biaya berikut mungkin bulanan: ${candidates
+                      .slice(0, 10)
+                      .map((r) => r.name)
+                      .join(
+                        ", ",
+                      )}${candidates.length > 10 ? ` dan ${candidates.length - 10} lainnya` : ""}. Ubah semuanya menjadi Per bulan? Pilih Batal untuk mempertahankan jenis semula.`,
+                  )
+                )
+                  next = {
+                    ...next,
+                    rows: next.rows.map((r) =>
+                      candidates.includes(r)
+                        ? {
+                            ...r,
+                            billing: "monthly",
+                            daily: false,
+                            monthlyDivisor: "fixed30",
+                            monthlyBasis: "calendar",
+                          }
+                        : r,
+                    ),
+                  };
+                if (
+                  window.confirm(
+                    "Timpa skenario aktif? Impor akan menghitung ulang dengan pembulatan pada total akhir.",
+                  )
+                ) {
                   change(next, "Impor skenario");
                   setError("");
                 }
@@ -1042,16 +1086,16 @@ export function ExportActions({
         <button
           onClick={() =>
             window.confirm(
-              "Reset parameter dan seluruh pos ke preset contoh?",
-            ) && change(preset(), "Reset preset contoh")
+              "Reset parameter dan seluruh pos ke skenario kosong?",
+            ) && change(freshScenario(), "Reset skenario")
           }
         >
-          Reset preset
+          Reset skenario
         </button>
         <button
           onClick={() =>
             window.confirm(
-              "Hapus skenario tersimpan di browser dan kembali ke contoh? Autosave dihentikan sampai Anda mengubah data lagi.",
+              "Hapus skenario tersimpan di browser dan kembali ke skenario kosong? Autosave dihentikan sampai Anda mengubah data lagi.",
             ) && onClear()
           }
         >
@@ -1098,7 +1142,8 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
       <div className="easy-rows">
         {s.rows.map((r, i) => {
           const kind = billingKind(r),
-            monthlyMissing = kind === "monthly" && (!s.start || !s.end);
+            monthlyMissing =
+              kind === "monthly" && monthlyAllocationIncomplete(r, s);
           return (
             <details className="easy-row" key={r.id}>
               <summary>
@@ -1113,7 +1158,7 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                   {!r.active
                     ? "—"
                     : monthlyMissing
-                      ? "Isi tanggal"
+                      ? "Isi hari per bulan"
                       : money(planCost(r, s))}
                 </strong>
               </summary>
@@ -1144,7 +1189,16 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                         key={key}
                         aria-pressed={kind === key}
                         onClick={() =>
-                          update(r.id, { billing: key, daily: key === "daily" })
+                          update(r.id, {
+                            billing: key,
+                            daily: key === "daily",
+                            ...(key === "monthly" && kind !== "monthly"
+                              ? {
+                                  monthlyDivisor: "fixed30" as const,
+                                  monthlyBasis: "calendar" as const,
+                                }
+                              : {}),
+                          })
                         }
                       >
                         {key === "daily" ? "☀ " : ""}
@@ -1156,10 +1210,48 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                 {kind === "monthly" && (
                   <>
                     <p className="easy-hint">
-                      Masukkan tanggal kalender. Biaya bulanan dibagi sesuai
-                      jumlah hari pada setiap bulan yang dilewati, termasuk hari
-                      awal dan akhir.
+                      Tagihan bulanan dihitung menjadi biaya harian, lalu
+                      dikalikan jumlah hari yang dipilih. Hari awal dan akhir
+                      termasuk.
                     </p>
+                    <Select
+                      label="Pembagi biaya bulanan"
+                      value={r.monthlyDivisor}
+                      options={[
+                        ["fixed30", "30 hari tetap"],
+                        ["calendar", "Hari kalender bulan (28–31)"],
+                      ]}
+                      onChange={(v) =>
+                        update(r.id, {
+                          monthlyDivisor: v as Expense["monthlyDivisor"],
+                        })
+                      }
+                    />
+                    {r.monthlyDivisor === "fixed30" &&
+                      r.monthlyBasis === "calendar" &&
+                      calendarMonths(s.start, s.end).some(
+                        (m) => m.days === m.daysInMonth && m.daysInMonth !== 30,
+                      ) && (
+                        <p className="easy-hint">
+                          Dengan pembagi tetap 30, satu bulan penuh yang berisi
+                          28, 29, atau 31 hari menghasilkan bagian tagihan yang
+                          berbeda dari satu bulan penuh. Pilih hari kalender
+                          bulan jika ingin mengikuti panjang bulan sebenarnya.
+                        </p>
+                      )}
+                    <Select
+                      label="Dasar jumlah hari"
+                      value={r.monthlyBasis}
+                      options={[
+                        ["calendar", "Hari kalender periode"],
+                        ["service", "Hari pelayanan"],
+                      ]}
+                      onChange={(v) =>
+                        update(r.id, {
+                          monthlyBasis: v as Expense["monthlyBasis"],
+                        })
+                      }
+                    />
                     <div className="easy-fields">
                       <TextField
                         label="Tanggal awal periode"
@@ -1170,6 +1262,7 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                             ...s,
                             start,
                             end: s.end && start > s.end ? "" : s.end,
+                            serviceByMonth: {},
                           })
                         }
                       />
@@ -1177,9 +1270,46 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                         label="Tanggal akhir periode"
                         type="date"
                         value={s.end}
-                        onChange={(end) => change({ ...s, end })}
+                        onChange={(end) =>
+                          change({ ...s, end, serviceByMonth: {} })
+                        }
                       />
                     </div>
+                    {(!s.start || !s.end) && (
+                      <p className="sim-warning">
+                        Tanggal belum lengkap. Perkiraan memakai {s.days} hari
+                        pelayanan dan pembagi 30; isi tanggal agar sesuai bulan
+                        sebenarnya.
+                      </p>
+                    )}
+                    {r.monthlyBasis === "service" &&
+                      calendarMonths(s.start, s.end).length > 1 && (
+                        <div>
+                          <p className="easy-hint">
+                            Bagikan {s.days} hari pelayanan ke masing-masing
+                            bulan. Jumlah seluruhnya harus sama. Mengubah
+                            tanggal menghapus pembagian sebelumnya.
+                          </p>
+                          {calendarMonths(s.start, s.end).map((m) => (
+                            <NumberField
+                              key={m.key}
+                              label={`Hari pelayanan ${m.key}`}
+                              value={s.serviceByMonth[m.key] ?? 0}
+                              integer
+                              max={m.days}
+                              onChange={(n) =>
+                                change({
+                                  ...s,
+                                  serviceByMonth: {
+                                    ...s.serviceByMonth,
+                                    [m.key]: n,
+                                  },
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
                     {s.start && s.end && (
                       <p className="easy-hint">
                         {calendarDays(s)} hari kalender dalam periode · {s.days}{" "}
@@ -1205,19 +1335,20 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
                       ? `${money(r.price)} × ${s.pm.toLocaleString("id-ID")} penerima × ${s.days} hari pelayanan`
                       : kind === "monthly"
                         ? monthlyMissing
-                          ? "Lengkapi tanggal agar biaya dihitung."
-                          : `${money(r.price)} × (${calendarMonths(
-                              s.start,
-                              s.end,
-                            )
-                              .map((m) => `${m.days}/${m.daysInMonth}`)
+                          ? "Lengkapi pembagian hari pelayanan per bulan"
+                          : `(${monthlyParts(r, s)
+                              .map(
+                                (m) =>
+                                  `${money(r.price)}/bulan ÷ ${m.divisor} ${Number.isInteger(r.price / m.divisor) ? "=" : "≈"} Rp${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(r.price / m.divisor)}/hari × ${m.days} hari (${m.key})`,
+                              )
                               .join(" + ")})`
                         : `${money(r.price)} × 1 kali`}
                   {r.qty !== 1 || r.frequency !== 1
                     ? ` × jumlah ${r.qty} × frekuensi ${r.frequency}`
                     : ""}{" "}
                   = {monthlyMissing ? "belum dihitung" : money(planCost(r, s))}.
-                  Pembulatan per baris.
+                  Biaya harian ditampilkan sebagai perkiraan; total memakai
+                  nilai sebelum pembulatan.
                 </p>
                 <label className="sim-check">
                   <input
@@ -1286,18 +1417,24 @@ function QuickSheet({ s, change }: { s: Scenario; change: Change }) {
 
 function Kesimpulan({ s }: { s: Scenario }) {
   const t = summary(s),
-    incompleteMonth =
-      s.basis === "plan" &&
-      s.rows.some(
-        (r) => r.active && billingKind(r) === "monthly" && (!s.start || !s.end),
-      );
+    incompleteMonth = s.rows.some(
+      (r) =>
+        r.active &&
+        r.price > 0 &&
+        billingKind(r) === "monthly" &&
+        usesPlan(r, s) &&
+        monthlyAllocationIncomplete(r, s),
+    );
   const invalidDays = !!(s.start && s.end && s.days > calendarDays(s));
   const missing =
     s.basis !== "plan" &&
     s.rows.some(
       (r) =>
         r.active &&
-        (planCost(r, s) > 0 || r.actual > 0 || r.projected > 0) &&
+        (r.price > 0 ||
+          planCost(r, s) > 0 ||
+          r.actual > 0 ||
+          r.projected > 0) &&
         !(s.basis === "actual" ? r.actualProvided : r.projectedProvided),
     );
   const honorRows = s.rows.filter(
@@ -1312,7 +1449,7 @@ function Kesimpulan({ s }: { s: Scenario }) {
   const short = Math.max(0, -t.balance),
     reserveShort = Math.max(0, -t.gap);
   const title = incompleteMonth
-    ? "Lengkapi tanggal biaya bulanan"
+    ? "Lengkapi hari pelayanan per bulan"
     : invalidDays
       ? "Periksa jumlah hari pelayanan"
       : missing
@@ -1343,11 +1480,11 @@ function Kesimpulan({ s }: { s: Scenario }) {
       <h2>{title}</h2>
       <p>
         {incompleteMonth
-          ? "Isi tanggal awal dan akhir untuk menghitung biaya bulanan."
+          ? "Isi pembagian hari pelayanan per bulan untuk menghitung biaya bulanan."
           : invalidDays
             ? `Periode ini ${calendarDays(s)} hari kalender; hari pelayanan tidak boleh lebih banyak.`
             : missing
-              ? "Sebagian nilai belum diisi. Isi di Rincian biaya lanjutan sebelum memakai hasil ini."
+              ? "Sebagian nilai belum diisi; sementara menggunakan angka rencana. Isi nilai sebenarnya di Rincian biaya lanjutan."
               : !t.budget
                 ? "Isi jumlah penerima dan hari pelayanan untuk menghitung pagu."
                 : t.total === 0
@@ -1408,9 +1545,28 @@ function Kesimpulan({ s }: { s: Scenario }) {
           {money(honorTotal(s))}. Buka Simulasi honor relawan untuk memeriksa.
         </p>
       )}
+      {t.total + t.outside !== t.allTotal && (
+        <p>
+          Subtotal yang ditampilkan dapat berbeda Rp1 dari total gabungan karena
+          pembulatan akhir.
+        </p>
+      )}
+      {s.rows.some(
+        (r) =>
+          r.active &&
+          r.price > 0 &&
+          usesPlan(r, s) &&
+          billingKind(r) === "monthly" &&
+          (!s.start || !s.end),
+      ) && (
+        <p>
+          ⚠ Tanggal belum lengkap: biaya bulanan diperkirakan dari {s.days} hari
+          pelayanan dengan pembagi 30.
+        </p>
+      )}
       <small>
-        Simulasi, bukan saldo kas atau persetujuan pembiayaan. Pembulatan per
-        baris.
+        Simulasi, bukan saldo kas atau persetujuan pembiayaan. Pembulatan
+        dilakukan pada total akhir.
       </small>
     </section>
   );
@@ -1424,9 +1580,28 @@ function freshScenario(): Scenario {
     note: "Isi biaya harian atau biaya untuk periode yang dipilih.",
     pm: 0,
     days: 1,
-    rows: base.rows
-      .filter((r) => !r.name.startsWith("Ard"))
-      .map((r) => ({ ...r, price: 0, daily: false, billing: "once" })),
+    rows: [
+      ...base.rows
+        .filter((r) => !r.name.startsWith("Ard"))
+        .map((r) => ({
+          ...r,
+          name: r.name === "Listrik" ? "Listrik abonemen" : r.name,
+          price: 0,
+          daily: false,
+          billing: /internet|bpjs|listrik/i.test(r.name)
+            ? ("monthly" as const)
+            : r.billing,
+          monthlyDivisor: "fixed30" as const,
+          monthlyBasis: "calendar" as const,
+        })),
+      ...["Sewa", "Langganan aplikasi"].map((name) => ({
+        ...blankRow(),
+        name,
+        billing: "monthly" as const,
+        monthlyDivisor: "fixed30" as const,
+        monthlyBasis: "calendar" as const,
+      })),
+    ],
     honor: {
       ...base.honor,
       registered: 0,
@@ -1462,9 +1637,13 @@ export default function Simulator() {
         setSaved(items.map((item) => validateScenario(item)));
       }
       archiveReadable.current = true;
+      const storedText = localStorage.getItem(STORAGE_KEY);
+      const legacy = storedText && JSON.parse(storedText).version === 1;
       setStatus(
         stored
-          ? "Skenario lokal dimuat."
+          ? legacy
+            ? "Skenario lama dimuat. Periksa ulang total: pembulatan kini pada total akhir."
+            : "Skenario lokal dimuat."
           : "Skenario siap digunakan. Data hanya di perangkat ini.",
       );
     } catch {
@@ -1568,7 +1747,7 @@ export default function Simulator() {
             onChange={(pm) => change({ ...s, pm })}
           />
           <NumberField
-            label="📅 Berapa hari?"
+            label="📅 Hari pelayanan"
             value={s.days}
             integer
             max={366}
@@ -1583,7 +1762,26 @@ export default function Simulator() {
       <div className="sim-toolbar sim-no-print">
         <button
           onClick={() => {
-            if (archiveCurrent()) change(freshScenario(), "Skenario baru");
+            if (archiveCurrent())
+              change(
+                {
+                  ...s,
+                  name: "Skenario baru",
+                  note: "",
+                  rows: s.rows.map((r) => ({
+                    ...r,
+                    price: 0,
+                    actual: 0,
+                    projected: 0,
+                    actualProvided: false,
+                    projectedProvided: false,
+                    managedHonor: false,
+                  })),
+                  honor: freshScenario().honor,
+                  log: [],
+                },
+                "Skenario baru",
+              );
           }}
         >
           ＋ Skenario baru
@@ -1680,14 +1878,25 @@ export default function Simulator() {
                       ? ` × ${s.pm} penerima × ${s.days} hari`
                       : billingKind(r) === "monthly"
                         ? ` × (${
-                            calendarMonths(s.start, s.end)
-                              .map((m) => `${m.days}/${m.daysInMonth}`)
-                              .join(" + ") || "tanggal belum diisi"
+                            monthlyAllocationIncomplete(r, s)
+                              ? "hari pelayanan belum lengkap"
+                              : monthlyParts(r, s)
+                                  .map(
+                                    (m) =>
+                                      `${m.key}: ${m.days}/${m.divisor}${m.fallback ? " (perkiraan)" : ""}`,
+                                  )
+                                  .join(" + ")
                           })`
                         : ""}
                   {r.outsideCap ? " · di luar pagu" : ""}
                 </td>
-                <td>{money(r.active ? planCost(r, s) : 0)}</td>
+                <td>
+                  {r.active &&
+                  billingKind(r) === "monthly" &&
+                  monthlyAllocationIncomplete(r, s)
+                    ? "Belum lengkap"
+                    : money(r.active ? planCost(r, s) : 0)}
+                </td>
                 <td>
                   {r.actualProvided
                     ? money(r.active ? r.actual : 0)
@@ -1759,7 +1968,7 @@ export default function Simulator() {
             change={change}
             onClear={() => {
               setPersist(false);
-              setS(preset());
+              setS(freshScenario());
               setSaved([]);
               try {
                 localStorage.removeItem(STORAGE_KEY);

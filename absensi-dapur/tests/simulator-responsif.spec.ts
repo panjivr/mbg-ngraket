@@ -3,8 +3,8 @@ for (const width of [320, 360, 390, 768, 1024, 1440]) {
  test(`simulator dapat dipakai pada lebar ${width}px`, async ({page}) => {
   await page.setViewportSize({width,height:850});
   await page.goto('/simulator-operasional');await page.getByLabel('👥 Jumlah penerima').fill('2600');
-  await expect(page.getByLabel('📅 Berapa hari?')).toBeVisible();
-  await page.getByLabel('📅 Berapa hari?').fill('10');
+  await expect(page.getByLabel('📅 Hari pelayanan')).toBeVisible();
+  await page.getByLabel('📅 Hari pelayanan').fill('10');
   await page.locator('.easy-main > summary').filter({hasText:'Isi biaya'}).click();
   const gas=page.locator('.easy-row').filter({hasText:/^Gas/});
   await gas.locator('summary').click();
